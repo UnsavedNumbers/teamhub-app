@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+﻿import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { getFeeAssignmentById, formatCurrency, generateReceiptPDF } from '../data/services/paymentsService'
@@ -282,7 +282,7 @@ export default function PaymentDetail() {
         ]}
       >
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
         </div>
       </PortalLayout>
     )
@@ -332,7 +332,7 @@ export default function PaymentDetail() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(getLink('portal.payments'))}
-              className="size-10 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-[var(--org-link-color)] transition-colors"
+              className="size-10 flex items-center justify-center rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-[var(--org-link-color)] transition-colors"
             >
               <Icon name="arrow_back" />
             </button>
@@ -363,10 +363,10 @@ export default function PaymentDetail() {
             }`}>
               <Icon name={isPaid ? 'check_circle' : 'pending'} size="text-4xl" />
             </div>
-            <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-[0.2em] text-sm mb-2">
+            <p className="text-gray-500 dark:text-gray-400 font-bold uppercase tracking-[0.2em] text-sm mb-2">
               {isPaid ? 'Total Amount Paid' : 'Amount Due'}
             </p>
-            <h2 className="text-7xl font-black text-slate-900 dark:text-white tracking-tighter mb-4">
+            <h2 className="text-7xl font-black text-gray-900 dark:text-white tracking-tighter mb-4">
               {formatCurrency(isPaid ? totalPaid : assignment.balance_cents)}
             </h2>
             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-black text-xs uppercase tracking-widest ${
@@ -391,14 +391,14 @@ export default function PaymentDetail() {
               <div className="space-y-4">
                 <SectionHeader>PAYER</SectionHeader>
                 <div className="flex items-center gap-4">
-                  <div className="size-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center">
-                    <Icon name="person" className="text-slate-500" />
+                  <div className="size-12 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
+                    <Icon name="person" className="text-gray-500" />
                   </div>
                   <div>
-                    <p className="font-bold text-slate-900 dark:text-white">
+                    <p className="font-bold text-gray-900 dark:text-white">
                       {assignment.parent?.display_name || assignment.parent?.email || 'Unknown'}
                     </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       {assignment.parent?.email || 'No email'}
                     </p>
                   </div>
@@ -407,22 +407,22 @@ export default function PaymentDetail() {
               <div className="space-y-4">
                 <SectionHeader>FOR</SectionHeader>
                 <div className="flex items-center gap-4">
-                  <div className="size-12 rounded-full border-2 border-[var(--org-btn-primary-bg, #137fec)] overflow-hidden bg-slate-200 dark:bg-slate-800 flex items-center justify-center">
+                  <div className="size-12 rounded-full border-2 border-[var(--org-btn-primary-bg, #137fec)] overflow-hidden bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
                     {assignment.athlete ? (
-                      <span className="text-slate-500 text-xs font-bold">
+                      <span className="text-gray-500 text-xs font-bold">
                         {assignment.athlete.first_name[0]}{assignment.athlete.last_name[0]}
                       </span>
                     ) : (
-                      <Icon name="person" className="text-slate-500" />
+                      <Icon name="person" className="text-gray-500" />
                     )}
                   </div>
                   <div>
-                    <p className="font-bold text-slate-900 dark:text-white">
+                    <p className="font-bold text-gray-900 dark:text-white">
                       {assignment.athlete 
                         ? `${assignment.athlete.first_name} ${assignment.athlete.last_name}`
                         : 'Unknown Athlete'}
                     </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       Athlete #{assignment.athlete?.id.slice(-4) || 'N/A'}
                     </p>
                   </div>
@@ -432,22 +432,22 @@ export default function PaymentDetail() {
 
             {/* Itemization */}
             <Card noPadding>
-              <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center rounded-t-2xl">
+              <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center rounded-t-2xl">
                 <SectionHeader>ITEMIZATION</SectionHeader>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  {paymentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • {paymentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  {paymentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - {paymentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}
                 </span>
               </div>
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {assignment.fee && (
                   <div className="p-6 flex justify-between items-center">
                     <div>
-                      <p className="font-bold text-slate-900 dark:text-white">{assignment.fee.title}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <p className="font-bold text-gray-900 dark:text-white">{assignment.fee.title}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {assignment.fee.description || 'Fee payment'}
                       </p>
                     </div>
-                    <p className="font-bold text-slate-900 dark:text-white">
+                    <p className="font-bold text-gray-900 dark:text-white">
                       {formatCurrency(assignment.fee.amount_cents)}
                     </p>
                   </div>
@@ -457,18 +457,18 @@ export default function PaymentDetail() {
                     {assignment.payments.map((p) => (
                       <div key={p.id} className="p-6 flex justify-between items-center">
                         <div>
-                          <p className="font-medium text-slate-900 dark:text-white">Payment</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • {formatCurrency(p.amount_cents)}
+                          <p className="font-medium text-gray-900 dark:text-white">Payment</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - {formatCurrency(p.amount_cents)}
                           </p>
                         </div>
-                        <p className="font-bold text-slate-900 dark:text-white">
+                        <p className="font-bold text-gray-900 dark:text-white">
                           {formatCurrency(p.amount_cents)}
                         </p>
                       </div>
                     ))}
-                    <div className="p-6 bg-slate-50 dark:bg-slate-800/30 flex justify-between items-center">
-                      <p className="font-black text-slate-900 dark:text-white uppercase tracking-widest text-sm">
+                    <div className="p-6 bg-gray-50 dark:bg-gray-800/30 flex justify-between items-center">
+                      <p className="font-black text-gray-900 dark:text-white uppercase tracking-widest text-sm">
                         Grand Total
                       </p>
                       <p className="text-2xl font-black text-[var(--org-btn-primary-bg, #137fec)]">
@@ -492,14 +492,14 @@ export default function PaymentDetail() {
                     <Icon name="sports_soccer" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-bold text-slate-900 dark:text-white leading-tight">
+                    <p className="font-bold text-gray-900 dark:text-white leading-tight">
                       {assignment.fee?.title || 'Fee'}
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       {context.organizationName || 'Organization'}
                     </p>
                   </div>
-                  <Icon name="open_in_new" className="text-slate-300 group-hover:text-[var(--org-btn-primary-bg, #137fec)]" />
+                  <Icon name="open_in_new" className="text-gray-300 group-hover:text-[var(--org-btn-primary-bg, #137fec)]" />
                 </div>
               </Card>
             </div>
@@ -511,15 +511,15 @@ export default function PaymentDetail() {
                 <Card className="p-5">
                   <div className="flex items-center gap-4">
                     <div className="size-10 flex items-center justify-center">
-                      <Icon name="credit_card" className="text-slate-500" />
+                      <Icon name="credit_card" className="text-gray-500" />
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900 dark:text-white leading-tight">
+                      <p className="font-bold text-gray-900 dark:text-white leading-tight">
                         {assignment.payments[0].stripe_payment_intent_id 
                           ? `Payment #${assignment.payments[0].stripe_payment_intent_id.slice(-4)}`
                           : 'Payment Processed'}
                       </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         Authorization: #{assignment.payments[0].id.slice(-8).toUpperCase()}
                       </p>
                     </div>
@@ -529,18 +529,18 @@ export default function PaymentDetail() {
             )}
 
             {/* Contact Registrar */}
-            <Card className="p-6 bg-slate-100 dark:bg-slate-800/30 border-dashed border-slate-300 dark:border-slate-700">
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 text-center mb-4">
+            <Card className="p-6 bg-gray-100 dark:bg-gray-800/30 border-dashed border-gray-300 dark:border-gray-700">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 text-center mb-4">
                 Questions about this payment?
               </p>
               <Button
                 variant="secondary"
                 onClick={handleContactRegistrar}
                 disabled={actionLoading !== null}
-                className="w-full h-10 border-2 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs font-bold tracking-widest uppercase"
+                className="w-full h-10 border-2 border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-xs font-bold tracking-widest uppercase"
               >
                 {actionLoading === 'contact' ? (
-                  <span className="animate-spin size-4 border-2 border-slate-500 border-t-transparent rounded-full inline-block" />
+                  <span className="animate-spin size-4 border-2 border-gray-500 border-t-transparent rounded-full inline-block" />
                 ) : (
                   'CONTACT REGISTRAR'
                 )}
@@ -552,3 +552,4 @@ export default function PaymentDetail() {
     </PortalLayout>
   )
 }
+

@@ -412,6 +412,45 @@ verify_jwt = false
 [functions.ticketing-events-api]
 verify_jwt = false
 
+[functions.bulk-invite-generate-template]
+verify_jwt = false
+
+[functions.bulk-invite-validate]
+verify_jwt = false
+
+[functions.bulk-invite-import]
+verify_jwt = false
+
+[functions.stripe-verify-price]
+verify_jwt = false
+
+[functions.billing-create-checkout-session]
+verify_jwt = false
+
+[functions.billing-customer-portal]
+verify_jwt = false
+
+[functions.rsvp-process-outbox]
+verify_jwt = false
+
+[functions.uniforms-process-outbox]
+verify_jwt = false
+
+[functions.travel-notify]
+verify_jwt = false
+
+[functions.resend-tickets]
+verify_jwt = false
+
+[functions.api]
+verify_jwt = false
+
+[functions.upgrade-org-license]
+verify_jwt = false
+
+[functions.stream-token]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

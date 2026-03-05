@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Bookmarked Events Page
  * 
  * Lists all events the user has bookmarked.
@@ -12,6 +12,7 @@ import { PageTitle } from '../../components/portal/Typography'
 import Card from '../../components/portal/Card'
 import Button from '../../components/portal/Button'
 import Icon from '../../components/portal/Icon'
+import EmptyState from '../../components/portal/EmptyState'
 import { formatEventDate, formatEventTimeRange } from '../../types/calendar'
 import { useNavigate } from 'react-router-dom'
 import { useI18n } from '../../i18n/useI18n'
@@ -57,111 +58,121 @@ export default function BookmarkedEvents() {
 
   if (isError) {
     return (
-      <PortalLayout>
-        <div className="max-w-4xl mx-auto px-4 py-8">
+      <PortalLayout
+        breadcrumbs={[
+          { label: t('common.home'), path: getLink('portal.dashboard') },
+          { label: t('portal.fan.bookmarkedEvents.title') },
+        ]}
+      >
+        <div className="mb-6 sm:mb-8">
           <PageTitle>{t('portal.fan.bookmarkedEvents.title')}</PageTitle>
-          <Card className="p-8 text-center border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800">
-            <Icon name="error_outline" className="text-4xl text-red-500 mb-4" />
-            <h3 className="text-lg font-bold text-red-700 dark:text-red-400 mb-2">
-              {t('toast.error.loadFailed')}
-            </h3>
-            <p className="text-red-600 dark:text-red-300 mb-6">
-              {error instanceof Error ? error.message : t('errors.unknownError')}
-            </p>
-            <Button variant="primary" onClick={handleRetry}>
-              {tAny('common.actions.retry')}
-            </Button>
-          </Card>
+          <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide mt-1">
+            {t('portal.fan.bookmarkedEvents.description')}
+          </p>
         </div>
+        <Card className="p-8 text-center border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800">
+          <Icon name="error_outline" className="text-4xl text-red-500 mb-4" />
+          <h3 className="text-lg font-bold text-red-700 dark:text-red-400 mb-2">
+            {t('toast.error.loadFailed')}
+          </h3>
+          <p className="text-red-600 dark:text-red-300 mb-6">
+            {error instanceof Error ? error.message : t('errors.unknownError')}
+          </p>
+          <Button variant="primary" onClick={handleRetry}>
+            {tAny('common.actions.retry')}
+          </Button>
+        </Card>
       </PortalLayout>
     )
   }
 
   return (
-    <PortalLayout>
-      <div className="max-w-4xl mx-auto px-4 py-8">
+    <PortalLayout
+      breadcrumbs={[
+        { label: t('common.home'), path: getLink('portal.dashboard') },
+        { label: t('portal.fan.bookmarkedEvents.title') },
+      ]}
+    >
+      <div className="mb-6 sm:mb-8">
         <PageTitle>{t('portal.fan.bookmarkedEvents.title')}</PageTitle>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
+        <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide mt-1">
           {t('portal.fan.bookmarkedEvents.description')}
         </p>
+      </div>
 
-        {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="p-6 animate-pulse">
-                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-2"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-              </Card>
-            ))}
-          </div>
-        ) : bookmarks && bookmarks.length > 0 ? (
-          <div className="space-y-4">
-            {bookmarks.map((bookmark: FanEventBookmark) => {
-              const event = bookmark.event
-              if (!event) return null
+      {isLoading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="p-6 animate-pulse">
+              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-2"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+            </Card>
+          ))}
+        </div>
+      ) : bookmarks && bookmarks.length > 0 ? (
+        <div className="space-y-4">
+          {bookmarks.map((bookmark: FanEventBookmark) => {
+            const event = bookmark.event
+            if (!event) return null
 
-              return (
-                <Card key={bookmark.id} className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                        {event.title}
-                      </h3>
-                      <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                        <div className="flex items-center gap-2">
-                          <Icon name="calendar_today" className="text-base" />
-                          {formatEventDate(event.start_time, event.timezone || 'UTC')}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Icon name="schedule" className="text-base" />
-                          {formatEventTimeRange(event.start_time, event.end_time, event.timezone || 'UTC')}
-                        </div>
-                        {event.location && (
-                          <div className="flex items-center gap-2">
-                            <Icon name="location_on" className="text-base" />
-                            {event.location}
-                          </div>
-                        )}
+            return (
+              <Card key={bookmark.id} className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                      {event.title}
+                    </h3>
+                    <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                      <div className="flex items-center gap-2">
+                        <Icon name="calendar_today" className="text-base" />
+                        {formatEventDate(event.start_time, event.timezone || 'UTC')}
                       </div>
-                    </div>
-                    <div className="flex gap-2 ml-4">
-                      <Button
-                        variant="primary"
-                        onClick={() => navigate(getLink(RouteKeys.PORTAL_EVENT_DETAIL, { eventId: event.id }))}
-                      >
-                        View Details
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        disabled={isDeleting}
-                        onClick={() => deleteBookmark(bookmark.event_id)}
-                      >
-                        <Icon name="bookmark" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Icon name="schedule" className="text-base" />
+                        {formatEventTimeRange(event.start_time, event.end_time, event.timezone || 'UTC')}
+                      </div>
+                      {event.location && (
+                        <div className="flex items-center gap-2">
+                          <Icon name="location_on" className="text-base" />
+                          {event.location}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </Card>
-              )
-            })}
-          </div>
-        ) : (
-          <Card className="p-12 text-center">
-            <Icon name="bookmark_border" className="text-6xl text-gray-400 mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              {t('portal.fan.bookmarkedEvents.emptyTitle')}
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              {t('portal.fan.bookmarkedEvents.emptyDescription')}
-            </p>
-            <Button
-              variant="primary"
-              onClick={() => navigate(getLink(RouteKeys.PORTAL_CALENDAR))}
-            >
-              {t('portal.fan.bookmarkedEvents.viewCalendar')}
-            </Button>
-          </Card>
-        )}
-      </div>
+                  <div className="flex gap-2 ml-4">
+                    <Button
+                      variant="primary"
+                      onClick={() => navigate(getLink(RouteKeys.PORTAL_EVENT_DETAIL, { eventId: event.id }))}
+                    >
+                      View Details
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={isDeleting}
+                      onClick={() => deleteBookmark(bookmark.event_id)}
+                    >
+                      <Icon name="bookmark" />
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )
+          })}
+        </div>
+      ) : (
+        <Card>
+          <EmptyState
+            icon="bookmark_border"
+            title={t('portal.fan.bookmarkedEvents.emptyTitle')}
+            description={t('portal.fan.bookmarkedEvents.emptyDescription')}
+            action={{
+              label: t('portal.fan.bookmarkedEvents.viewCalendar'),
+              onClick: () => navigate(getLink(RouteKeys.PORTAL_CALENDAR)),
+            }}
+          />
+        </Card>
+      )}
     </PortalLayout>
   )
 }
+

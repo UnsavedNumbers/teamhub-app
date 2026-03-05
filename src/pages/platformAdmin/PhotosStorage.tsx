@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useT } from '../../i18n/useI18n'
 import { supabase } from '../../lib/supabase'
-import { Card, EmptyState, InlineNotice, PageHeader, StatCard, Table } from '../../components/platformAdmin'
+import { Card, EmptyState, InlineNotice, PageHeader, Table } from '../../components/platformAdmin'
+import { TopLevelStats } from '../../components/common/TopLevelStats'
 import { formatFileSize, formatNumber } from '../../utils/formatters'
 
 interface OrgUsageRow {
@@ -344,33 +345,16 @@ export default function PhotosStorage() {
           />
         )}
 
-        <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4 pa-gap-4 pa-mb-6">
-          <StatCard
-            label={t('platformAdmin.photosStorage.totalStorage')}
-            value={formatFileSize(totalBytes)}
-            icon="storage"
-            loading={loading}
-            meta={lastUpdated ? t('platformAdmin.photosStorage.lastUpdated', { date: new Date(lastUpdated).toLocaleDateString() }) : undefined}
-          />
-          <StatCard
-            label={t('platformAdmin.photosStorage.totalOrganizations')}
-            value={formatNumber(totalOrgs)}
-            icon="apartment"
-            loading={loading}
-          />
-          <StatCard
-            label={t('platformAdmin.photosStorage.totalGalleries')}
-            value={formatNumber(totalGalleries)}
-            icon="photo_library"
-            loading={loading}
-          />
-          <StatCard
-            label={t('platformAdmin.photosStorage.totalPhotos')}
-            value={formatNumber(totalPhotos)}
-            icon="image"
-            loading={loading}
-          />
-        </div>
+        <TopLevelStats
+          className="pa-mb-6"
+          ariaLabel="Photo storage summary metrics"
+          items={[
+            { id: 'storage', label: t('platformAdmin.photosStorage.totalStorage'), value: loading ? '—' : formatFileSize(totalBytes), icon: 'storage', meta: lastUpdated ? t('platformAdmin.photosStorage.lastUpdated', { date: new Date(lastUpdated).toLocaleDateString() }) : undefined },
+            { id: 'orgs', label: t('platformAdmin.photosStorage.totalOrganizations'), value: loading ? '—' : formatNumber(totalOrgs), icon: 'apartment' },
+            { id: 'galleries', label: t('platformAdmin.photosStorage.totalGalleries'), value: loading ? '—' : formatNumber(totalGalleries), icon: 'photo_library' },
+            { id: 'photos', label: t('platformAdmin.photosStorage.totalPhotos'), value: loading ? '—' : formatNumber(totalPhotos), icon: 'image' },
+          ]}
+        />
 
         <div className="pa-space-y-6">
           <Card title={t('platformAdmin.photosStorage.orgUsageTitle')}>
@@ -407,3 +391,4 @@ export default function PhotosStorage() {
     </div>
   )
 }
+

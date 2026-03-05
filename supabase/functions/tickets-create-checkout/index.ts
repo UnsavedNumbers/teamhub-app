@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
 import Stripe from "https://esm.sh/stripe@12.18.0?dts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
-import { getOrgTicketOrderUrl, getOrgTicketEventUrl, getPaymentSuccessUrl, getPaymentCancelUrl, getFullUrl } from '../shared/url-generator.ts'
+import { getOrgTicketOrderUrl, getOrgTicketEventUrl, getFullUrl } from '../shared/url-generator.ts'
 
 // CORS helpers
 function buildCorsHeaders(req: Request) {
@@ -65,6 +65,28 @@ function areSeatsAdjacent(seatIdentifiers: string[]): boolean {
   }
 
   return true
+}
+
+type CheckoutRole = "fan" | "guardian"
+
+function normalizeCheckoutRole(role: unknown): CheckoutRole | null {
+  if (typeof role !== "string") return null
+  const normalized = role.trim().toLowerCase()
+  if (normalized === "fan") return "fan"
+  if (normalized === "guardian" || normalized === "parent") return "guardian"
+  return null
+}
+
+function appendRoleParam(url: string, role: CheckoutRole | null): string {
+  if (!role) return url
+  try {
+    const parsed = new URL(url)
+    parsed.searchParams.set("role", role)
+    return parsed.toString()
+  } catch {
+    const separator = url.includes("?") ? "&" : "?"
+    return `${url}${separator}role=${encodeURIComponent(role)}`
+  }
 }
 
 serve(async (req) => {
@@ -131,6 +153,7 @@ serve(async (req) => {
   const items = payload?.items as Array<{ ticket_type_id: string; quantity: number }> | undefined
   const seatSelections = payload?.seat_selections as Array<{ ticket_type_id: string; seat_map_section_ids: string[] }> | undefined
   const purchaserEmail = payload?.purchaser_email as string | undefined
+  const purchaserRole = normalizeCheckoutRole(payload?.purchaser_role)
   const orgSlug = payload?.org_slug as string | undefined
   const returnBaseUrl = payload?.return_base_url as string | undefined
 
@@ -481,19 +504,22 @@ serve(async (req) => {
     const cancelUrl = derivedOrgSlug
       ? getOrgTicketEventUrl(derivedOrgSlug, ticketedEventId, normalizedBaseUrl)
       : getFullUrl('portal.ticketEventDetail', normalizedBaseUrl, { eventId: ticketedEventId })
+    const successUrlWithRole = appendRoleParam(successUrl, purchaserRole)
+    const cancelUrlWithRole = appendRoleParam(cancelUrl, purchaserRole)
 
     const sessionParams: any = {
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
-      success_url: successUrl,
-      cancel_url: cancelUrl,
+      success_url: successUrlWithRole,
+      cancel_url: cancelUrlWithRole,
       customer_email: purchaserEmail,
       metadata: {
         order_id: order.id,
         org_id: event.org_id,
         org_slug: orgSlug || "",
         ticketed_event_id: ticketedEventId,
+        purchaser_role: purchaserRole || "",
         stripe_connect_account_id: org.payout_account_id,
         platform_fee_cents: platformFeeCents.toString(),
         org_revenue_cents: orgRevenueCents.toString(),

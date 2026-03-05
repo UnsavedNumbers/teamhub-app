@@ -65,9 +65,7 @@ export default function OrganizationIdentityStep({
       <div
         className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1]"
         style={{
-          backgroundImage:
-            'linear-gradient(to right, #f3f4f6 1px, transparent 1px), linear-gradient(to bottom, #f3f4f6 1px, transparent 1px)',
-          backgroundSize: '100px 100px',
+          backgroundColor: '#f3f4f6',
         }}
       />
 

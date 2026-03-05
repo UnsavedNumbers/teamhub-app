@@ -177,8 +177,13 @@
     border-color: #d4d4d8;
 }
 
+.fan-ticket-card-top-row {
+    display: flex;
+    flex-direction: column;
+}
+
 @media (min-width: 768px) {
-    .fan-ticket-card-horizontal {
+    .fan-ticket-card-top-row {
         flex-direction: row;
     }
 }
@@ -237,20 +242,9 @@
 /* Ticket Content */
 .fan-ticket-card-horizontal .fan-ticket-card-content {
     flex: 1;
+    min-width: 0;
     padding: 2rem;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-@media (min-width: 768px) {
-    .fan-ticket-card-horizontal .fan-ticket-card-content {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-        gap: 2rem;
-    }
+    display: block;
 }
 
 .fan-ticket-category {
@@ -267,8 +261,9 @@
     font-weight: 700;
     letter-spacing: -0.025em;
     color: #18181b;
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 1rem 0;
     text-transform: none;
+    cursor: pointer;
 }
 
 .fan-ticket-card-horizontal .fan-ticket-event-name span {
@@ -279,8 +274,49 @@
 
 .fan-ticket-details {
     display: flex;
-    flex-wrap: wrap;
-    gap: 1.5rem;
+    flex-direction: column;
+    gap: 0.9rem;
+    margin-bottom: 1.1rem;
+}
+
+.fan-ticket-location-block {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.375rem;
+}
+
+.fan-ticket-location-block .material-symbols-outlined {
+    font-size: 0.9rem;
+    color: #71717a;
+    margin-top: 0.075rem;
+}
+
+.fan-ticket-location-lines {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.fan-ticket-venue-name {
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #52525b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fan-ticket-venue-city-state {
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #a1a1aa;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .fan-ticket-detail {
@@ -298,11 +334,59 @@
     font-size: 0.875rem;
 }
 
-/* Ticket Actions */
-.fan-ticket-card-actions {
+.fan-ticket-card-actions-inline {
     display: flex;
+    margin-top: 1.5rem;
+}
+
+.fan-ticket-card-actions-inline .fan-btn-primary {
+    max-width: 100%;
+}
+
+@media (min-width: 768px) and (max-width: 1120px) {
+    .fan-ticket-card-actions-inline .fan-btn-primary {
+        padding: 0.875rem 1.125rem;
+        letter-spacing: 0.14em;
+    }
+}
+
+.fan-ticket-qr-expanded {
+    width: 100%;
+    border-top: 1px solid #f4f4f5;
+    background-color: #fafafa;
+    padding: 1.5rem 2rem 2rem;
+}
+
+.fan-qr-container {
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    padding: 2rem;
+    gap: 0.75rem;
+}
+
+.fan-qr-refresh-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #71717a;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.fan-qr-refresh-indicator .material-symbols-outlined {
+    font-size: 0.9rem;
+}
+
+.fan-qr-instructions {
+    margin: 1rem 0 0;
+    text-align: center;
+    color: #52525b;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
 }
 
 .fan-btn-primary {
@@ -517,6 +601,553 @@
     font-size: 0.875rem;
     color: #71717a;
     margin: 0;
+}
+
+/* ============================================================================
+   TICKET DETAIL PAGE - Modern Layout + Carousel
+   ============================================================================ */
+
+.fan-ticket-detail-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.fan-ticket-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: fit-content;
+    padding: 0.25rem 0;
+    background: none;
+    border: none;
+    color: #111111;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.fan-ticket-back-btn .material-symbols-outlined {
+    font-size: 1.2rem;
+}
+
+.fan-ticket-detail-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-bottom: 1.75rem;
+    border-bottom: 1px solid #f4f4f5;
+}
+
+.fan-ticket-detail-eyebrow {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #a1a1aa;
+}
+
+.fan-ticket-detail-title {
+    margin: 0;
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #111111;
+    text-transform: none;
+}
+
+.fan-ticket-detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+}
+
+.fan-ticket-detail-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: #52525b;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.fan-ticket-detail-meta .material-symbols-outlined {
+    font-size: 1rem;
+    color: #a1a1aa;
+}
+
+.fan-ticket-carousel-shell {
+    border: 1px solid #f4f4f5;
+    background: #fafafa;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+}
+
+.fan-ticket-carousel-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.fan-ticket-carousel-title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #111111;
+}
+
+.fan-ticket-carousel-subtitle {
+    margin: 0;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #71717a;
+}
+
+.fan-ticket-carousel-viewport {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.fan-ticket-carousel-viewport::-webkit-scrollbar {
+    display: none;
+}
+
+.fan-ticket-carousel-slide {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+}
+
+.fan-ticket-carousel-card {
+    border: 1px solid #e4e4e7;
+    background: #ffffff;
+    padding: 1rem;
+    min-height: 7.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.fan-ticket-carousel-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.fan-ticket-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 1.5rem;
+    padding: 0 0.55rem;
+    border: 1px solid #e4e4e7;
+    background: #fafafa;
+    color: #52525b;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.fan-ticket-carousel-card h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #18181b;
+    text-transform: none;
+}
+
+.fan-ticket-carousel-card p {
+    margin: 0;
+    font-size: 0.78rem;
+    color: #52525b;
+    letter-spacing: 0.02em;
+}
+
+.fan-ticket-carousel-code {
+    color: #71717a;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    font-size: 0.65rem !important;
+    font-weight: 700;
+}
+
+.fan-ticket-carousel-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.fan-ticket-carousel-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: none;
+    background: transparent;
+    color: #27272a;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.fan-ticket-carousel-nav:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.fan-ticket-carousel-nav .material-symbols-outlined {
+    font-size: 1rem;
+}
+
+.fan-ticket-carousel-dots {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.fan-ticket-carousel-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    border: none;
+    background: #d4d4d8;
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.fan-ticket-carousel-dot.active {
+    background: #111111;
+    transform: scale(1.25);
+}
+
+.fan-ticket-detail-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 390px) minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+}
+
+.fan-ticket-pass-card {
+    border: 1px solid #e4e4e7;
+    background: #ffffff;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    position: sticky;
+    top: 1.5rem;
+}
+
+.fan-ticket-pass-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.fan-ticket-pass-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #71717a;
+}
+
+.fan-ticket-pass-index {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #a1a1aa;
+}
+
+.fan-ticket-pass-qr {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #fafafa;
+    border: 1px solid #f4f4f5;
+    padding: 1rem;
+}
+
+.fan-ticket-pass-card .fan-qr-refresh-indicator {
+    align-self: center;
+}
+
+.fan-ticket-pass-note {
+    margin: 0;
+    text-align: center;
+    color: #71717a;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.fan-ticket-detail-panels {
+    display: grid;
+    gap: 1rem;
+}
+
+.fan-ticket-detail-section {
+    border: 1px solid #f4f4f5;
+    background: #ffffff;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.fan-ticket-detail-section h3 {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #71717a;
+}
+
+.fan-ticket-detail-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    color: #18181b;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    text-transform: none;
+}
+
+.fan-ticket-detail-row .material-symbols-outlined {
+    color: #a1a1aa;
+    font-size: 1.1rem;
+}
+
+.fan-ticket-detail-label {
+    color: #71717a;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.fan-ticket-confirmation-code {
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #18181b;
+}
+
+.fan-ticket-status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 1.6rem;
+    padding: 0 0.65rem;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+}
+
+.fan-ticket-status-valid {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+
+.fan-ticket-status-used {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+
+.fan-ticket-status-expired,
+.fan-ticket-status-transferred,
+.fan-ticket-status-pending {
+    background: #f4f4f5;
+    color: #52525b;
+    border-color: #e4e4e7;
+}
+
+.fan-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: fit-content;
+    padding: 0;
+    background: none;
+    border: none;
+    color: #111111;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.fan-link-btn .material-symbols-outlined {
+    font-size: 1rem;
+}
+
+.fan-ticket-detail-actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.fan-ticket-offline-banner {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #fcd34d;
+    background: #fffbeb;
+    color: #92400e;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.fan-ticket-offline-banner .material-symbols-outlined {
+    font-size: 1rem;
+}
+
+.fan-ticket-btn-secondary {
+    background: #ffffff;
+    color: #18181b;
+    border: 1px solid #d4d4d8;
+    padding: 12px 20px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.fan-ticket-btn-secondary:hover {
+    background: #f4f4f5;
+}
+
+.fan-modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 200;
+}
+
+.fan-transfer-ticket-preview {
+    padding: 0.85rem 1rem;
+    border: 1px solid #f4f4f5;
+    background: #fafafa;
+    margin-bottom: 1rem;
+}
+
+.fan-transfer-ticket-preview h3 {
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: none;
+}
+
+.fan-transfer-ticket-preview p {
+    margin: 0;
+    color: #71717a;
+    font-size: 0.8rem;
+}
+
+.fan-input {
+    width: 100%;
+    border: 1px solid #e4e4e7;
+    background: #ffffff;
+    padding: 0.7rem 0.8rem;
+    font-size: 0.9rem;
+    color: #18181b;
+}
+
+.fan-input:focus {
+    outline: none;
+    border-color: #111111;
+}
+
+.fan-transfer-warning {
+    margin: 0;
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    color: #71717a;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+}
+
+.fan-transfer-warning .material-symbols-outlined {
+    font-size: 1rem;
+}
+
+.fan-modal-actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+@media (max-width: 1024px) {
+    .fan-ticket-detail-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .fan-ticket-pass-card {
+        position: static;
+    }
+}
+
+@media (max-width: 767px) {
+    .fan-ticket-detail-page {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .fan-ticket-detail-title {
+        font-size: 1.5rem;
+    }
+
+    .fan-ticket-detail-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .fan-ticket-detail-actions .fan-btn {
+        width: 100%;
+        justify-content: center;
+    }
 }
 
 
@@ -765,6 +1396,40 @@
     margin: 0;
 }
 
+.fan-event-card-org {
+    margin-top: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    color: rgba(24, 24, 27, 0.72);
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.fan-event-card-org-avatar {
+    width: 1.15rem;
+    height: 1.15rem;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(161, 161, 170, 0.2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.fan-event-card-org-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.fan-event-card-org-avatar .material-symbols-outlined {
+    font-size: 0.9rem;
+    color: rgba(63, 63, 70, 0.8);
+}
+
 /* Schedule Legend */
 .fan-schedule-legend {
     display: flex;
@@ -998,6 +1663,59 @@
 .fan-galleries-grid {
     column-count: 1;
     column-gap: 2rem;
+}
+
+.fan-galleries-group {
+    break-inside: avoid;
+    margin-bottom: 1.5rem;
+}
+
+.fan-galleries-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.8rem;
+}
+
+.fan-galleries-group-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.fan-galleries-group-logo {
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(229, 231, 235, 0.8);
+    border: 1px solid rgba(209, 213, 219, 0.8);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.fan-galleries-group-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.fan-galleries-group-logo .material-symbols-outlined {
+    font-size: 0.95rem;
+    color: rgba(75, 85, 99, 0.85);
+}
+
+.fan-galleries-group-link {
+    font-size: 0.78rem;
+    color: #2563eb;
+    background: transparent;
+    border: none;
+    cursor: pointer;
 }
 
 @media (min-width: 768px) {
@@ -2348,12 +3066,7 @@
         gap: 0.75rem;
     }
 
-    .fan-ticket-card-actions {
-        width: 100%;
-        padding: 1rem;
-    }
-
-    .fan-ticket-card-actions .fan-btn-primary {
+    .fan-ticket-card-actions-inline .fan-btn-primary {
         width: 100%;
     }
 

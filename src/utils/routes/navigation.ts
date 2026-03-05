@@ -78,7 +78,9 @@ export const parentNavSections: NavigationSection[] = [
             {
                 label: 'Messages',
                 items: [
-                    { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', description: 'Team chat and announcements' },
+                    { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', description: 'Direct user-to-user messages' },
+                    { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', description: 'Team and organization chat channels' },
+                    { routeKey: 'portal.messages', text: 'Announcements', icon: 'campaign', description: 'Team announcements and updates' },
                 ],
             },
         ],
@@ -106,6 +108,7 @@ export const parentNavSections: NavigationSection[] = [
                         { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', description: 'Team galleries' },
                         { routeKey: 'portal.videos', text: 'Video Library', icon: 'smart_display', description: 'Watch team and athlete videos' },
                         { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', description: 'Tryout sessions' },
+                        { routeKey: 'portal.tryoutRegistrations', text: 'My Tryout Registrations', icon: 'assignment', description: 'Track tryout status' },
                     ],
                 },
                 {
@@ -178,12 +181,12 @@ export const athleteNavSections: NavigationSection[] = [
     },
     {
         label: 'Announcements',
-        route: '/portal/messages',
+        route: '/portal/announcements',
         groups: [
             {
                 label: 'Announcements',
                 items: [
-                    { routeKey: 'portal.messages', text: 'Announcements', icon: 'forum', description: 'Team announcements' },
+                    { routeKey: 'portal.messages', text: 'Announcements', icon: 'campaign', description: 'Team announcements and updates' },
                 ],
             },
         ],
@@ -283,7 +286,9 @@ export const coachNavSections: NavigationSection[] = [
                 items: [
                     { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', description: 'Tryout sessions' },
                     { routeKey: 'portal.travel', text: 'Travel', icon: 'flight', description: 'Trip details' },
-                    { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', description: 'Team chat' },
+                    { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', description: 'Direct user-to-user messages' },
+                    { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', description: 'Team and organization chat channels' },
+                    { routeKey: 'portal.messages', text: 'Announcements', icon: 'campaign', description: 'Team announcements and updates' },
                     { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', description: 'Preferences' },
                 ],
             },
@@ -317,7 +322,10 @@ export const orgAdminNavSections: NavigationSection[] = [
                 items: [
                     { routeKey: 'admin.organization.base', text: 'Organization Settings', icon: 'settings', description: 'Organization info' },
                     { routeKey: 'admin.organization.users', text: 'Users', icon: 'admin_panel_settings', description: 'Access and roles' },
+                    { routeKey: 'admin.organization.bulkInvite', text: 'Bulk Invites', icon: 'upload', description: 'Onboard multiple users' },
+                    { routeKey: 'admin.organization.subOrgs', text: 'Sub-Organizations', icon: 'apartment', description: 'Manage sub-organizations' },
                     { routeKey: 'admin.organization.billing', text: 'Billing', icon: 'credit_card', description: 'Plan and billing' },
+                    { routeKey: 'admin.organization.addOns', text: 'Add-ons', icon: 'add_circle', description: 'Purchase additional features' },
                 ],
             },
         ],
@@ -434,8 +442,20 @@ export const adminMenuItems: MenuItemDefinition[] = [
         requiresOrg: true,
         children: [
             { text: 'Events', icon: 'event', routeKey: 'admin.events.list', requiresOrg: true },
+            { text: 'Facilities', icon: 'location_city', routeKey: 'admin.facilities.list', requiresOrg: true },
             { text: 'Attendance', icon: 'how_to_reg', routeKey: 'admin.attendance', requiresOrg: true },
             { text: 'Uniforms', icon: 'checkroom', routeKey: 'admin.uniforms.list', requiresOrg: true },
+        ],
+    },
+    {
+        label: 'Tryouts',
+        icon: 'emoji_events',
+        routeKey: 'admin.tryouts.list',
+        requiresOrg: true,
+        children: [
+            { text: 'All Tryouts', icon: 'list', routeKey: 'admin.tryouts.list', requiresOrg: true },
+            { text: 'Create Tryout', icon: 'add', routeKey: 'admin.tryouts.create', requiresOrg: true },
+            { text: 'My Assignments', icon: 'assignment_ind', routeKey: 'admin.tryouts.assigned', requiresOrg: true },
         ],
     },
     {
@@ -473,6 +493,7 @@ export const platformAdminNavSections: {
             items: [
                 { routeKey: 'platformAdmin.organizations.list', text: 'Organizations', icon: 'apartment', requiredAction: 'view_organizations' },
                 { routeKey: 'platformAdmin.demoManagement.list', text: 'Demo Management', icon: 'bolt', requiredAction: 'view_organizations' },
+                { routeKey: 'platformAdmin.demoInsights', text: 'Demo Insights', icon: 'analytics', requiredAction: 'view_organizations' },
             ],
         },
         {
@@ -578,6 +599,7 @@ export const adminGlobalNavSections: NavigationSection[] = [
                 items: [
                     { routeKey: 'admin.payments.list', text: 'Payments', icon: 'credit_card', description: 'Fees & collections' },
                     { routeKey: 'admin.events.list', text: 'Events', icon: 'event', description: 'Schedule & calendar' },
+                    { routeKey: 'admin.facilities.list', text: 'Facilities', icon: 'location_city', description: 'Fields, courts, gyms & scheduling' },
                     { routeKey: 'admin.attendance', text: 'Attendance', icon: 'how_to_reg', description: 'Check-ins & tracking' },
                 ],
             },

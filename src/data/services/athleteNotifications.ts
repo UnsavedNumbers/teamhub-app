@@ -3,6 +3,7 @@ import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../config'
 import type { NotificationAction } from '../../types/notifications'
 import { notifyUsers } from './notificationServiceCore'
+import { collectTeamManagers } from './notificationHelpers'
 
 const supabaseAny = supabase as any
 
@@ -27,6 +28,7 @@ export async function distributeAthleteAddedNotifications(input: AthleteTeamNoti
     try {
         const guardianUserIds: string[] = []
         const coachUserIds: string[] = []
+        const teamManagerUserIds: string[] = []
 
         // Get guardians of the athlete
         const { data: athlete, error: athleteError } = await supabase
@@ -63,6 +65,10 @@ export async function distributeAthleteAddedNotifications(input: AthleteTeamNoti
                 }
             })
         }
+
+        // Get team managers for team
+        const teamManagerIds = await collectTeamManagers(input.team_id, input.action_by_user_id)
+        teamManagerUserIds.push(...teamManagerIds)
 
         const action: NotificationAction = 'athlete_added_to_team'
         let totalInAppCount = 0
@@ -111,6 +117,28 @@ export async function distributeAthleteAddedNotifications(input: AthleteTeamNoti
             }
         }
 
+        // Notify team managers
+        if (teamManagerUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: teamManagerUserIds,
+                orgId: input.org_id,
+                teamId: input.team_id,
+                action,
+                roleContext: 'team_manager',
+                title: `Athlete Added to Team`,
+                body: `${input.athlete_name} has been added to ${input.team_name}`,
+                linkUrl: `/admin/athletes/${input.athlete_id}`,
+                entityType: 'athlete',
+                entityId: input.athlete_id,
+                metadata: {
+                    team_name: input.team_name
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
+
         debug.perf.end('athleteNotifications.distributeAthleteAddedNotifications')
         debug.flow('AthleteNotifications.distributeAthleteAddedNotifications', 'Notifications distributed', {
             athleteId: input.athlete_id,
@@ -140,6 +168,7 @@ export async function distributeAthleteRemovedNotifications(input: AthleteTeamNo
     try {
         const guardianUserIds: string[] = []
         const coachUserIds: string[] = []
+        const teamManagerUserIds: string[] = []
 
         const { data: athlete, error: athleteError } = await supabase
             .from('athletes')
@@ -175,6 +204,10 @@ export async function distributeAthleteRemovedNotifications(input: AthleteTeamNo
             })
         }
 
+        // Get team managers for team
+        const teamManagerIds = await collectTeamManagers(input.team_id, input.action_by_user_id)
+        teamManagerUserIds.push(...teamManagerIds)
+
         const action: NotificationAction = 'athlete_removed_from_team'
         let totalInAppCount = 0
 
@@ -208,6 +241,28 @@ export async function distributeAthleteRemovedNotifications(input: AthleteTeamNo
                 teamId: input.team_id,
                 action,
                 roleContext: 'coach',
+                title: `Athlete Removed from Team`,
+                body: `${input.athlete_name} has been removed from ${input.team_name}`,
+                linkUrl: `/admin/athletes/${input.athlete_id}`,
+                entityType: 'athlete',
+                entityId: input.athlete_id,
+                metadata: {
+                    team_name: input.team_name
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
+
+        // Notify team managers
+        if (teamManagerUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: teamManagerUserIds,
+                orgId: input.org_id,
+                teamId: input.team_id,
+                action,
+                roleContext: 'team_manager',
                 title: `Athlete Removed from Team`,
                 body: `${input.athlete_name} has been removed from ${input.team_name}`,
                 linkUrl: `/admin/athletes/${input.athlete_id}`,

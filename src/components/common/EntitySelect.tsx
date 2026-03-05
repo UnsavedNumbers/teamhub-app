@@ -378,9 +378,9 @@ export function EntitySelect<T = unknown>({
         style={{
           padding: '12px 16px',
           cursor: 'pointer',
-          background: isHighlighted ? 'var(--pa-n50)' : 'var(--pa-n0)',
-          borderBottom: '1px solid var(--pa-n100)',
-          color: 'var(--pa-n900)',
+          background: isHighlighted ? 'var(--pa-bg-hover)' : 'transparent',
+          borderBottom: '1px solid var(--pa-border-default)',
+          color: 'var(--pa-text-primary)',
         }}
         className="pa-body-m"
       >
@@ -468,8 +468,8 @@ export function EntitySelect<T = unknown>({
               top: '100%',
               left: 0,
               right: 0,
-              background: 'var(--pa-n0)',
-              border: '1px solid var(--pa-n100)',
+              background: 'var(--pa-surface-panel)',
+              border: '1px solid var(--pa-border-default)',
               borderRadius: 'var(--pa-radius-md)',
               marginTop: '4px',
               maxHeight: '200px',
@@ -483,7 +483,7 @@ export function EntitySelect<T = unknown>({
                 style={{
                   padding: '12px 16px',
                   textAlign: 'center',
-                  color: 'var(--pa-n700)',
+                  color: 'var(--pa-text-muted)',
                 }}
                 className="pa-body-s"
               >
@@ -494,7 +494,7 @@ export function EntitySelect<T = unknown>({
                 style={{
                   padding: '12px 16px',
                   textAlign: 'center',
-                  color: 'var(--pa-n700)',
+                  color: 'var(--pa-text-muted)',
                 }}
                 className="pa-body-s"
               >

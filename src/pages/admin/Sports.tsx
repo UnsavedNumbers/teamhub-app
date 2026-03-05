@@ -7,17 +7,19 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useOffline } from '../../hooks/useOffline'
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 import { USE_FAKE_DATA } from '../../data/config'
 import { getSports, deleteSport } from '../../data/services/sportsService'
 import { getPrograms } from '../../data/services/sportsService'
 import type { Sport } from '../../data/types/organization'
-import { AdminPageHeader, ConfirmDialog, Button, Card, EmptyState, InlineNotice } from '../../components/admin'
+import { AdminPageHeader, ConfirmDialog, Button, Card, InlineNotice } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { Tooltip } from '../../components/admin/Tooltip'
 import { getLink } from '../../utils/routes'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import '../../styles/orgAdmin.css'
 import './Sports.css'
 
@@ -26,9 +28,11 @@ export default function Sports() {
   useDebugLifecycle('Sports')
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const { isOffline } = useOffline()
   const location = useLocation()
   const navigate = useNavigate()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
 
   const [loading, setLoading] = useState(true)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -137,15 +141,17 @@ export default function Sports() {
           { label: 'Sports' },
         ]}
         actions={
-          <OrgAdminButton
-            icon="add"
-            variant="primary"
-            onClick={() => navigate(`${formsRoute}?type=sport&returnUrl=${encodeURIComponent(sportsRoute)}`)}
-            disabled={isOffline || USE_FAKE_DATA}
-            className="w-full sm:w-auto"
-          >
-            {USE_FAKE_DATA ? 'Sign in to Add Sport' : 'Add Sport'}
-          </OrgAdminButton>
+          isOrgAdmin ? (
+            <OrgAdminButton
+              icon="add"
+              variant="primary"
+              onClick={() => navigate(`${formsRoute}?type=sport&returnUrl=${encodeURIComponent(sportsRoute)}`)}
+              disabled={isOffline || USE_FAKE_DATA}
+              className="w-full sm:w-auto"
+            >
+              {USE_FAKE_DATA ? 'Sign in to Add Sport' : 'Add Sport'}
+            </OrgAdminButton>
+          ) : undefined
         }
       />
 
@@ -169,21 +175,23 @@ export default function Sports() {
 
       <div className="oa-flex oa-flex-col oa-gap-4">
         {sports.length === 0 ? (
-          <Card>
-            <EmptyState
-              icon="sports"
-              title="No sports added"
-              description="Start by adding a sport to your organization."
-              noCard
-            >
-                <Button 
+          <Card className="oa-border-2 oa-border-dashed">
+            <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+              <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>sports</span>
+              <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+                <h3 className="oa-h3 oa-mb-0">No sports added</h3>
+                <p className="oa-body-m oa-text-muted oa-mb-4">Start by adding a sport to your organization.</p>
+                {isOrgAdmin && (
+                  <Button 
                     icon="add"
                     onClick={() => navigate(`${formsRoute}?type=sport&returnUrl=${encodeURIComponent(sportsRoute)}`)}
                     disabled={isOffline || USE_FAKE_DATA}
-                >
+                  >
                     {USE_FAKE_DATA ? 'Sign in to Add Sport' : 'Add Sport'}
-                </Button>
-            </EmptyState>
+                  </Button>
+                )}
+              </div>
+            </div>
           </Card>
         ) : (
           <Card className="oa-stacked-list">
@@ -233,34 +241,38 @@ export default function Sports() {
                       >
                         View {sport.name} Programs
                       </Button>
-                      <Button
-                        variant="secondary"
-                        size="dense"
-                        icon="add"
-                        onClick={() => navigate(`${formsRoute}?type=program&sport_id=${sport.id}&returnUrl=${encodeURIComponent(sport.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : programsRoute)}`)}
-                        disabled={isOffline || USE_FAKE_DATA}
-                      >
-                        Add Program
-                      </Button>
-                      <div className="sports-delete-tooltip-wrapper">
-                        <Tooltip
-                          content={programCount > 0 ? 'Cannot remove sport with active programs' : 'Remove sport'}
-                          side="top"
-                        >
-                          <span>
-                            <Button
-                              variant="danger"
-                              size="dense"
-                              icon="delete"
-                              onClick={() => handleDeleteSport(sport.id, sport.name)}
-                              disabled={deletingSportId === sport.id || isOffline || USE_FAKE_DATA || programCount > 0}
-                              loading={deletingSportId === sport.id}
+                      {isOrgAdmin && (
+                        <>
+                          <Button
+                            variant="secondary"
+                            size="dense"
+                            icon="add"
+                            onClick={() => navigate(`${formsRoute}?type=program&sport_id=${sport.id}&returnUrl=${encodeURIComponent(sport.slug ? getLink('admin.programs.bySport', { sport_slug: sport.slug }) : programsRoute)}`)}
+                            disabled={isOffline || USE_FAKE_DATA}
+                          >
+                            Add Program
+                          </Button>
+                          <div className="sports-delete-tooltip-wrapper">
+                            <Tooltip
+                              content={programCount > 0 ? 'Cannot remove sport with active programs' : 'Remove sport'}
+                              side="top"
                             >
-                              Delete
-                            </Button>
-                          </span>
-                        </Tooltip>
-                      </div>
+                              <span>
+                                <Button
+                                  variant="danger"
+                                  size="dense"
+                                  icon="delete"
+                                  onClick={() => handleDeleteSport(sport.id, sport.name)}
+                                  disabled={deletingSportId === sport.id || isOffline || USE_FAKE_DATA || programCount > 0}
+                                  loading={deletingSportId === sport.id}
+                                >
+                                  Delete
+                                </Button>
+                              </span>
+                            </Tooltip>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

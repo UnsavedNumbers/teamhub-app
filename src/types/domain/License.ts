@@ -1,3 +1,5 @@
+import type { Json } from '../../lib/database.types'
+
 /**
  * Domain Model: License
  * 
@@ -47,6 +49,16 @@ export interface FeatureEntitlement {
   isSystemFeature?: boolean // If true, always available for every license tier (including new tiers)
   platformAdminOnly?: boolean // If true, not available to org users; platform admin only
   parentFeatureKey?: string | null // Parent feature for hierarchy (child inherits parent unavailability)
+  available_as_addon?: boolean // If true, can be purchased as add-on
+  addon_stripe_price_id?: string | null // Stripe Price ID for add-on (annual recurring)
+  addon_external_name?: string | null // Display name shown to org admins
+  addon_external_description?: string | null // Marketing description
+  addon_external_short_label?: string | null // Short label for badges/buttons
+  addon_external_bullets?: string[] | null // Array of feature bullets
+  addon_external_cta_label?: string | null // CTA button label
+  addon_display_order?: number | null // Sort order for display
+  addon_is_public?: boolean // If true, visible in org admin store
+  addon_eligibility_rules?: Json | null // Future eligibility rules
 }
 
 export interface TierFeatureAssignment {

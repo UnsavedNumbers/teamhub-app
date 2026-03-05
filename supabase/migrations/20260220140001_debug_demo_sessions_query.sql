@@ -1,0 +1,74 @@
+-- ============================================
+-- DIAGNOSTIC QUERIES FOR DEMO SESSIONS
+-- ============================================
+-- Run these queries manually in Supabase SQL Editor to diagnose why 
+-- get_user_organizations returns empty for demo users.
+--
+-- Replace 'dd633432-5946-4273-b29e-cbd0523433d9' with the actual user_id
+-- ============================================
+
+-- 1. Check if demo_account_roles row exists for this user
+-- SELECT role, user_id, created_at 
+-- FROM demo_account_roles 
+-- WHERE user_id = 'dd633432-5946-4273-b29e-cbd0523433d9';
+
+-- 2. Check if demo_sessions row exists for this user
+-- SELECT 
+--   id,
+--   user_id,
+--   demo_code,
+--   demo_org_id,
+--   organization_id,
+--   expires_at,
+--   expires_at > now() as is_not_expired,
+--   last_activity_at
+-- FROM demo_sessions 
+-- WHERE user_id = 'dd633432-5946-4273-b29e-cbd0523433d9';
+
+-- 3. Check demo_organizations data for the demo_org_id from session
+-- SELECT 
+--   dmo.id,
+--   dmo.name,
+--   dmo.status,
+--   dmo.organization_id,
+--   o.id as org_exists,
+--   o.name as org_name
+-- FROM demo_sessions ds
+-- JOIN demo_organizations dmo ON dmo.id = ds.demo_org_id
+-- LEFT JOIN organizations o ON o.id = dmo.organization_id
+-- WHERE ds.user_id = 'dd633432-5946-4273-b29e-cbd0523433d9';
+
+-- 4. Full diagnostic query (combines all checks)
+-- SELECT 
+--   'demo_account_roles' as check_name,
+--   CASE WHEN dar.user_id IS NOT NULL THEN '✓ EXISTS' ELSE '✗ MISSING' END as status,
+--   dar.role as detail
+-- FROM demo_account_roles dar
+-- WHERE dar.user_id = 'dd633432-5946-4273-b29e-cbd0523433d9'
+-- UNION ALL
+-- SELECT 
+--   'demo_sessions' as check_name,
+--   CASE WHEN ds.id IS NOT NULL THEN '✓ EXISTS' ELSE '✗ MISSING' END as status,
+--   CASE WHEN ds.expires_at > now() THEN 'Not expired' ELSE 'EXPIRED' END as detail
+-- FROM demo_sessions ds
+-- WHERE ds.user_id = 'dd633432-5946-4273-b29e-cbd0523433d9'
+-- UNION ALL
+-- SELECT 
+--   'demo_organizations.organization_id' as check_name,
+--   CASE WHEN dmo.organization_id IS NOT NULL THEN '✓ SET' ELSE '✗ NULL' END as status,
+--   COALESCE(dmo.organization_id::text, 'NULL') as detail
+-- FROM demo_sessions ds
+-- JOIN demo_organizations dmo ON dmo.id = ds.demo_org_id
+-- WHERE ds.user_id = 'dd633432-5946-4273-b29e-cbd0523433d9'
+-- UNION ALL
+-- SELECT 
+--   'organizations row exists' as check_name,
+--   CASE WHEN o.id IS NOT NULL THEN '✓ EXISTS' ELSE '✗ MISSING' END as status,
+--   COALESCE(o.name, 'N/A') as detail
+-- FROM demo_sessions ds
+-- JOIN demo_organizations dmo ON dmo.id = ds.demo_org_id
+-- LEFT JOIN organizations o ON o.id = COALESCE(ds.organization_id, dmo.organization_id)
+-- WHERE ds.user_id = 'dd633432-5946-4273-b29e-cbd0523433d9';
+
+-- This is a comment-only migration file for debugging purposes
+-- No actual schema changes

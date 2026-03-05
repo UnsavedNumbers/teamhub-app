@@ -4,6 +4,7 @@ import type {
   DemoAllowedRole,
   DemoCode,
   DemoCodeValidationResult,
+  DemoOrganizationStatus,
 } from '@/types/demoManagement'
 import { isValidDemoCode, normalizeDemoCode } from '@/types/demoManagement'
 import { USE_FAKE_DATA } from '../config'
@@ -211,15 +212,8 @@ export async function getDemoCodeDetails(code: string): Promise<DemoCode> {
     throw new Error('Demo code format is invalid.')
   }
 
-  if (USE_FAKE_DATA) {
-    const store = readDemoManagementStore()
-    const found = store.codes.find((item) => item.demo_code === normalized)
-    if (!found) {
-      throw new Error('Demo code not found.')
-    }
-    return updateCodeStatusIfExpired(found)
-  }
-
+  // IMPORTANT: Demo code details ALWAYS uses real Supabase, even in fake data mode
+  // Demo codes are meant to be validated against the real database
   const { data, error } = await supabaseAny
     .from('demo_codes')
     .select('*')
@@ -242,33 +236,30 @@ export async function validateDemoCode(code: string): Promise<DemoCodeValidation
     return { valid: false, reason: 'not_found' }
   }
 
+  // Demo code validation ALWAYS uses real Supabase, even in fake data mode.
   let demoCode: DemoCode | null = null
-  let orgStatus: 'active' | 'inactive' | null = null
+  let orgStatus: DemoOrganizationStatus | null = null
 
-  if (USE_FAKE_DATA) {
-    const store = readDemoManagementStore()
-    demoCode = store.codes.find((item) => item.demo_code === normalized) ?? null
-    if (demoCode) {
-      const org = store.organizations.find((item) => item.id === demoCode?.demo_org_id)
-      orgStatus = org?.status ?? null
-    }
-  } else {
-    const { data, error } = await supabaseAny
-      .from('demo_codes')
-      .select('*')
-      .eq('demo_code', normalized)
+  const { data, error } = await supabaseAny
+    .from('demo_codes')
+    .select('*')
+    .eq('demo_code', normalized)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error(`Failed to validate demo code: ${error.message}`)
+  }
+  if (data) {
+    demoCode = mapDemoCodeRow(data as Record<string, unknown>)
+    const { data: orgRow, error: orgError } = await supabaseAny
+      .from('demo_organizations')
+      .select('status, allowed_roles')
+      .eq('id', demoCode.demo_org_id)
       .maybeSingle()
 
-    if (error) {
-      throw new Error(`Failed to validate demo code: ${error.message}`)
-    }
-    if (data) {
-      demoCode = mapDemoCodeRow(data as Record<string, unknown>)
-      const { data: orgRow } = await supabaseAny
-        .from('demo_organizations')
-        .select('status')
-        .eq('id', demoCode.demo_org_id)
-        .maybeSingle()
+    if (orgError) {
+      orgStatus = 'active'
+    } else {
       orgStatus = orgRow?.status === 'inactive' ? 'inactive' : 'active'
     }
   }

@@ -9,7 +9,7 @@ import { useT } from '../../i18n/useI18n'
 import { getTravelPlanById, updateTravelPlan, type UpdateTravelPlanDTO } from '../../data/services/travelService'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
-import { isValidUUID } from '../../utils/uuid'
+import { isValidUuid } from '../../utils/uuid'
 import { 
   AdminPageHeader, 
   Card, 
@@ -157,7 +157,7 @@ export default function EditTravelPlan() {
     }
 
     // Validate UUID format
-    if (!isValidUUID(id)) {
+    if (!isValidUuid(id)) {
       console.warn(`[EditTravelPlan:${componentIdRef.current}] fetchPlan #${fetchId} - Invalid UUID, navigating away`)
       if (isMountedRef.current) {
         navigate('/admin/travel')
@@ -282,7 +282,7 @@ export default function EditTravelPlan() {
       navigate('/admin/travel', { replace: true })
       return
     }
-    if (!isValidUUID(id)) {
+    if (!isValidUuid(id)) {
       setLoading(false)
       navigate('/admin/travel', { replace: true })
       return
@@ -306,7 +306,7 @@ export default function EditTravelPlan() {
       return
     }
 
-    if (!id || !isValidUUID(id)) {
+    if (!id || !isValidUuid(id)) {
       console.warn(`[EditTravelPlan:${componentIdRef.current}] onSubmit - Invalid plan ID`)
       if (isMountedRef.current) {
         setError('Invalid plan ID')

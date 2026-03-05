@@ -123,7 +123,8 @@ export function mapOrganization(row: OrganizationRow): Organization {
     createdAt: row.created_at ?? new Date().toISOString(),
     updatedAt: row.updated_at ?? new Date().toISOString(),
     licenseStatus: 'license_status' in row ? row.license_status : null,
-    licensePlan: 'license_plan' in row ? row.license_plan : null,
+    /** @deprecated Use current_tier_id/tier_name instead. Will be removed in Phase 8. */
+    licensePlan: 'license_plan' in row ? (row.license_plan as string | null) : null,
     licenseTrialEndsAt: 'license_trial_ends_at' in row ? row.license_trial_ends_at : null,
     licenseCurrentPeriodEnd: 'license_current_period_end' in row ? row.license_current_period_end : null,
     payoutAccountId: 'payout_account_id' in row ? row.payout_account_id : null,
@@ -252,6 +253,17 @@ export function mapFeatureEntitlement(row: SupabaseExtended['public']['Tables'][
     isSystemFeature: (row as any).is_system_feature ?? false,
     platformAdminOnly: (row as any).platform_admin_only ?? false,
     parentFeatureKey: (row as any).parent_feature_key ?? null,
+    // Add-on fields
+    available_as_addon: (row as any).available_as_addon ?? false,
+    addon_stripe_price_id: (row as any).addon_stripe_price_id ?? null,
+    addon_external_name: (row as any).addon_external_name ?? null,
+    addon_external_description: (row as any).addon_external_description ?? null,
+    addon_external_short_label: (row as any).addon_external_short_label ?? null,
+    addon_external_bullets: Array.isArray((row as any).addon_external_bullets) ? (row as any).addon_external_bullets : null,
+    addon_external_cta_label: (row as any).addon_external_cta_label ?? null,
+    addon_display_order: (row as any).addon_display_order ?? null,
+    addon_is_public: (row as any).addon_is_public ?? false,
+    addon_eligibility_rules: (row as any).addon_eligibility_rules ?? null,
   }
 }
 

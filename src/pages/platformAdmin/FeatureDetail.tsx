@@ -2,13 +2,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
-import { PageHeader, Card, Button, Input, Select, Checkbox } from '../../components/platformAdmin'
+import { PageHeader, Card, Button, Input, Select, Checkbox, ErrorState } from '../../components/platformAdmin'
 import { FeatureHierarchySelector } from '../../components/admin/FeatureHierarchySelector'
 import { mapFeatureEntitlement, mapLicenseTier, mapTierFeatureAssignment } from '../../utils/domainMappers'
 import type { FeatureEntitlement, LicenseTier, TierFeatureAssignment } from '../../types/domain/License'
 import { FEATURE_CATEGORIES, FEATURE_TYPES } from '../../utils/licenseTierConstants'
 import { showSuccess, showError } from '../../utils/toast'
 import { useI18n } from '../../i18n/useI18n'
+import { isUuid } from '../../utils/uuid'
+import { getLink, RouteKeys } from '../../utils/routes'
 
 const FEATURE_CATEGORIES_OPTIONS = FEATURE_CATEGORIES.map(cat => ({ value: cat, label: cat }))
 const FEATURE_TYPES_OPTIONS = FEATURE_TYPES.map(type => ({ value: type, label: type }))
@@ -33,6 +35,16 @@ export default function FeatureDetail() {
     unavailableGateAction: 'overlay',
     isSystemFeature: false,
     platformAdminOnly: false,
+    available_as_addon: false,
+    addon_stripe_price_id: null,
+    addon_external_name: null,
+    addon_external_description: null,
+    addon_external_short_label: null,
+    addon_external_bullets: null,
+    addon_external_cta_label: null,
+    addon_display_order: null,
+    addon_is_public: false,
+    addon_eligibility_rules: null,
   })
   const [originalFeature, setOriginalFeature] = useState<Partial<FeatureEntitlement> | null>(null)
   const [tiers, setTiers] = useState<LicenseTier[]>([])
@@ -50,22 +62,47 @@ export default function FeatureDetail() {
 
   const fetchFeature = useCallback(async () => {
     if (isNew) return
+    if (!id || !isUuid(id)) {
+      setError('Invalid feature ID')
+      setLoading(false)
+      return
+    }
 
     setLoading(true)
+    setError(null)
     try {
       const { data, error: featureError } = await supabase
         .from('feature_entitlements')
         .select('*')
-        .eq('id', id!)
+        .eq('id', id)
         .single()
 
-      if (featureError) throw featureError
-      if (data) {
-        const mapped = mapFeatureEntitlement(data)
-        setFeature(mapped)
-        setOriginalFeature(mapped)
+      if (featureError) {
+        if (featureError.code === 'PGRST116') {
+          // Not found
+          setError('Feature not found')
+        } else {
+          throw featureError
+        }
+        return
       }
+
+      if (!data) {
+        setError('Feature not found')
+        return
+      }
+
+      // Check if archived
+      if (data.archived_at) {
+        setError('This feature has been archived')
+        return
+      }
+
+      const mapped = mapFeatureEntitlement(data)
+      setFeature(mapped)
+      setOriginalFeature(mapped)
     } catch (err: any) {
+      console.error('Error fetching feature:', err)
       setError(err.message || 'Failed to load feature')
     } finally {
       setLoading(false)
@@ -366,12 +403,62 @@ export default function FeatureDetail() {
       return false
     }
 
+    // Validate add-on configuration if enabled
+    if (feature.available_as_addon) {
+      if (!feature.addon_stripe_price_id || !feature.addon_stripe_price_id.trim()) {
+        setError('Stripe Price ID is required when enabling add-on')
+        return false
+      }
+      if (!feature.addon_stripe_price_id.startsWith('price_')) {
+        setError('Stripe Price ID must start with "price_"')
+        return false
+      }
+      if (!feature.addon_external_name?.trim()) {
+        setError('External Name is required when enabling add-on')
+        return false
+      }
+    }
+
     setSaving(true)
     setError(null)
 
     try {
       if (isNew) {
-        const insertData = {
+        // Validate parent exists if set
+        if (feature.parentFeatureKey) {
+          const { data: parentExists, error: parentError } = await supabase
+            .from('feature_entitlements')
+            .select('id, archived_at')
+            .eq('feature_key', feature.parentFeatureKey)
+            .single()
+
+          if (parentError || !parentExists) {
+            setError(`Parent feature "${feature.parentFeatureKey}" not found`)
+            setSaving(false)
+            return false
+          }
+
+          if (parentExists.archived_at) {
+            setError(`Parent feature "${feature.parentFeatureKey}" is archived`)
+            setSaving(false)
+            return false
+          }
+        }
+
+        // Check if feature_key already exists
+        const { data: existing } = await supabase
+          .from('feature_entitlements')
+          .select('id')
+          .eq('feature_key', feature.featureKey)
+          .single()
+
+        if (existing) {
+          setError(`Feature key "${feature.featureKey}" already exists`)
+          setSaving(false)
+          return false
+        }
+
+        const insertData: Database['public']['Tables']['feature_entitlements']['Insert'] = {
           feature_key: feature.featureKey,
           display_name: feature.displayName,
           category: feature.category!,
@@ -382,20 +469,45 @@ export default function FeatureDetail() {
           is_system_feature: feature.isSystemFeature ?? false,
           platform_admin_only: feature.platformAdminOnly ?? false,
           parent_feature_key: feature.parentFeatureKey || null,
-        } as any
+          // Add-on fields
+          available_as_addon: feature.available_as_addon ?? false,
+          addon_stripe_price_id: feature.addon_stripe_price_id || null,
+          addon_external_name: feature.addon_external_name?.trim() || null,
+          addon_external_description: feature.addon_external_description || null,
+          addon_external_short_label: feature.addon_external_short_label || null,
+          addon_external_bullets: feature.addon_external_bullets || null,
+          addon_external_cta_label: feature.addon_external_cta_label || null,
+          addon_display_order: feature.addon_display_order || null,
+          addon_is_public: feature.addon_is_public ?? false,
+          addon_eligibility_rules: feature.addon_eligibility_rules || null,
+        }
         const { data, error: createError } = await supabase
           .from('feature_entitlements')
           .insert(insertData)
           .select()
           .single()
 
-        if (createError) throw createError
+        if (createError) {
+          if (createError.code === '23505') {
+            // Unique constraint violation
+            throw new Error(`Feature key "${feature.featureKey}" already exists`)
+          }
+          throw createError
+        }
 
         if (data) {
           const newId = (data as { id: string }).id
+          
+          // Clear feature gate cache on create
+          const { clearFeatureGateCache } = await import('../../lib/featureGate/api')
+          clearFeatureGateCache()
+
           if (feature.isSystemFeature) {
-            for (const tier of tiers) {
-              await supabase.from('tier_feature_assignments').insert({
+            // Auto-assign to all tiers for system features
+            // Transaction safety: If any assignment fails, we still have the feature created
+            // but we'll show a warning if assignments partially fail
+            const assignmentPromises = tiers.map(async (tier) => {
+              const { error: assignError } = await supabase.from('tier_feature_assignments').insert({
                 license_tier_id: tier.id,
                 feature_entitlement_id: newId,
                 included: true,
@@ -403,10 +515,20 @@ export default function FeatureDetail() {
                 role_coach: true,
                 role_parent: false,
               })
+              if (assignError) {
+                console.error(`Failed to assign feature to tier ${tier.tierKey}:`, assignError)
+                return { tier: tier.tierKey, error: assignError }
+              }
+              return null
+            })
+            const assignmentResults = await Promise.all(assignmentPromises)
+            const failedAssignments = assignmentResults.filter((r): r is { tier: string; error: any } => r !== null)
+            if (failedAssignments.length > 0) {
+              showError(`Feature created but failed to assign to ${failedAssignments.length} tier(s). Please assign manually.`)
             }
           }
           showSuccess('Feature created successfully!')
-          navigate(`/platform-admin/licenses/features/${newId}`)
+          navigate(getLink(RouteKeys.PLATFORM_LICENSE_FEATURE_DETAIL, { id: newId }))
           return true
         }
         return false
@@ -421,7 +543,35 @@ export default function FeatureDetail() {
           return false
         }
 
-        const updateData = {
+        // Feature key is immutable - prevent updates
+        if (feature.featureKey !== originalFeature?.featureKey) {
+          setError('Feature key cannot be changed after creation')
+          setSaving(false)
+          return false
+        }
+
+        // Validate parent exists if changed
+        if (feature.parentFeatureKey !== originalFeature?.parentFeatureKey && feature.parentFeatureKey) {
+          const { data: parentExists, error: parentError } = await supabase
+            .from('feature_entitlements')
+            .select('id, archived_at')
+            .eq('feature_key', feature.parentFeatureKey)
+            .single()
+
+          if (parentError || !parentExists) {
+            setError(`Parent feature "${feature.parentFeatureKey}" not found`)
+            setSaving(false)
+            return false
+          }
+
+          if (parentExists.archived_at) {
+            setError(`Parent feature "${feature.parentFeatureKey}" is archived`)
+            setSaving(false)
+            return false
+          }
+        }
+
+        const updateData: Database['public']['Tables']['feature_entitlements']['Update'] = {
           display_name: feature.displayName,
           category: feature.category,
           feature_type: feature.featureType,
@@ -429,10 +579,21 @@ export default function FeatureDetail() {
           unavailable_gate_action: feature.unavailableGateAction || 'overlay',
           is_system_feature: feature.isSystemFeature ?? false,
           platform_admin_only: feature.platformAdminOnly ?? false,
+          // Add-on fields
+          available_as_addon: feature.available_as_addon ?? false,
+          addon_stripe_price_id: feature.addon_stripe_price_id || null,
+          addon_external_name: feature.addon_external_name?.trim() || null,
+          addon_external_description: feature.addon_external_description || null,
+          addon_external_short_label: feature.addon_external_short_label || null,
+          addon_external_bullets: feature.addon_external_bullets || null,
+          addon_external_cta_label: feature.addon_external_cta_label || null,
+          addon_display_order: feature.addon_display_order || null,
+          addon_is_public: feature.addon_is_public ?? false,
+          addon_eligibility_rules: feature.addon_eligibility_rules || null,
           parent_feature_key: feature.parentFeatureKey || null,
           // Only update rollout_status if feature is toggleable
           ...(feature.isToggleable !== false ? { rollout_status: feature.rolloutStatus } : {}),
-        } as any
+        }
         const { error: updateError } = await supabase
           .from('feature_entitlements')
           .update(updateData)
@@ -440,10 +601,16 @@ export default function FeatureDetail() {
 
         if (updateError) throw updateError
 
+        // Clear feature gate cache on update
+        const { clearFeatureGateCache } = await import('../../lib/featureGate/api')
+        clearFeatureGateCache()
+
         // When marking as system feature, backfill assignments for all active tiers
+        // Transaction safety: If assignments fail, feature update still succeeds
+        // but we'll show a warning
         if (feature.isSystemFeature && !originalFeature?.isSystemFeature) {
-          for (const tier of tiers) {
-            await supabase.from('tier_feature_assignments').upsert(
+          const assignmentPromises = tiers.map(async (tier) => {
+            const { error: assignError } = await supabase.from('tier_feature_assignments').upsert(
               {
                 license_tier_id: tier.id,
                 feature_entitlement_id: id!,
@@ -454,8 +621,19 @@ export default function FeatureDetail() {
               },
               { onConflict: 'license_tier_id,feature_entitlement_id' }
             )
+            if (assignError) {
+              console.error(`Failed to assign feature to tier ${tier.tierKey}:`, assignError)
+              return { tier: tier.tierKey, error: assignError }
+            }
+            return null
+          })
+          const assignmentResults = await Promise.all(assignmentPromises)
+          const failedAssignments = assignmentResults.filter((r): r is { tier: string; error: any } => r !== null)
+          if (failedAssignments.length > 0) {
+            showError(`Feature updated but failed to assign to ${failedAssignments.length} tier(s). Please assign manually.`)
+          } else {
+            await fetchAssignments()
           }
-          await fetchAssignments()
         }
 
         // Update original feature after successful save
@@ -487,6 +665,37 @@ export default function FeatureDetail() {
     return (
       <div>
         <PageHeader title="Loading..." />
+        <Card>
+          <div style={{ padding: '2rem', textAlign: 'center' }}>
+            <div className="pa-skeleton" style={{ height: '24px', width: '200px', margin: '0 auto 1rem' }} />
+            <div className="pa-skeleton" style={{ height: '16px', width: '400px', margin: '0 auto' }} />
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
+  if (error && !isNew && !feature.featureKey) {
+    return (
+      <div>
+        <PageHeader title="Error" />
+        <ErrorState
+          title="Failed to Load Feature"
+          message={error}
+          onRetry={() => {
+            setError(null)
+            fetchFeature()
+          }}
+          retryLabel="Retry"
+        />
+        <div style={{ marginTop: 'var(--pa-space-4)' }}>
+          <Button
+            variant="secondary"
+            onClick={() => navigate(getLink(RouteKeys.PLATFORM_LICENSE_FEATURES))}
+          >
+            Back to Features
+          </Button>
+        </div>
       </div>
     )
   }
@@ -501,7 +710,7 @@ export default function FeatureDetail() {
             {!isNew && (
               <Button 
                 variant="ghost" 
-                onClick={() => navigate('/platform-admin/licenses/features')}
+                onClick={() => navigate(getLink(RouteKeys.PLATFORM_LICENSE_FEATURES))}
                 className="w-full sm:w-auto min-h-[44px]"
                 style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
               >
@@ -530,7 +739,14 @@ export default function FeatureDetail() {
                 {saving ? 'Saving...' : 'Save and Go Back'}
               </Button>
             )}
-            <Button variant="primary" onClick={handleSave} disabled={saving} className="w-full sm:w-auto min-h-[44px]">
+            <Button 
+              variant="primary" 
+              onClick={handleSave} 
+              disabled={saving} 
+              className="w-full sm:w-auto min-h-[44px]"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              {saving && <span className="material-symbols-outlined" style={{ fontSize: '18px', animation: 'spin 1s linear infinite' }}>sync</span>}
               {saving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
@@ -846,6 +1062,143 @@ export default function FeatureDetail() {
                 </Button>
               </div>
             </div>
+          )}
+        </Card>
+
+        {/* Add-On Configuration */}
+        <Card title="Add-On Configuration">
+          <p className="pa-body-s pa-text-muted" style={{ marginBottom: 'var(--pa-space-4)' }}>
+            Configure this feature as a purchasable add-on for organizations.
+          </p>
+
+          <div className="pa-form-group">
+            <div className="pa-flex pa-items-start pa-gap-3">
+              <Checkbox
+                checked={feature.available_as_addon ?? false}
+                onChange={(e) => setFeature({ ...feature, available_as_addon: e.target.checked })}
+              />
+              <div>
+                <label htmlFor="available-as-addon" className="pa-label" style={{ marginBottom: 'var(--pa-space-1)' }}>
+                  Available as Add-On
+                </label>
+                <div className="pa-body-s" style={{ color: 'var(--pa-n600)' }}>
+                  When enabled, org admins can purchase this feature as an add-on to their subscription.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {feature.available_as_addon && (
+            <>
+              <div className="pa-form-group">
+                <label className="pa-label pa-label--required">Stripe Price ID</label>
+                <Input
+                  value={feature.addon_stripe_price_id || ''}
+                  onChange={(e) => setFeature({ ...feature, addon_stripe_price_id: e.target.value.trim() || null })}
+                  placeholder="price_xxxxx"
+                />
+                <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
+                  Annual recurring Stripe Price ID. Must start with "price_".
+                </div>
+              </div>
+
+              <div className="pa-form-group">
+                <label className="pa-label pa-label--required">External Name</label>
+                <Input
+                  value={feature.addon_external_name || ''}
+                  onChange={(e) => setFeature({ ...feature, addon_external_name: e.target.value || null })}
+                  placeholder="e.g., Advanced Ticketing"
+                />
+                <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
+                  Display name shown to org admins when purchasing.
+                </div>
+              </div>
+
+              <div className="pa-form-group">
+                <label className="pa-label">External Description</label>
+                <textarea
+                  className="pa-input pa-textarea"
+                  value={feature.addon_external_description || ''}
+                  onChange={(e) => setFeature({ ...feature, addon_external_description: e.target.value.trim() || null })}
+                  placeholder="Marketing description shown to org admins..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="pa-form-group">
+                <label className="pa-label">Short Label</label>
+                <Input
+                  value={feature.addon_external_short_label || ''}
+                  onChange={(e) => setFeature({ ...feature, addon_external_short_label: e.target.value.trim() || null })}
+                  placeholder="e.g., Ticketing"
+                />
+                <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
+                  Short label for badges/buttons (optional).
+                </div>
+              </div>
+
+              <div className="pa-form-group">
+                <label className="pa-label">Feature Bullets</label>
+                <textarea
+                  className="pa-input pa-textarea"
+                  value={Array.isArray(feature.addon_external_bullets) ? feature.addon_external_bullets.join('\n') : ''}
+                  onChange={(e) => {
+                    const lines = e.target.value.split('\n').filter(line => line.trim())
+                    setFeature({ ...feature, addon_external_bullets: lines.length > 0 ? lines : null })
+                  }}
+                  placeholder="One feature benefit per line..."
+                  rows={4}
+                />
+                <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
+                  List of feature benefits (one per line).
+                </div>
+              </div>
+
+              <div className="pa-form-group">
+                <label className="pa-label">CTA Label</label>
+                <Input
+                  value={feature.addon_external_cta_label || ''}
+                  onChange={(e) => setFeature({ ...feature, addon_external_cta_label: e.target.value.trim() || null })}
+                  placeholder={`Add ${feature.addon_external_name || 'Feature'}`}
+                />
+                <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
+                  Call-to-action button label. Defaults to "Add [External Name]" if not provided.
+                </div>
+              </div>
+
+              <div className="pa-form-group">
+                <label className="pa-label">Display Order</label>
+                <Input
+                  type="number"
+                  value={feature.addon_display_order ?? ''}
+                  onChange={(e) => {
+                    const value = e.target.value === '' ? null : parseInt(e.target.value, 10)
+                    setFeature({ ...feature, addon_display_order: value })
+                  }}
+                  placeholder="0"
+                />
+                <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
+                  Sort order for displaying add-ons. Lower numbers appear first.
+                </div>
+              </div>
+
+              <div className="pa-form-group">
+                <div className="pa-flex pa-items-start pa-gap-3">
+                  <Checkbox
+                    checked={feature.addon_is_public ?? false}
+                    onChange={(e) => setFeature({ ...feature, addon_is_public: e.target.checked })}
+                  />
+                  <div>
+                    <label htmlFor="addon-is-public" className="pa-label" style={{ marginBottom: 'var(--pa-space-1)' }}>
+                      Public (Visible to Org Admins)
+                    </label>
+                    <div className="pa-body-s" style={{ color: 'var(--pa-n600)' }}>
+                      When enabled, this add-on is visible in the org admin store. When disabled, only platform admins can see it.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </Card>
 

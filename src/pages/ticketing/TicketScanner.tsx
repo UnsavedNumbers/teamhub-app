@@ -20,6 +20,8 @@ import { OrderContextPanel } from '@/components/ticketing/OrderContextPanel'
 import { queueValidation } from '@/features/tickets/utils/offlineQueue'
 import { useMemoryMonitor } from '@/features/tickets/hooks/useMemoryMonitor'
 import { unlockAudio } from '@/utils/audio'
+import { AdminPageHeader, Card } from '@/components/admin'
+import '../../styles/orgAdmin.css'
 
 interface ValidationResult {
   timestamp: Date
@@ -471,66 +473,80 @@ export default function TicketScanner() {
   return (
     <div
       style={scannerColorRoles}
-      className="min-h-screen bg-[var(--org-surface-page,#f6f7f8)] text-[var(--org-text-primary,#111418)] p-3 sm:p-4 md:p-6"
+      className="oa-root"
     >
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-4 md:mb-6 rounded-2xl border border-[var(--org-border-default,#dce7f6)] bg-[var(--org-surface-card,#fff)] p-4 sm:p-6 shadow-sm">
-          <div className="h-1.5 w-16 rounded-full bg-[var(--scanner-color-secondary)] mb-4" />
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[var(--org-text-primary,#111418)] uppercase tracking-tight">
-            {t('ticketing.scanner.title')}
-          </h1>
-          <p className="mt-1 text-sm sm:text-base text-[var(--org-text-secondary,#617589)]">
-            {t('ticketing.scanner.subtitle')}
-          </p>
-          {eventsLoading && directEventId ? (
-            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--org-surface-card-header,#f3f4f6)] border border-[var(--org-border-default,#dce7f6)] px-3 py-1.5 text-sm">
-              <span className="h-4 w-24 rounded bg-[var(--org-border-default,#dce7f6)] animate-pulse" />
-              <span className="h-4 w-40 rounded bg-[var(--org-border-default,#dce7f6)] animate-pulse" />
-            </div>
-          ) : currentEvent && (
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[var(--org-surface-card-header,#f3f4f6)] border border-[var(--org-border-default,#dce7f6)] px-3 py-1.5 text-sm">
-                <span className="font-medium text-[var(--scanner-color-secondary)]">{t('ticketing.scanner.validatingFor')}</span>
-                {currentEventAdminDetailPath ? (
+      <AdminPageHeader
+        title={t('ticketing.scanner.title')}
+        subtitle={t('ticketing.scanner.subtitle')}
+        children={
+          <>
+            {eventsLoading && directEventId ? (
+              <div className="oa-mt-4 oa-inline-flex oa-items-center oa-gap-2 oa-rounded-full oa-bg-[var(--pa-surface-panel)] oa-border oa-border-[var(--pa-border-default)] oa-px-3 oa-py-1.5 oa-text-sm">
+                <span className="oa-h-4 oa-w-24 oa-rounded oa-bg-[var(--pa-border-default)] oa-animate-pulse" />
+                <span className="oa-h-4 oa-w-40 oa-rounded oa-bg-[var(--pa-border-default)] oa-animate-pulse" />
+              </div>
+            ) : currentEvent && (
+              <div className="oa-mt-4 oa-flex oa-flex-wrap oa-items-center oa-gap-2">
+                <div className="oa-inline-flex oa-items-center oa-gap-2 oa-rounded-full oa-bg-[var(--pa-surface-panel)] oa-border oa-border-[var(--pa-border-default)] oa-px-3 oa-py-1.5 oa-text-sm">
+                  <span className="oa-font-medium" style={{ color: 'var(--scanner-color-secondary)' }}>{t('ticketing.scanner.validatingFor')}</span>
+                  {currentEventAdminDetailPath ? (
+                    <button
+                      type="button"
+                      onClick={() => navigate(currentEventAdminDetailPath)}
+                      className="oa-font-semibold oa-underline oa-underline-offset-2 oa-text-[var(--pa-text-primary)] hover:oa-text-[var(--scanner-color-secondary-hover)]"
+                    >
+                      {currentEvent.title}
+                    </button>
+                  ) : (
+                    <span className="oa-font-semibold oa-text-[var(--pa-text-primary)]">{currentEvent.title}</span>
+                  )}
+                </div>
+                {!token && (
                   <button
                     type="button"
-                    onClick={() => navigate(currentEventAdminDetailPath)}
-                    className="font-semibold text-[var(--org-text-primary,#111418)] underline underline-offset-2 hover:text-[var(--scanner-color-secondary-hover)]"
+                    onClick={() => {
+                      setSelectedEventId(null)
+                      setValidationResult(null)
+                      setOrderContext(null)
+                      setEntryCode('')
+                      setScannerMode('physical')
+                      setIsCameraOpen(false)
+                      navigate(getLink(RouteKeys.ADMIN_TICKETING_SCANNER))
+                    }}
+                    className="oa-inline-flex oa-items-center oa-rounded-full oa-border oa-border-[var(--pa-border-default)] oa-bg-[var(--pa-surface)] oa-px-3 oa-py-1.5 oa-text-sm oa-font-semibold transition-colors"
+                    style={{ 
+                      color: 'var(--scanner-color-secondary)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = 'var(--pa-text-primary)'
+                      e.currentTarget.style.backgroundColor = 'var(--scanner-color-tertiary-bg)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'var(--scanner-color-secondary)'
+                      e.currentTarget.style.backgroundColor = 'var(--pa-surface)'
+                    }}
                   >
-                    {currentEvent.title}
+                    {t('ticketing.scanner.switchEvents')}
                   </button>
-                ) : (
-                  <span className="font-semibold text-[var(--org-text-primary,#111418)]">{currentEvent.title}</span>
                 )}
               </div>
-              {!token && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedEventId(null)
-                    setValidationResult(null)
-                    setOrderContext(null)
-                    setEntryCode('')
-                    setScannerMode('physical')
-                    setIsCameraOpen(false)
-                    navigate(getLink(RouteKeys.ADMIN_TICKETING_SCANNER))
-                  }}
-                  className="inline-flex items-center rounded-full border border-[var(--org-border-default,#dce7f6)] bg-[var(--org-surface-card,#fff)] px-3 py-1.5 text-sm font-semibold text-[var(--scanner-color-secondary)] hover:text-[var(--org-text-primary,#111418)] hover:bg-[var(--scanner-color-tertiary-bg)] transition-colors"
-                >
-                  {t('ticketing.scanner.switchEvents')}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </>
+        }
+      />
 
         {isOffline && (
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-3 sm:p-4 mb-3 md:mb-4">
-            <p className="text-sm sm:text-base text-yellow-800 dark:text-yellow-200">
+          <div className="oa-card oa-mb-4" style={{ 
+            background: 'var(--pa-warning-bg)', 
+            borderColor: 'var(--pa-warning)', 
+            borderWidth: '1px',
+            borderStyle: 'solid'
+          }}>
+            <p className="oa-text-sm sm:oa-text-base" style={{ color: 'var(--pa-warning)' }}>
               <strong>{t('ticketing.scanner.connectionLost')}</strong> {t('ticketing.scanner.connectionLostDesc')}
             </p>
             {pendingCount > 0 && (
-              <p className="text-xs sm:text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+              <p className="oa-text-xs sm:oa-text-sm oa-mt-1" style={{ color: 'var(--pa-warning)' }}>
                 {t('ticketing.scanner.queuedCount', {
                   count: pendingCount,
                   plural: pendingCount === 1 ? '' : 's',
@@ -541,13 +557,25 @@ export default function TicketScanner() {
         )}
 
         {showWarning && heapSize !== null && (
-          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-3 sm:p-4 mb-3 md:mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <p className="text-sm sm:text-base text-orange-800 dark:text-orange-200">
+          <div className="oa-card oa-mb-4 oa-flex oa-flex-col sm:oa-flex-row oa-items-start sm:oa-items-center oa-justify-between oa-gap-2" style={{ 
+            background: 'var(--pa-warning-bg)', 
+            borderColor: 'var(--pa-warning)', 
+            borderWidth: '1px',
+            borderStyle: 'solid'
+          }}>
+            <p className="oa-text-sm sm:oa-text-base" style={{ color: 'var(--pa-warning)' }}>
               <strong>{t('ticketing.scanner.memoryWarningTitle')}</strong> {t('ticketing.scanner.memoryWarningDesc', { heapSize })}
             </p>
             <button
               onClick={dismissWarning}
-              className="text-sm sm:text-base px-3 py-1.5 sm:px-0 sm:py-0 text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-200 whitespace-nowrap"
+              className="oa-text-sm sm:oa-text-base oa-px-3 oa-py-1.5 sm:oa-px-0 sm:oa-py-0 oa-whitespace-nowrap transition-colors"
+              style={{ color: 'var(--pa-warning)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--pa-text-primary)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--pa-warning)'
+              }}
             >
               {t('ticketing.scanner.dismissMemoryWarning')}
             </button>
@@ -555,30 +583,32 @@ export default function TicketScanner() {
         )}
 
         {!token && !directEventId && eventList.length > 0 && (
-          <div className="mb-4 md:mb-6 rounded-xl border border-[var(--org-border-default,#dce7f6)] bg-[var(--org-surface-card,#fff)] p-4 shadow-sm">
-            <label className="block text-sm sm:text-base font-medium text-[var(--scanner-color-secondary)] mb-2">
-              {t('ticketing.scanner.selectEvent')}
-            </label>
-            <select
-              value={selectedEventId || ''}
-              onChange={(e) => {
-                const nextEventId = e.target.value
-                setSelectedEventId(nextEventId || null)
-                navigate(
-                  nextEventId
-                    ? getLink(RouteKeys.ADMIN_TICKETING_SCANNER_EVENT, { eventId: nextEventId })
-                    : getLink(RouteKeys.ADMIN_TICKETING_SCANNER),
-                )
-              }}
-              className="w-full px-3 sm:px-4 py-3 sm:py-2.5 text-base border border-[var(--org-border-default,#d1d5db)] rounded-lg bg-[var(--org-surface-primary,#fff)] text-[var(--org-text-primary,#111418)] focus:ring-2 focus:ring-[var(--scanner-color-tertiary-bg)] focus:border-[var(--scanner-color-tertiary)]"
-            >
-              <option value="">{t('ticketing.scanner.chooseEvent')}</option>
-              {eventList.map((event: any) => (
-                <option key={event.id} value={event.id}>
-                  {event.title} - {new Date(event.starts_at).toLocaleDateString()}
-                </option>
-              ))}
-            </select>
+          <div className="oa-card oa-mb-6">
+            <div className="oa-form-group">
+              <label className="oa-label" style={{ color: 'var(--scanner-color-secondary)' }}>
+                {t('ticketing.scanner.selectEvent')}
+              </label>
+              <select
+                value={selectedEventId || ''}
+                onChange={(e) => {
+                  const nextEventId = e.target.value
+                  setSelectedEventId(nextEventId || null)
+                  navigate(
+                    nextEventId
+                      ? getLink(RouteKeys.ADMIN_TICKETING_SCANNER_EVENT, { eventId: nextEventId })
+                      : getLink(RouteKeys.ADMIN_TICKETING_SCANNER),
+                  )
+                }}
+                className="oa-input oa-select"
+              >
+                <option value="">{t('ticketing.scanner.chooseEvent')}</option>
+                {eventList.map((event: any) => (
+                  <option key={event.id} value={event.id}>
+                    {event.title} - {new Date(event.starts_at).toLocaleDateString()}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         )}
 
@@ -590,29 +620,38 @@ export default function TicketScanner() {
 
         {(selectedEventId || token) && (
           <>
-            <section className="mb-4 md:mb-6 rounded-2xl border border-[var(--org-border-default,#dce7f6)] bg-[var(--org-surface-card,#fff)] p-4 sm:p-5 md:p-6 shadow-sm">
+            <Card title={t('ticketing.scanner.manualEntry')} className="oa-mb-6">
               <form onSubmit={handleManualSubmit}>
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                  <label className="text-sm sm:text-base font-bold text-[var(--scanner-color-secondary)] uppercase tracking-wide">
-                    {t('ticketing.scanner.manualEntry')}
-                  </label>
-                  <span className="inline-flex items-center rounded-full border border-[var(--org-border-default,#dce7f6)] bg-[var(--scanner-color-tertiary-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--scanner-color-secondary)]">
+                <div className="oa-flex oa-flex-wrap oa-items-center oa-justify-end oa-gap-3 oa-mb-4">
+                  <span className="oa-inline-flex oa-items-center oa-rounded-full oa-border oa-border-[var(--pa-border-default)] oa-px-2.5 oa-py-1 oa-text-xs oa-font-semibold" style={{ 
+                    backgroundColor: 'var(--scanner-color-tertiary-bg)',
+                    color: 'var(--scanner-color-secondary)'
+                  }}>
                     {scannerMode === 'physical' ? t('ticketing.scanner.physicalScanner') : t('ticketing.scanner.phoneCamera')}
                   </span>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="oa-flex oa-flex-col sm:oa-flex-row oa-gap-3">
                   <input
                     ref={inputRef}
                     type="text"
                     value={entryCode}
                     onChange={(e) => handleCodeChange(e.target.value)}
-                    onBlur={() => {
+                    placeholder={t('ticketing.scanner.entryCodePlaceholder')}
+                    className="oa-flex-1 oa-text-xl sm:oa-text-2xl oa-font-mono oa-text-center oa-px-3 sm:oa-px-4 oa-py-4 oa-border-2 oa-rounded-lg oa-bg-[var(--pa-surface)] oa-text-[var(--pa-text-primary)] oa-uppercase oa-tracking-wider oa-min-h-[56px] oa-transition-all oa-input"
+                    style={{
+                      borderColor: 'var(--pa-border-default)',
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--scanner-color-tertiary)'
+                      e.currentTarget.style.boxShadow = `0 0 0 2px var(--scanner-color-tertiary-bg)`
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--pa-border-default)'
+                      e.currentTarget.style.boxShadow = 'none'
                       if (scannerMode === 'physical' && !isValidating && !isOffline) {
                         window.setTimeout(() => inputRef.current?.focus(), 0)
                       }
                     }}
-                    placeholder={t('ticketing.scanner.entryCodePlaceholder')}
-                    className="flex-1 text-xl sm:text-2xl font-mono text-center px-3 sm:px-4 py-4 border-2 border-[var(--org-border-default,#c9daee)] rounded-lg bg-[var(--org-surface-primary,#fff)] text-[var(--org-text-primary,#111418)] focus:ring-2 focus:ring-[var(--scanner-color-tertiary-bg)] focus:border-[var(--scanner-color-tertiary)] uppercase tracking-wider min-h-[56px] transition-all"
                     maxLength={14}
                     disabled={!selectedEventId || isValidating || isOffline}
                     autoComplete="off"
@@ -622,80 +661,156 @@ export default function TicketScanner() {
                   <button
                     type="submit"
                     disabled={!selectedEventId || !entryCode.trim() || isValidating || isOffline}
-                    className="w-full sm:w-auto px-6 sm:px-8 py-4 bg-[var(--scanner-color-primary)] text-[var(--scanner-color-on-primary)] font-black text-base sm:text-lg rounded-lg hover:bg-[var(--scanner-color-primary-hover)] active:bg-[var(--scanner-color-primary-active)] disabled:bg-[var(--org-btn-disabled-bg,#94a3b8)] disabled:text-[var(--org-btn-disabled-text,#e2e8f0)] disabled:cursor-not-allowed transition-colors uppercase tracking-wider shadow-sm min-h-[56px]"
+                    className="oa-w-full sm:oa-w-auto oa-px-6 sm:oa-px-8 oa-py-4 oa-font-black oa-text-base sm:oa-text-lg oa-rounded-lg oa-transition-colors oa-uppercase oa-tracking-wider oa-shadow-sm oa-min-h-[56px] oa-btn oa-btn-primary"
+                    style={{
+                      backgroundColor: 'var(--scanner-color-primary)',
+                      color: 'var(--scanner-color-on-primary)',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = 'var(--scanner-color-primary-hover)'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = 'var(--scanner-color-primary)'
+                      }
+                    }}
+                    onMouseDown={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = 'var(--scanner-color-primary-active)'
+                      }
+                    }}
+                    onMouseUp={(e) => {
+                      if (!e.currentTarget.disabled) {
+                        e.currentTarget.style.backgroundColor = 'var(--scanner-color-primary-hover)'
+                      }
+                    }}
                   >
                     {isValidating ? t('ticketing.scanner.validating') : t('ticketing.scanner.validate')}
                   </button>
                 </div>
                 {pendingValidation && (
-                  <p className="mt-2 text-xs sm:text-sm text-yellow-600 dark:text-yellow-400">
+                  <p className="oa-mt-2 oa-text-xs sm:oa-text-sm" style={{ color: 'var(--pa-warning)' }}>
                     {t('ticketing.scanner.queuedForValidation')}
                   </p>
                 )}
               </form>
-            </section>
+            </Card>
 
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-6">
-              <section className="xl:col-span-7 space-y-4">
-                <div className="rounded-2xl border border-[var(--org-border-default,#dce7f6)] bg-[var(--org-surface-card,#fff)] p-4 sm:p-5 shadow-sm">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                    <p className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-[var(--scanner-color-secondary)]">
-                      {t('ticketing.scanner.scannerMode')}
-                    </p>
-                    <div className="inline-flex rounded-lg bg-[var(--org-surface-card-header,#eef4fc)] p-1 border border-[var(--org-border-default,#dce7f6)]">
-                      <button
-                        type="button"
-                        onClick={() => setScannerMode('physical')}
-                        className={`px-3 sm:px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
-                          scannerMode === 'physical'
-                            ? 'bg-[var(--org-surface-primary,#fff)] text-[var(--scanner-color-primary)] shadow-sm border-b-2 border-[var(--scanner-color-secondary)]'
-                            : 'text-[var(--org-text-secondary,#64748b)] hover:text-[var(--scanner-color-secondary-hover)] hover:bg-[var(--scanner-color-tertiary-bg)]'
-                        }`}
-                        aria-pressed={scannerMode === 'physical'}
-                      >
-                        {t('ticketing.scanner.physicalScanner')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          unlockAudio()
-                          setScannerMode('camera')
-                        }}
-                        className={`px-3 sm:px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
-                          scannerMode === 'camera'
-                            ? 'bg-[var(--org-surface-primary,#fff)] text-[var(--scanner-color-primary)] shadow-sm border-b-2 border-[var(--scanner-color-secondary)]'
-                            : 'text-[var(--org-text-secondary,#64748b)] hover:text-[var(--scanner-color-secondary-hover)] hover:bg-[var(--scanner-color-tertiary-bg)]'
-                        }`}
-                        aria-pressed={scannerMode === 'camera'}
-                      >
-                        {t('ticketing.scanner.phoneCamera')}
-                      </button>
-                    </div>
+            <div className="oa-grid oa-grid-cols-1 xl:oa-grid-cols-12 oa-gap-4 md:oa-gap-6">
+              <section className="xl:oa-col-span-7">
+                <Card title={t('ticketing.scanner.scannerMode')} className="oa-mb-6">
+                  {/* Tab Navigation */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '8px',
+                      borderBottom: '2px solid var(--org-border-default, var(--pa-n100))',
+                      marginBottom: '24px',
+                      marginTop: '-6px',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setScannerMode('physical')}
+                      style={{
+                        padding: '12px 24px',
+                        background: 'transparent',
+                        border: 'none',
+                        borderBottom: scannerMode === 'physical' 
+                          ? '2px solid var(--scanner-color-primary)' 
+                          : '2px solid transparent',
+                        color: scannerMode === 'physical'
+                          ? 'var(--scanner-color-primary)'
+                          : 'var(--org-text-secondary, var(--pa-text-secondary))',
+                        fontSize: '14px',
+                        fontWeight: scannerMode === 'physical' ? '600' : '400',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        marginBottom: '-2px',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (scannerMode !== 'physical') {
+                          e.currentTarget.style.color = 'var(--org-text-primary, var(--pa-text-primary))'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (scannerMode !== 'physical') {
+                          e.currentTarget.style.color = 'var(--org-text-secondary, var(--pa-text-secondary))'
+                        }
+                      }}
+                      aria-pressed={scannerMode === 'physical'}
+                    >
+                      {t('ticketing.scanner.physicalScanner')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        unlockAudio()
+                        setScannerMode('camera')
+                      }}
+                      style={{
+                        padding: '12px 24px',
+                        background: 'transparent',
+                        border: 'none',
+                        borderBottom: scannerMode === 'camera' 
+                          ? '2px solid var(--scanner-color-primary)' 
+                          : '2px solid transparent',
+                        color: scannerMode === 'camera'
+                          ? 'var(--scanner-color-primary)'
+                          : 'var(--org-text-secondary, var(--pa-text-secondary))',
+                        fontSize: '14px',
+                        fontWeight: scannerMode === 'camera' ? '600' : '400',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        marginBottom: '-2px',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (scannerMode !== 'camera') {
+                          e.currentTarget.style.color = 'var(--org-text-primary, var(--pa-text-primary))'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (scannerMode !== 'camera') {
+                          e.currentTarget.style.color = 'var(--org-text-secondary, var(--pa-text-secondary))'
+                        }
+                      }}
+                      aria-pressed={scannerMode === 'camera'}
+                    >
+                      {t('ticketing.scanner.phoneCamera')}
+                    </button>
                   </div>
 
-                  <p className="text-sm text-[var(--org-text-secondary,#617589)] mb-4">
+                  <p className="oa-text-sm oa-text-[var(--pa-text-secondary)] oa-mb-4">
                     {scannerMode === 'physical'
                       ? t('ticketing.scanner.modePhysicalDescription')
                       : t('ticketing.scanner.modeCameraDescription')}
                   </p>
 
                   {scannerMode === 'physical' ? (
-                    <div className="rounded-xl border border-[var(--scanner-color-tertiary)] bg-[var(--scanner-color-tertiary-bg)] p-4">
-                      <p className="text-sm font-bold text-[var(--org-text-primary,#111418)] mb-1">
+                    <div className="oa-rounded-xl oa-border oa-p-4" style={{
+                      borderColor: 'var(--scanner-color-tertiary)',
+                      backgroundColor: 'var(--scanner-color-tertiary-bg)'
+                    }}>
+                      <p className="oa-text-sm oa-font-bold oa-text-[var(--pa-text-primary)] oa-mb-1">
                         {t('ticketing.scanner.physicalReadyTitle')}
                       </p>
-                      <p className="text-xs sm:text-sm text-[var(--org-text-secondary,#617589)]">
+                      <p className="oa-text-xs sm:oa-text-sm oa-text-[var(--pa-text-secondary)]">
                         {t('ticketing.scanner.physicalReadyDesc')}
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="oa-space-y-3">
                       {!isCameraOpen ? (
-                        <div className="rounded-xl border border-dashed border-[var(--scanner-color-tertiary)] bg-[var(--scanner-color-tertiary-bg)] p-5 text-center">
-                          <p className="text-sm font-semibold text-[var(--org-text-primary,#111418)] mb-1">
+                        <div className="oa-rounded-xl oa-border oa-border-dashed oa-p-5 oa-text-center" style={{
+                          borderColor: 'var(--scanner-color-tertiary)',
+                          backgroundColor: 'var(--scanner-color-tertiary-bg)'
+                        }}>
+                          <p className="oa-text-sm oa-font-semibold oa-text-[var(--pa-text-primary)] oa-mb-1">
                             {t('ticketing.scanner.cameraReadyTitle')}
                           </p>
-                          <p className="text-xs sm:text-sm text-[var(--org-text-secondary,#617589)] mb-4">
+                          <p className="oa-text-xs sm:oa-text-sm oa-text-[var(--pa-text-secondary)] oa-mb-4">
                             {t('ticketing.scanner.cameraReadyDesc')}
                           </p>
                           <button
@@ -704,21 +819,34 @@ export default function TicketScanner() {
                               unlockAudio()
                               setIsCameraOpen(true)
                             }}
-                            className="inline-flex items-center justify-center px-5 py-2.5 border border-[var(--org-btn-secondary-border,#cbd5e1)] bg-[var(--org-btn-secondary-bg,transparent)] text-[var(--org-btn-secondary-text,var(--org-text-primary,#111418))] font-bold rounded-lg hover:bg-[var(--org-btn-secondary-hover,var(--scanner-color-tertiary-bg))] transition-colors"
+                            className="oa-inline-flex oa-items-center oa-justify-center oa-px-5 oa-py-2.5 oa-border oa-border-[var(--pa-border-default)] oa-bg-[var(--pa-surface)] oa-text-[var(--pa-text-primary)] oa-font-bold oa-rounded-lg oa-transition-colors oa-btn oa-btn-secondary"
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--scanner-color-tertiary-bg)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--pa-surface)'
+                            }}
                           >
                             {t('ticketing.scanner.openCamera')}
                           </button>
                         </div>
                       ) : (
-                        <div className="rounded-xl overflow-hidden border border-[var(--org-border-default,#dce7f6)]">
-                          <div className="flex items-center justify-between px-3 py-2 bg-[var(--org-surface-card-header,#f2f7fe)] border-b border-[var(--org-border-default,#dce7f6)]">
-                            <p className="text-xs sm:text-sm font-semibold text-[var(--scanner-color-secondary)]">
+                        <div className="oa-rounded-xl oa-overflow-hidden oa-border oa-border-[var(--pa-border-default)]">
+                          <div className="oa-flex oa-items-center oa-justify-between oa-px-3 oa-py-2 oa-bg-[var(--pa-surface-panel)] oa-border-b oa-border-[var(--pa-border-default)]">
+                            <p className="oa-text-xs sm:oa-text-sm oa-font-semibold" style={{ color: 'var(--scanner-color-secondary)' }}>
                               {t('ticketing.scanner.cameraHint')}
                             </p>
                             <button
                               type="button"
                               onClick={() => setIsCameraOpen(false)}
-                              className="text-xs sm:text-sm text-[var(--scanner-color-secondary)] hover:text-[var(--scanner-color-secondary-hover)] font-semibold"
+                              className="oa-text-xs sm:oa-text-sm oa-font-semibold transition-colors"
+                              style={{ color: 'var(--scanner-color-secondary)' }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.color = 'var(--scanner-color-secondary-hover)'
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.color = 'var(--scanner-color-secondary)'
+                              }}
                             >
                               {t('ticketing.scanner.closeCamera')}
                             </button>
@@ -735,7 +863,7 @@ export default function TicketScanner() {
                       )}
                     </div>
                   )}
-                </div>
+                </Card>
 
                 {validationResult && (
                   <ValidationResultBanner
@@ -762,58 +890,53 @@ export default function TicketScanner() {
                 )}
               </section>
 
-              <aside className="xl:col-span-5 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-3 sm:gap-4">
-                  <div className="bg-[var(--org-surface-card,#fff)] rounded-xl border border-[var(--org-border-default,#dce7f6)] shadow-sm p-4">
-                    <p className="text-xs sm:text-sm text-[var(--scanner-color-secondary)]">{t('ticketing.scanner.validatedThisSession')}</p>
-                    <p className="text-3xl font-black text-[var(--scanner-color-primary)] mt-1">{sessionCounts.validated}</p>
-                  </div>
+              <aside className="xl:oa-col-span-5">
+                <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-2 xl:oa-grid-cols-1 oa-gap-4 oa-mb-6">
+                  <Card title={t('ticketing.scanner.validatedThisSession')}>
+                    <p className="oa-text-3xl oa-font-black oa-mt-2" style={{ color: 'var(--scanner-color-primary)' }}>{sessionCounts.validated}</p>
+                  </Card>
                   {sessionCounts.remainingCapacity !== null && (
-                    <div className="bg-[var(--org-surface-card,#fff)] rounded-xl border border-[var(--org-border-default,#dce7f6)] shadow-sm p-4">
-                      <p className="text-xs sm:text-sm text-[var(--scanner-color-secondary)]">{t('ticketing.scanner.remainingCapacity')}</p>
-                      <p className="text-3xl font-black text-[var(--scanner-color-primary)] mt-1">{sessionCounts.remainingCapacity}</p>
-                    </div>
+                    <Card title={t('ticketing.scanner.remainingCapacity')}>
+                      <p className="oa-text-3xl oa-font-black oa-mt-2" style={{ color: 'var(--scanner-color-primary)' }}>{sessionCounts.remainingCapacity}</p>
+                    </Card>
                   )}
                 </div>
 
-                <div className="bg-[var(--org-surface-card,#fff)] rounded-xl border border-[var(--org-border-default,#dce7f6)] shadow-sm p-4">
-                  <h3 className="text-base sm:text-lg font-black text-[var(--scanner-color-secondary)] mb-3 uppercase tracking-tight">
-                    {t('ticketing.scanner.recentScans')}
-                  </h3>
+                <Card title={t('ticketing.scanner.recentScans')}>
                   {validationHistory.length === 0 ? (
-                    <p className="text-sm text-[var(--org-text-secondary,#617589)]">{t('ticketing.scanner.noScansYet')}</p>
+                    <p className="oa-text-sm oa-text-[var(--pa-text-secondary)]">{t('ticketing.scanner.noScansYet')}</p>
                   ) : (
-                    <div className="space-y-2 max-h-72 sm:max-h-96 overflow-y-auto">
+                    <div className="oa-space-y-2 oa-max-h-72 sm:oa-max-h-96 oa-overflow-y-auto">
                       {validationHistory.map((result, idx) => (
                         <div
                           key={idx}
-                          className={`flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-3 p-2.5 rounded-lg ${
-                            result.result === 'valid'
-                              ? 'bg-[#10b981]/10'
+                          className={`oa-flex oa-flex-col sm:oa-flex-row sm:oa-items-center oa-justify-between oa-gap-1 sm:oa-gap-3 oa-p-2.5 oa-rounded-lg`}
+                          style={{
+                            backgroundColor: result.result === 'valid' 
+                              ? 'var(--pa-success-bg)'
                               : result.result === 'already_used'
-                              ? 'bg-orange-50 dark:bg-orange-900/20'
-                              : 'bg-red-50 dark:bg-red-900/20'
-                          }`}
+                              ? 'var(--pa-warning-bg)'
+                              : 'var(--pa-danger-bg)'
+                          }}
                         >
-                          <div className="flex items-center gap-2 sm:gap-3">
-                            <span className="font-mono text-sm sm:text-base font-bold text-[var(--org-text-primary,#111418)]">{result.code}</span>
-                            <span className="text-xs sm:text-sm text-[var(--org-text-secondary,#617589)]">
+                          <div className="oa-flex oa-items-center oa-gap-2 sm:oa-gap-3">
+                            <span className="oa-font-mono oa-text-sm sm:oa-text-base oa-font-bold oa-text-[var(--pa-text-primary)]">{result.code}</span>
+                            <span className="oa-text-xs sm:oa-text-sm oa-text-[var(--pa-text-secondary)]">
                               {result.ticketTypeName && `(${result.ticketTypeName})`}
                             </span>
                           </div>
-                          <div className="text-xs text-[var(--org-text-muted,#94a3b8)] sm:text-right">
+                          <div className="oa-text-xs oa-text-[var(--pa-text-muted)] sm:oa-text-right">
                             {result.timestamp.toLocaleTimeString()}
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
-                </div>
+                </Card>
               </aside>
             </div>
           </>
         )}
-      </div>
     </div>
   )
 }

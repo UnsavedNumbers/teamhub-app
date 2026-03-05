@@ -70,8 +70,11 @@ export function FeatureHierarchySelector({
     const allDescendants = collectDescendants(currentFeatureKey);
 
     // Build options with indentation based on depth
+    // Filter out excluded features (should already be filtered by service, but double-check)
     const validFeatures = features.filter(f => 
-      f.featureKey !== currentFeatureKey && !allDescendants.has(f.featureKey)
+      f.featureKey !== currentFeatureKey && 
+      !allDescendants.has(f.featureKey)
+      // Note: excluded_from_discovery filtering is handled by getFeatureHierarchyFlat service
     );
 
     return [

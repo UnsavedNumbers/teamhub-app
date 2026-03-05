@@ -87,6 +87,10 @@ export const DEMO_USER_IDS: Record<string, string> = {
     'admin-only@example.com': 'aca2bee1-5ced-47c1-9894-2b054104949e',
     'parent-admin@example.com': '27efad60-95d9-4f40-8506-b6fe3bcb9abb',
     'parent-coach@example.com': '65a74f13-37c9-4831-9691-ec62963e193e',
+    // Additional demo roles
+    'staff-only@example.com': 'b1c2d3e4-f5a6-7890-bcde-f01234567890',
+    'athlete-only@example.com': 'c2d3e4f5-a6b7-8901-cdef-012345678901',
+    'fan-only@example.com': 'd3e4f5a6-b7c8-9012-defa-123456789012',
 } as const
 
 // Reverse mapping: ID to email (computed at runtime)

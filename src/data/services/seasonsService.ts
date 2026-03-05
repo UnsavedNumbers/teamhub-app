@@ -5,7 +5,7 @@
  * Supports both fake data and Supabase.
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 import type { UserContext } from '../fake/userContext'
@@ -35,7 +35,7 @@ export async function getSeasons(
   try {
     if (USE_FAKE_DATA) {
       await simulateDelay()
-      const allSeasons = getSeasonsForOrg(context.orgId)
+      const allSeasons = getSeasonsForOrg(DEMO_ORG_A_ID)
       const seasons = options.activeOnly ? allSeasons.filter(s => s.is_active) : allSeasons
       debug.perf.end('seasonsService.getSeasons')
       debug.data('SeasonsService.getSeasons', 'Response (fake)', { seasonCount: seasons.length, activeOnly: options.activeOnly })

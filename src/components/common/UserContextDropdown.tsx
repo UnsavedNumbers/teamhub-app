@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback, useMemo, useContext } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { OrganizationContext } from '../../contexts/OrganizationContext'
+import { useDemoSession } from '../../contexts/DemoSessionContext'
 import { useT } from '../../i18n/useI18n'
 import { getLink, RouteKeys, useCurrentRouteKey } from '@/utils/routes'
 import { formatRoleName, hasRole } from '@/utils/roleHelpers'
@@ -10,8 +12,51 @@ import { useOffline } from '@/hooks/useOffline'
 import { useMobile } from '@/hooks/useMobile'
 import MobileBottomSheet from './MobileBottomSheet'
 import type { OrgMemberRole } from '@/contexts/OrganizationContext'
+import type { DemoAllowedRole } from '@/types/demoManagement'
+import { getDemoOrg } from '@/data/services/demoOrgService'
+import { supabase } from '@/lib/supabase'
 
-export default function UserContextDropdown() {
+function isLocalHostname(hostname: string): boolean {
+  const host = hostname.toLowerCase()
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1'
+}
+
+function sanitizeMagicLinkUrl(rawUrl: string): string {
+  const currentOrigin = window.location.origin
+  const currentHostIsLocal = isLocalHostname(window.location.hostname)
+
+  try {
+    const url = new URL(rawUrl, currentOrigin)
+
+    const isAppCallbackPath = url.pathname === '/portal/auth/callback'
+    if (url.origin !== currentOrigin && isAppCallbackPath) {
+      return new URL(url.pathname + url.search + url.hash, currentOrigin).toString()
+    }
+
+    if (!currentHostIsLocal && isLocalHostname(url.hostname)) {
+      return new URL(url.pathname + url.search + url.hash, currentOrigin).toString()
+    }
+
+    const nested = url.searchParams.get('redirect_to')
+    if (!nested) return url.toString()
+
+    const nestedUrl = new URL(nested, currentOrigin)
+    if (nestedUrl.origin !== currentOrigin) {
+      const rewritten = new URL(nestedUrl.pathname + nestedUrl.search + nestedUrl.hash, currentOrigin)
+      url.searchParams.set('redirect_to', rewritten.toString())
+    }
+
+    return url.toString()
+  } catch {
+    return rawUrl
+  }
+}
+
+interface UserContextDropdownProps {
+  neutralPalette?: boolean
+}
+
+export default function UserContextDropdown({ neutralPalette = false }: UserContextDropdownProps) {
   const { user, profile, signOut } = useAuth()
   const orgContext = useContext(OrganizationContext)
   const currentOrganization = orgContext?.currentOrganization ?? null
@@ -22,8 +67,17 @@ export default function UserContextDropdown() {
   const t = useT()
   const [isOpen, setIsOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
+  const [switchRolesModalOpen, setSwitchRolesModalOpen] = useState(false)
+  const [availableDemoRoles, setAvailableDemoRoles] = useState<DemoAllowedRole[]>([])
+  const [currentDemoRole, setCurrentDemoRole] = useState<DemoAllowedRole | null>(null)
+  const [switchingDemoRole, setSwitchingDemoRole] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const [desktopMenuStyle, setDesktopMenuStyle] = useState<React.CSSProperties | undefined>(undefined)
   const isMobile = useMobile()
+  const { session: demoSession } = useDemoSession()
+  const isDemoSessionActive = demoSession.is_demo_session && Boolean(demoSession.demo_org_id)
 
   // Infer active role from current route
   // Admin routes (starting with /admin) indicate org_admin or coach role
@@ -47,7 +101,10 @@ export default function UserContextDropdown() {
   // Close on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      const clickedTrigger = dropdownRef.current?.contains(target) ?? false
+      const clickedMenu = menuRef.current?.contains(target) ?? false
+      if (!clickedTrigger && !clickedMenu) {
         setIsOpen(false)
       }
     }
@@ -63,6 +120,39 @@ export default function UserContextDropdown() {
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
   }, [])
+
+  const updateDesktopMenuPosition = useCallback(() => {
+    if (isMobile || !isOpen || !triggerRef.current) return
+    const rect = triggerRef.current.getBoundingClientRect()
+    const top = rect.bottom + 8
+    const right = Math.max(8, window.innerWidth - rect.right)
+    const maxHeight = Math.max(220, window.innerHeight - top - 12)
+
+    setDesktopMenuStyle({
+      position: 'fixed',
+      top: `${top}px`,
+      right: `${right}px`,
+      width: '18rem',
+      maxHeight: `${maxHeight}px`,
+    })
+  }, [isMobile, isOpen])
+
+  useEffect(() => {
+    if (!isOpen || isMobile) {
+      setDesktopMenuStyle(undefined)
+      return
+    }
+
+    updateDesktopMenuPosition()
+    const handleReposition = () => updateDesktopMenuPosition()
+
+    window.addEventListener('resize', handleReposition)
+    window.addEventListener('scroll', handleReposition, true)
+    return () => {
+      window.removeEventListener('resize', handleReposition)
+      window.removeEventListener('scroll', handleReposition, true)
+    }
+  }, [isOpen, isMobile, updateDesktopMenuPosition])
 
   const handleLogout = async () => {
     await signOut()
@@ -115,6 +205,8 @@ export default function UserContextDropdown() {
       let destination: string
       if (role === 'org_admin' || role === 'coach') {
         destination = getLink(RouteKeys.ADMIN_DASHBOARD)
+      } else if (role === 'fan') {
+        destination = getLink(RouteKeys.FAN_HOME)
       } else {
         destination = getLink(RouteKeys.PORTAL_DASHBOARD)
       }
@@ -148,6 +240,8 @@ export default function UserContextDropdown() {
     { role: 'parent', label: 'Payments', path: getLink(RouteKeys.PORTAL_PAYMENTS), icon: 'receipt_long' as const },
     { role: 'coach', label: 'My Athletes', path: getLink(RouteKeys.PORTAL_ATHLETES), icon: 'sports_soccer' as const },
     { role: 'org_admin', label: 'Organization Settings', path: getLink(RouteKeys.ADMIN_ORGANIZATION), icon: 'admin_panel_settings' as const },
+    { role: 'fan', label: 'Fan Home', path: getLink(RouteKeys.FAN_HOME), icon: 'home' as const },
+    { role: 'fan', label: 'Following', path: getLink(RouteKeys.FAN_FOLLOWING), icon: 'favorite' as const },
   ]
 
   // Filter links based on current roles
@@ -171,15 +265,15 @@ export default function UserContextDropdown() {
   const menuContent = (
     <>
       {/* 1. User Identity */}
-      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
-        <p className="text-sm font-medium text-slate-900 dark:text-white truncate" title={displayName}>{displayName}</p>
-        <p className="text-xs text-slate-500 dark:text-slate-400 truncate" title={email}>{email}</p>
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate" title={displayName}>{displayName}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 truncate" title={email}>{email}</p>
         {currentOrganization && (
-          <span 
+          <span
             className="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
             style={{
               backgroundColor: 'var(--org-badge-primary-bg, rgba(19, 127, 236, 0.1))',
-              color: 'var(--org-badge-primary-text, var(--org-btn-primary-bg, #137fec))'
+              color: 'var(--org-badge-primary-text, var(--org-btn-primary-bg, #137fec))',
             }}
           >
             {currentOrganization.name}
@@ -188,8 +282,8 @@ export default function UserContextDropdown() {
       </div>
 
       {/* 2. Organization Context - Role Switcher */}
-      <div className="py-1 border-b border-slate-100 dark:border-slate-700">
-        <div className="px-4 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+      <div className="py-1 border-b border-gray-100 dark:border-gray-700">
+        <div className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
           Organization
         </div>
         {hasAnyOrgs ? (
@@ -203,8 +297,8 @@ export default function UserContextDropdown() {
                   disabled={switching}
                   className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between group transition-colors min-h-[44px] ${
                     isActive 
-                      ? 'font-medium' 
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                      ? 'font-semibold'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900'
                   } ${switching ? 'opacity-50 cursor-not-allowed' : ''}`}
                   style={isActive ? {
                     backgroundColor: 'var(--org-highlight-bg, var(--org-surface-accent, rgba(19, 127, 236, 0.15)))',
@@ -213,7 +307,7 @@ export default function UserContextDropdown() {
                 >
                   <div className="flex flex-col">
                     <span>{org.name}</span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
                       {formatRoleName(role)}
                     </span>
                   </div>
@@ -230,35 +324,61 @@ export default function UserContextDropdown() {
             }) || []
           )
         ) : (
-          <div className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300" title="You are not a member of any organization">
+          <div className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300" title="You are not a member of any organization">
             No Organization
           </div>
         )}
       </div>
 
+      {/* 2.5. Demo Role Switching */}
+      {isDemoSessionActive && (
+        <div className="py-1 border-b border-gray-100 dark:border-gray-700">
+          <button
+            onClick={async () => {
+              if (!demoSession.demo_org_id) return
+              try {
+                const demoOrg = await getDemoOrg(demoSession.demo_org_id)
+                const allowedRoles = demoOrg.allowed_roles ?? ['org_admin', 'coach', 'parent', 'athlete', 'staff', 'fan']
+                setAvailableDemoRoles(allowedRoles)
+                // Infer current role from currentRoles or route
+                const currentRole = currentRoles[0] as DemoAllowedRole | undefined
+                setCurrentDemoRole(currentRole || null)
+                setSwitchRolesModalOpen(true)
+              } catch (err) {
+                console.error('Failed to load demo org:', err)
+              }
+            }}
+            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors min-h-[44px]"
+          >
+            <span className="material-symbols-outlined mr-3 text-lg text-gray-400 dark:text-gray-500">swap_horiz</span>
+            Switch Roles
+          </button>
+        </div>
+      )}
+
       {/* 3. Personal Settings */}
-      <div className="py-1 border-b border-slate-100 dark:border-slate-700">
+      <div className="py-1 border-b border-gray-100 dark:border-gray-700">
         <Link 
           to={settingsPath}
           onClick={handleClose}
-          className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px] no-underline hover:no-underline"
+          className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors min-h-[44px] no-underline hover:no-underline"
         >
-          <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">settings</span>
+          <span className="material-symbols-outlined mr-3 text-lg text-gray-400 dark:text-gray-500">settings</span>
           My Settings
         </Link>
       </div>
 
       {/* 4. Role-Specific Links */}
       {visibleRoleLinks.length > 0 && (
-        <div className="py-1 border-b border-slate-100 dark:border-slate-700">
+        <div className="py-1 border-b border-gray-100 dark:border-gray-700">
           {visibleRoleLinks.map(link => (
             <Link 
               key={link.path}
               to={link.path} 
               onClick={handleClose} 
-              className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px] no-underline hover:no-underline"
+              className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors min-h-[44px] no-underline hover:no-underline"
             >
-              <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">{link.icon}</span>
+              <span className="material-symbols-outlined mr-3 text-lg text-gray-400 dark:text-gray-500">{link.icon}</span>
               {link.label}
             </Link>
           ))}
@@ -266,13 +386,13 @@ export default function UserContextDropdown() {
       )}
 
       {/* 5. Support */}
-      <div className="py-1 border-b border-slate-100 dark:border-slate-700">
+      <div className="py-1 border-b border-gray-100 dark:border-gray-700">
         <Link 
           to={getLink(RouteKeys.PORTAL_HELP)} 
           onClick={handleClose} 
-          className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors min-h-[44px] no-underline hover:no-underline"
+          className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors min-h-[44px] no-underline hover:no-underline"
         >
-          <span className="material-symbols-outlined mr-3 text-lg text-slate-400 dark:text-slate-500">help</span>
+          <span className="material-symbols-outlined mr-3 text-lg text-gray-400 dark:text-gray-500">help</span>
           Help & Support
         </Link>
       </div>
@@ -281,9 +401,13 @@ export default function UserContextDropdown() {
       <div className="py-1">
         <button
           onClick={handleLogout}
-          className="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 min-h-[44px]"
+          className={`w-full text-left flex items-center px-4 py-2 text-sm min-h-[44px] ${
+            neutralPalette
+              ? 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900'
+              : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+          }`}
         >
-          <span className="material-symbols-outlined mr-3 text-lg text-red-500">logout</span>
+          <span className={`material-symbols-outlined mr-3 text-lg ${neutralPalette ? 'text-gray-500 dark:text-gray-400' : 'text-red-500'}`}>logout</span>
           Log out
         </button>
       </div>
@@ -295,6 +419,7 @@ export default function UserContextDropdown() {
       <div className="relative" ref={dropdownRef}>
         {/* Trigger */}
         <button 
+          ref={triggerRef}
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center justify-center p-0 border-none bg-transparent cursor-pointer rounded-full focus-visible:outline-2 focus-visible:outline-offset-2"
           style={{
@@ -304,20 +429,24 @@ export default function UserContextDropdown() {
           aria-expanded={isOpen}
           aria-haspopup="true"
         >
-          <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold transition-transform hover:scale-105 active:scale-95">
+          <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-800 bg-cover bg-center border border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 font-bold transition-transform hover:scale-105 active:scale-95">
             {initials}
           </div>
         </button>
 
-        {/* Desktop Menu - absolute dropdown */}
-        {!isMobile && isOpen && (
-          <div 
-            className="absolute right-0 mt-2 w-72 origin-top-right rounded-xl overflow-hidden z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg"
-          >
-            {menuContent}
-          </div>
-        )}
       </div>
+
+      {/* Desktop Menu - portaled to body so it cannot be clipped by scrolling containers */}
+      {!isMobile && isOpen && desktopMenuStyle && createPortal(
+        <div
+          ref={menuRef}
+          className="origin-top-right rounded-xl overflow-y-auto overflow-x-hidden z-[1200] bg-white dark:bg-black border border-gray-200 dark:border-gray-700 shadow-lg"
+          style={desktopMenuStyle}
+        >
+          {menuContent}
+        </div>,
+        document.body
+      )}
 
       {/* Mobile Menu - bottom sheet */}
       {isMobile && (
@@ -328,6 +457,124 @@ export default function UserContextDropdown() {
         >
           {menuContent}
         </MobileBottomSheet>
+      )}
+
+      {/* Switch Roles Modal */}
+      {switchRolesModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSwitchRolesModalOpen(false)}>
+          <div className="bg-white dark:bg-black rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Switch Role</h2>
+                <button
+                  onClick={() => setSwitchRolesModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Select a role to view the demo from that perspective.
+              </p>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {availableDemoRoles.map((role) => {
+                  const roleLabels: Record<DemoAllowedRole, string> = {
+                    org_admin: 'Org Admin',
+                    coach: 'Coach',
+                    parent: 'Guardian',
+                    athlete: 'Athlete',
+                    staff: 'Volunteer',
+                    fan: 'Fan',
+                  }
+                  const isCurrent = role === currentDemoRole
+                  return (
+                    <button
+                      key={role}
+                      onClick={async () => {
+                        if (isCurrent || switchingDemoRole) return
+                        if (!demoSession.demo_org_id) return
+                        setSwitchingDemoRole(true)
+                        try {
+                          // Call Edge Function to switch roles
+                          // Get user's session token for authorization
+                          const { data: { session: currentSession } } = await supabase.auth.getSession()
+                          if (!currentSession) {
+                            throw new Error('Not authenticated')
+                          }
+                          
+                          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+                          if (!supabaseUrl) {
+                            throw new Error('Configuration error')
+                          }
+                          const response = await fetch(`${supabaseUrl}/functions/v1/demo-switch-role`, {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${currentSession.access_token}`,
+                              'X-App-Origin': window.location.origin,
+                            },
+                            body: JSON.stringify({
+                              role,
+                            }),
+                          })
+                          const result = await response.json()
+                          if (!result.success) {
+                            throw new Error(result.error || 'Failed to switch role')
+                          }
+
+                          // Preferred: server verified OTP, use session tokens directly
+                          if (result.access_token && result.refresh_token) {
+                            const { error: sessionError } = await supabase.auth.setSession({
+                              access_token: result.access_token,
+                              refresh_token: result.refresh_token,
+                            })
+                            if (!sessionError) {
+                              window.location.href = `/portal/auth/callback?demo=true&role=${role}`
+                              return
+                            }
+                            console.error('setSession failed, falling back to redirect_url', sessionError)
+                          }
+
+                          // Fallback: redirect through Supabase magic link
+                          if (!result.redirect_url) {
+                            throw new Error('Failed to switch role')
+                          }
+                          const safeRedirectUrl = sanitizeMagicLinkUrl(result.redirect_url)
+                          window.location.href = safeRedirectUrl
+                        } catch (err) {
+                          console.error('Failed to switch role:', err)
+                          alert(err instanceof Error ? err.message : 'Failed to switch role')
+                          setSwitchingDemoRole(false)
+                        }
+                      }}
+                      disabled={switchingDemoRole}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        isCurrent
+                          ? neutralPalette
+                            ? 'border-[var(--org-btn-primary-bg,#137fec)] bg-[var(--org-highlight-bg,rgba(19,127,236,0.12))]'
+                            : 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          : neutralPalette
+                            ? 'border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-900'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-gray-50 dark:hover:bg-gray-900'
+                      } ${switchingDemoRole ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      <div className="text-center">
+                        <div className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">
+                          {roleLabels[role]}
+                        </div>
+                        {isCurrent && (
+                          <div className={`text-xs mt-1 ${neutralPalette ? 'text-[var(--org-link-color,#137fec)]' : 'text-blue-600 dark:text-blue-400'}`}>Current</div>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   )

@@ -7,14 +7,16 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { getSeasons, deleteSeason, isSeasonEmpty } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, ConfirmDialog, EmptyState, Badge, InlineNotice } from '../../components/admin'
+import { AdminPageHeader, Card, Button, ConfirmDialog, Badge, InlineNotice } from '../../components/admin'
 import OrgDataTable from '../../components/admin/OrgDataTable'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import '../../styles/orgAdmin.css'
 
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
@@ -23,7 +25,9 @@ export default function SeasonsManagement() {
   useDebugLifecycle('SeasonsManagement')
   
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [seasons, setSeasons] = useState<Season[]>([])
@@ -160,11 +164,35 @@ export default function SeasonsManagement() {
       id: 'is_active',
       label: 'Status',
       sortable: true,
-      render: (row) => (
-        <Badge variant={row.is_active ? 'success' : 'neutral'}>
-          {row.is_active ? 'Active' : 'Upcoming'}
-        </Badge>
-      )
+      render: (row) => {
+        const now = new Date()
+        const startDate = row.start_date ? new Date(row.start_date) : null
+        const endDate = row.end_date ? new Date(row.end_date) : null
+        
+        let status: 'Past' | 'Active' | 'Upcoming' = 'Upcoming'
+        let variant: 'success' | 'neutral' | 'warning' = 'neutral'
+        
+        if (endDate && endDate < now) {
+          status = 'Past'
+          variant = 'neutral'
+        } else if (startDate && endDate && startDate <= now && now <= endDate) {
+          status = 'Active'
+          variant = 'success'
+        } else if (startDate && startDate > now) {
+          status = 'Upcoming'
+          variant = 'neutral'
+        } else {
+          // Fallback to is_active flag if dates are missing
+          status = row.is_active ? 'Active' : 'Upcoming'
+          variant = row.is_active ? 'success' : 'neutral'
+        }
+        
+        return (
+          <Badge variant={variant}>
+            {status}
+          </Badge>
+        )
+      }
     },
     {
       id: 'actions',
@@ -172,29 +200,33 @@ export default function SeasonsManagement() {
       align: 'right',
       render: (row) => (
         <div className="oa-flex oa-items-center oa-justify-end oa-gap-2">
-          <Button 
-            variant="ghost" 
-            size="dense" 
-            icon="edit"
-            onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-                navigate(`${getLink('admin.seasons.update', { id: row.id })}?returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`)
-            }}
-          >
-            Edit
-          </Button>
-          {emptySeasons.has(row.id) && (
-            <Button
-              variant="ghost"
-              size="dense"
-              icon="delete"
-              disabled={deleting}
-              onClick={(e: React.MouseEvent) => handleDeleteClick(row, e)}
-              className="oa-text-danger hover:oa-bg-danger-surface"
-              title="Delete empty season"
-            >
-              Delete
-            </Button>
+          {isOrgAdmin && (
+            <>
+              <Button 
+                variant="ghost" 
+                size="dense" 
+                icon="edit"
+                onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    navigate(`${getLink('admin.seasons.update', { id: row.id })}?returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`)
+                }}
+              >
+                Edit
+              </Button>
+              {emptySeasons.has(row.id) && (
+                <Button
+                  variant="ghost"
+                  size="dense"
+                  icon="delete"
+                  disabled={deleting}
+                  onClick={(e: React.MouseEvent) => handleDeleteClick(row, e)}
+                  className="oa-text-danger hover:oa-bg-danger-surface"
+                  title="Delete empty season"
+                >
+                  Delete
+                </Button>
+              )}
+            </>
           )}
         </div>
       )
@@ -254,20 +286,20 @@ export default function SeasonsManagement() {
       )}
 
       {seasons.length === 0 ? (
-        <Card>
-          <EmptyState
-            icon="calendar_month"
-            title="No seasons yet"
-            description="Create your first season to start organizing teams and events."
-            noCard
-          >
-             <Button 
+        <Card className="oa-border-2 oa-border-dashed">
+          <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+            <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>calendar_month</span>
+            <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+              <h3 className="oa-h3 oa-mb-0">No seasons yet</h3>
+              <p className="oa-body-m oa-text-muted oa-mb-4">Create your first season to start organizing teams and events.</p>
+              <Button 
                 icon="add"
                 onClick={() => navigate(`${getLink('admin.organization.forms')}?type=season&returnUrl=${encodeURIComponent(getLink('admin.seasons.list'))}`)}
-            >
+              >
                 Add Season
-            </Button>
-          </EmptyState>
+              </Button>
+            </div>
+          </div>
         </Card>
       ) : (
         <OrgDataTable

@@ -18,6 +18,10 @@ import {
   getFanCalendar,
   type EntityProfile 
 } from '../../data/services/fanService'
+import { USE_FAKE_DATA } from '../../data/config'
+import { getFakeTicketingEvents } from '../../data/fake/fakeTicketingEvents'
+import { getMockGalleriesForOrg } from '../../data/fake/mockGalleries'
+import { getTeamsForOrg, getTeamWithDetails } from '../../data/fake/fakeTeams'
 import type { CalendarEvent } from '../../types/staffAndFan'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { useT } from '../../i18n/useI18n'
@@ -28,6 +32,27 @@ import '../../styles/fan-layouts.css'
 
 type TabType = 'overview' | 'schedule' | 'roster' | 'media'
 type FeedFilter = 'highlights' | 'press'
+
+interface OrgHighlightItem {
+  id: string
+  title: string
+  summary: string
+  date: string
+}
+
+interface OrgTeamItem {
+  id: string
+  name: string
+  sport: string
+  level: string
+}
+
+interface OrgMediaItem {
+  id: string
+  name: string
+  cover_url: string | null
+  photo_count: number
+}
 
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 
@@ -51,6 +76,9 @@ export default function FanOrgProfile() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [eventsLoading, setEventsLoading] = useState(false)
   const [eventsLoaded, setEventsLoaded] = useState(false)
+  const [highlights, setHighlights] = useState<OrgHighlightItem[]>([])
+  const [orgTeams, setOrgTeams] = useState<OrgTeamItem[]>([])
+  const [mediaItems, setMediaItems] = useState<OrgMediaItem[]>([])
 
   useEffect(() => {
     if (!slug) {
@@ -89,7 +117,57 @@ export default function FanOrgProfile() {
 
     setProfile(data)
     setIsFollowing(data.is_following || false)
+    loadFakeContent(data.id)
     setLoading(false)
+  }
+
+  const loadFakeContent = (orgId: string) => {
+    if (!USE_FAKE_DATA) {
+      setHighlights([])
+      setOrgTeams([])
+      setMediaItems([])
+      return
+    }
+
+    const teams = getTeamsForOrg(orgId)
+      .filter((team) => team.is_active)
+      .slice(0, 12)
+      .map((team) => {
+        const details = getTeamWithDetails(team.id)
+        return {
+          id: team.id,
+          name: team.name,
+          sport: details?.sport?.name || 'Sports',
+          level: details?.level?.name || team.age_group || 'All Levels',
+        }
+      })
+    setOrgTeams(teams)
+
+    const eventHighlights = getFakeTicketingEvents(orgId, {
+      page: 1,
+      perPage: 12,
+      fanVisibleOnly: true,
+      sortBy: 'created_at',
+    }).data
+      .slice(0, 8)
+      .map((event) => ({
+        id: event.id,
+        title: event.title,
+        summary: event.venue_name || event.event_type || 'Ticketed event update',
+        date: event.starts_at,
+      }))
+    setHighlights(eventHighlights)
+
+    const media = getMockGalleriesForOrg(orgId)
+      .filter((gallery) => gallery.fans_can_see)
+      .slice(0, 10)
+      .map((gallery) => ({
+        id: gallery.id,
+        name: gallery.name,
+        cover_url: gallery.cover_url || null,
+        photo_count: gallery.photo_count || 0,
+      }))
+    setMediaItems(media)
   }
 
   const handleFollowToggle = async () => {
@@ -375,11 +453,34 @@ export default function FanOrgProfile() {
                 </button>
               </div>
 
-              {/* Empty State */}
-              <div className="fan-empty-state">
-                <span className="material-symbols-outlined">article</span>
-                <p>{t('portal.fan.orgProfile.noPosts')}</p>
-              </div>
+              {highlights.length === 0 ? (
+                <div className="fan-empty-state">
+                  <span className="material-symbols-outlined">article</span>
+                  <p>{t('portal.fan.orgProfile.noPosts')}</p>
+                </div>
+              ) : (
+                <div className="fan-org-events-list">
+                  {highlights.map((item) => (
+                    <div key={item.id} className="fan-org-event-card">
+                      <div className="fan-org-event-date">
+                        <span className="fan-org-event-day">{new Date(item.date).getDate()}</span>
+                        <span className="fan-org-event-month">
+                          {new Date(item.date).toLocaleDateString('en-US', { month: 'short' })}
+                        </span>
+                      </div>
+                      <div className="fan-org-event-details">
+                        <h4 className="fan-org-event-title">{item.title}</h4>
+                        <div className="fan-org-event-meta">
+                          <span>
+                            <span className="material-symbols-outlined">info</span>
+                            {item.summary}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -441,17 +542,81 @@ export default function FanOrgProfile() {
           )}
 
           {activeTab === 'roster' && (
-            <div className="fan-empty-state">
-              <span className="material-symbols-outlined">groups</span>
-              <p>{t('portal.fan.orgProfile.noTeams')}</p>
-            </div>
+            orgTeams.length === 0 ? (
+              <div className="fan-empty-state">
+                <span className="material-symbols-outlined">groups</span>
+                <p>{t('portal.fan.orgProfile.noTeams')}</p>
+              </div>
+            ) : (
+              <div className="fan-org-events-list">
+                {orgTeams.map((team) => (
+                  <div
+                    key={team.id}
+                    className="fan-org-event-card"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(getLink(RouteKeys.FAN_TEAM_PROFILE, { teamId: team.id }))}
+                    onKeyDown={(e) => { if (e.key === 'Enter') navigate(getLink(RouteKeys.FAN_TEAM_PROFILE, { teamId: team.id })) }}
+                  >
+                    <div className="fan-org-event-date">
+                      <span className="material-symbols-outlined">groups</span>
+                    </div>
+                    <div className="fan-org-event-details">
+                      <h4 className="fan-org-event-title">{team.name}</h4>
+                      <div className="fan-org-event-meta">
+                        <span>
+                          <span className="material-symbols-outlined">sports</span>
+                          {team.sport}
+                        </span>
+                        <span>
+                          <span className="material-symbols-outlined">military_tech</span>
+                          {team.level}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
           )}
 
           {activeTab === 'media' && (
-            <div className="fan-empty-state">
-              <span className="material-symbols-outlined">photo_library</span>
-              <p>{t('portal.fan.orgProfile.noMedia')}</p>
-            </div>
+            mediaItems.length === 0 ? (
+              <div className="fan-empty-state">
+                <span className="material-symbols-outlined">photo_library</span>
+                <p>{t('portal.fan.orgProfile.noMedia')}</p>
+              </div>
+            ) : (
+              <div className="fan-org-events-list">
+                {mediaItems.map((media) => (
+                  <div
+                    key={media.id}
+                    className="fan-org-event-card"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(getLink(RouteKeys.FAN_PHOTOS_GALLERY, { id: media.id }))}
+                    onKeyDown={(e) => { if (e.key === 'Enter') navigate(getLink(RouteKeys.FAN_PHOTOS_GALLERY, { id: media.id })) }}
+                  >
+                    <div className="fan-org-event-date">
+                      {media.cover_url ? (
+                        <img src={media.cover_url} alt={media.name} style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover' }} />
+                      ) : (
+                        <span className="material-symbols-outlined">photo_library</span>
+                      )}
+                    </div>
+                    <div className="fan-org-event-details">
+                      <h4 className="fan-org-event-title">{media.name}</h4>
+                      <div className="fan-org-event-meta">
+                        <span>
+                          <span className="material-symbols-outlined">photo</span>
+                          {media.photo_count} photos
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
           )}
         </div>
       </div>

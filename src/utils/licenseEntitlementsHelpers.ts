@@ -152,35 +152,25 @@ export async function validateFeatureDependencies(
       const depFeatureId = (dep as any).depends_on_feature_id
       const depName = ((dep as any).feature_entitlements as any)?.display_name || 'Unknown'
 
-      // Check if enabled via tier
+      // Check if enabled via tier (using current_tier_id; column may exist before types are regenerated)
       if (targetType === 'organization') {
-        const { data: org } = await supabase
+        const { data: org } = await (supabase as any)
           .from('organizations')
-          .select('license_plan')
+          .select('current_tier_id')
           .eq('id', targetId)
-          .single()
+          .single() as { data: { current_tier_id?: string | null } | null }
 
-        if (org) {
-          const { data: tier } = await supabase
-            .from('license_tiers')
-            .select('id')
-            .eq('tier_key', (org as any).license_plan)
-            .or(`tier_key.eq.basic,license_plan.eq.starter`)
-            .or(`tier_key.eq.power,license_plan.in.(standard,pro)`)
+        if (org?.current_tier_id) {
+          const { data: assignment } = await supabase
+            .from('tier_feature_assignments')
+            .select('included')
+            .eq('license_tier_id', org.current_tier_id)
+            .eq('feature_entitlement_id', depFeatureId)
+            .eq('included', true)
             .single()
 
-          if (tier) {
-            const { data: assignment } = await supabase
-              .from('tier_feature_assignments')
-              .select('included')
-              .eq('license_tier_id', (tier as any).id)
-              .eq('feature_entitlement_id', depFeatureId)
-              .eq('included', true)
-              .single()
-
-            if (assignment) {
-              continue // Dependency is enabled via tier
-            }
+          if (assignment) {
+            continue // Dependency is enabled via tier
           }
         }
       }

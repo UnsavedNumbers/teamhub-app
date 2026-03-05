@@ -16,6 +16,8 @@ export interface Sport {
     is_system?: boolean // True for system-wide predefined sports
 }
 
+export type RegistrationMode = 'individual_only' | 'team_only' | 'both'
+
 export interface Program {
     id: string
     org_id: string
@@ -29,6 +31,17 @@ export interface Program {
     // Deprecated fields kept for backward compatibility during migration
     age_min?: number | null
     age_max?: number | null
+    // Program enhancement fields
+    is_public?: boolean | null
+    activity_start_date?: string | null
+    activity_end_date?: string | null
+    registration_start_date?: string | null
+    registration_end_date?: string | null
+    program_code?: string | null
+    sponsor?: string | null
+    default_location_id?: string | null
+    // Registration mode configuration
+    registration_mode?: RegistrationMode | null
 }
 
 export interface Level {
@@ -58,6 +71,7 @@ export interface Team {
     sport_id?: string | null
     name: string
     max_roster_size?: number | null
+    min_roster_size?: number | null
     is_active?: boolean
     created_at: string
     updated_at: string
@@ -107,6 +121,7 @@ export interface UpdateTeamDTO {
     sport_id?: string | null
     program_id?: string | null
     max_roster_size?: number | null
+    min_roster_size?: number | null
     is_active?: boolean
     visible_to_fans?: boolean
 }
@@ -154,6 +169,17 @@ export interface CreateProgramDTO {
     // Deprecated
     age_min?: number
     age_max?: number
+    // Program enhancement fields
+    is_public?: boolean
+    activity_start_date?: string
+    activity_end_date?: string
+    registration_start_date?: string
+    registration_end_date?: string
+    program_code?: string
+    sponsor?: string
+    default_location_id?: string
+    // Registration mode configuration
+    registration_mode?: RegistrationMode
 }
 
 export interface UpdateProgramDTO {
@@ -163,6 +189,17 @@ export interface UpdateProgramDTO {
     // Deprecated
     age_min?: number
     age_max?: number
+    // Program enhancement fields
+    is_public?: boolean
+    activity_start_date?: string
+    activity_end_date?: string
+    registration_start_date?: string
+    registration_end_date?: string
+    program_code?: string
+    sponsor?: string
+    default_location_id?: string
+    // Registration mode configuration
+    registration_mode?: RegistrationMode
 }
 
 export interface CreateLevelDTO {

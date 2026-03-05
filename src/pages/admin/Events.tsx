@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
@@ -19,8 +19,10 @@ import EventsList from '../../components/admin/EventsList'
 import EventsCalendar from '../../components/admin/EventsCalendar'
 import EventsAgenda from '../../components/admin/EventsAgenda'
 import BulkActionsBar from '../../components/admin/BulkActionsBar'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import type { CalendarEvent } from '../../types/calendar'
 import type { EventTimeContext, EventViewMode, EventsFilters as EventsFiltersType } from '../../types/eventsManagement'
+import '../../styles/orgAdmin.css'
 
 const supabaseAny = supabase as any
 interface Team {
@@ -93,6 +95,7 @@ export default function Events() {
     const { currentOrganization } = useOrganization()
     const navigate = useNavigate()
     const t = useT()
+    const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
 
     // Load filter data (teams, sports, seasons)
     useEffect(() => {
@@ -522,8 +525,21 @@ export default function Events() {
     if (!isReady) {
         return (
             <div>
-                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 text-center">
-                    <div className="animate-pulse rounded bg-slate-200 dark:bg-slate-700" style={{ width: '100%', height: '400px' }} />
+                <div 
+                    className="rounded-xl border p-8 text-center"
+                    style={{ 
+                        background: 'var(--pa-surface)',
+                        borderColor: 'var(--pa-border-default)'
+                    }}
+                >
+                    <div 
+                        className="animate-pulse rounded" 
+                        style={{ 
+                            width: '100%', 
+                            height: '400px',
+                            background: 'var(--pa-surface-panel)'
+                        }} 
+                    />
                 </div>
             </div>
         )
@@ -544,7 +560,7 @@ export default function Events() {
                     setViewMode(mode)
                     setPage(0)
                 }}
-                onCreateClick={() => navigate(getLink('admin.events.create'))}
+                onCreateClick={isOrgAdmin ? () => navigate(getLink('admin.events.create')) : undefined}
             />
 
             <EventsFilters

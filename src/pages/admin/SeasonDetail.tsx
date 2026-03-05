@@ -7,10 +7,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { getSeason, deleteSeason } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
 import { AdminPageHeader, Card, Button, ConfirmDialog } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
+import { TopLevelStats } from '../../components/common/TopLevelStats'
 import { getLink } from '../../utils/routes'
 import { supabase } from '../../lib/supabase'
 import SeasonTeamsSlideOver from '../../components/admin/SeasonTeamsSlideOver'
@@ -19,7 +21,19 @@ import './SeasonDetail.css'
 import { GalleryManagementSection } from '@/components/admin/galleries/GalleryManagementSection'
 import { useI18n } from '@/i18n/useI18n'
 import type { Gallery } from '@/data/services/galleryService'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import '../../styles/orgAdmin.css'
+import { USE_FAKE_DATA } from '../../data/config'
+import {
+  fakeTeamSeasons,
+  fakeTeamMembers,
+  fakeCoachAssignments,
+  getTeamById,
+  getProgramById,
+  getLevelById,
+  getSportById,
+} from '../../data/fake/fakeTeams'
+import { getEventsForSeason } from '../../data/fake/fakeEvents'
 
 interface SeasonStats {
   teamsCount: number
@@ -40,8 +54,10 @@ interface GalleryInsights {
 export default function SeasonDetail() {
   const { id } = useParams<{ id: string }>()
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
   const { t } = useI18n()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [season, setSeason] = useState<Season | null>(null)
@@ -94,61 +110,35 @@ export default function SeasonDetail() {
       setStatsLoading(true)
 
       try {
-        // Get teams for this season (level is on team, not on program)
-        const { data: teamSeasons, error: teamSeasonsError } = await supabase
-          .from('team_seasons')
-          .select(`
-            team_id,
-            team:teams(
-              id,
-              name,
-              program_id,
-              level_id,
-              program:programs(id, name),
-              level:levels(id, name),
-              sport_id,
-              sport:sports(id, name)
-            )
-          `)
-          .eq('season_id', id)
+        if (USE_FAKE_DATA) {
+          // Use fake data for demo mode
+          const teamSeasonsForSeason = fakeTeamSeasons.filter((ts) => ts.season_id === id)
+          const teamsCount = teamSeasonsForSeason.length
 
-        if (teamSeasonsError) {
-          console.error('Error loading team seasons:', teamSeasonsError)
-        }
+          // Count by level when present, otherwise by program name
+          const programsByLevel: Record<string, number> = {}
+          const uniqueSports = new Set<string>()
+          const teamRows: SeasonTeamRow[] = []
 
-        const teams = teamSeasons || []
-        const teamsCount = teams.length
+          teamSeasonsForSeason.forEach((ts) => {
+            const team = getTeamById(ts.team_id)
+            if (!team) return
 
-        // Count by level when present, otherwise by program name (so teams in programs with no level still show)
-        const programsByLevel: Record<string, number> = {}
-        const uniqueSports = new Set<string>()
-        const teamRows: SeasonTeamRow[] = []
+            const program = team.program_id ? getProgramById(team.program_id) : null
+            const level = team.level_id ? getLevelById(team.level_id) : null
+            const sport = team.sport_id ? getSportById(team.sport_id) : null
 
-        type TeamSeasonRow = {
-          team_id?: string
-          team?: {
-            id: string
-            name?: string
-            program?: { id?: string; name?: string } | null
-            level?: { id?: string; name?: string } | null
-            sport?: { id?: string; name?: string } | null
-          }
-        }
-        teams.forEach((ts: TeamSeasonRow) => {
-          const team = ts.team
-          const program = team?.program
-          const level = team?.level
-          const sport = team?.sport
-          const label = level
-            ? (level.name || 'Unknown level')
-            : program
-              ? (program.name || 'Unknown program')
-              : 'No program'
-          programsByLevel[label] = (programsByLevel[label] || 0) + 1
-          if (team?.sport?.id) {
-            uniqueSports.add(team.sport.id)
-          }
-          if (team?.id) {
+            const label = level
+              ? (level.name || 'Unknown level')
+              : program
+                ? (program.name || 'Unknown program')
+                : 'No program'
+            programsByLevel[label] = (programsByLevel[label] || 0) + 1
+
+            if (team.sport_id) {
+              uniqueSports.add(team.sport_id)
+            }
+
             teamRows.push({
               id: team.id,
               name: team.name ?? 'Unnamed team',
@@ -156,82 +146,185 @@ export default function SeasonDetail() {
               levelName: level?.name,
               sportName: sport?.name,
             })
-          }
-        })
+          })
 
-        setSeasonTeams(teamRows)
+          setSeasonTeams(teamRows)
 
-        // Get registered athletes count
-        const { count: athletesCount } = await supabase
-          .from('team_memberships')
-          .select('*', { count: 'exact', head: true })
-          .eq('season_id', id)
-          .eq('status', 'active')
+          // Get registered athletes count (active team members for this season)
+          const athletesCount = fakeTeamMembers.filter(
+            (tm) => tm.season_id === id && tm.status === 'active'
+          ).length
 
-        // Get games/events count (if events table exists and has season_id)
-        let gamesCount = 0
-        try {
-          const { count: eventsCount } = await supabase
-            .from('events')
-            .select('*', { count: 'exact', head: true })
+          // Get games/events count
+          const events = getEventsForSeason(id)
+          const gamesCount = events.length
+
+          // Get venues count (distinct locations from events)
+          const uniqueVenues = new Set(
+            events.map((e) => e.location).filter((loc): loc is string => !!loc)
+          )
+          const venuesCount = uniqueVenues.size
+
+          // Get staff count (unique coaches assigned to teams in this season)
+          const coachUserIds = new Set<string>()
+          teamSeasonsForSeason.forEach((ts) => {
+            const assignments = fakeCoachAssignments.filter(
+              (ca) => ca.team_id === ts.team_id && ca.season_id === id
+            )
+            assignments.forEach((ca) => coachUserIds.add(ca.user_id))
+          })
+          const staffCount = coachUserIds.size
+
+          setStats({
+            teamsCount,
+            programsByLevel,
+            sportsCount: uniqueSports.size,
+            registeredAthletes: athletesCount,
+            gamesCount,
+            venuesCount,
+            staffCount,
+          })
+        } else {
+          // Use real Supabase queries
+          // Get teams for this season (level is on team, not on program)
+          const { data: teamSeasons, error: teamSeasonsError } = await supabase
+            .from('team_seasons')
+            .select(`
+              team_id,
+              team:teams(
+                id,
+                name,
+                program_id,
+                level_id,
+                program:programs(id, name),
+                level:levels(id, name),
+                sport_id,
+                sport:sports(id, name)
+              )
+            `)
             .eq('season_id', id)
-          gamesCount = eventsCount || 0
-        } catch {
-          // Events table might not exist or have season_id
-        }
 
-        // Get venues count (distinct venues from events)
-        let venuesCount = 0
-        try {
-          const { data: venuesData } = await supabase
-            .from('events')
-            .select('venue_id')
-            .eq('season_id', id)
-            .not('venue_id', 'is', null)
-          
-          if (venuesData) {
-            const uniqueVenues = new Set(venuesData.map((e: any) => e.venue_id).filter(Boolean))
-            venuesCount = uniqueVenues.size
+          if (teamSeasonsError) {
+            console.error('Error loading team seasons:', teamSeasonsError)
           }
-        } catch {
-          // Venues might not be available
-        }
 
-        // Get staff count (users with coach/admin roles in org)
-        let staffCount = 0
-        try {
-          const { data: usersData } = await supabase
-            .from('users')
-            .select('id')
-            .eq('org_id', context.orgId)
-          
-          if (usersData) {
-            // Get user roles
-            const userIds = usersData.map((u: any) => u.id)
-            const { data: rolesData } = await (supabase as any)
-              .from('user_roles')
-              .select('user_id')
-              .in('user_id', userIds)
-              .in('role', ['coach', 'admin', 'staff'])
-            
-            if (rolesData) {
-              const uniqueStaff = new Set(rolesData.map((r: any) => r.user_id))
-              staffCount = uniqueStaff.size
+          const teams = teamSeasons || []
+          const teamsCount = teams.length
+
+          // Count by level when present, otherwise by program name (so teams in programs with no level still show)
+          const programsByLevel: Record<string, number> = {}
+          const uniqueSports = new Set<string>()
+          const teamRows: SeasonTeamRow[] = []
+
+          type TeamSeasonRow = {
+            team_id?: string
+            team?: {
+              id: string
+              name?: string
+              program?: { id?: string; name?: string } | null
+              level?: { id?: string; name?: string } | null
+              sport?: { id?: string; name?: string } | null
             }
           }
-        } catch {
-          // Staff count might not be available
-        }
+          teams.forEach((ts: TeamSeasonRow) => {
+            const team = ts.team
+            const program = team?.program
+            const level = team?.level
+            const sport = team?.sport
+            const label = level
+              ? (level.name || 'Unknown level')
+              : program
+                ? (program.name || 'Unknown program')
+                : 'No program'
+            programsByLevel[label] = (programsByLevel[label] || 0) + 1
+            if (team?.sport?.id) {
+              uniqueSports.add(team.sport.id)
+            }
+            if (team?.id) {
+              teamRows.push({
+                id: team.id,
+                name: team.name ?? 'Unnamed team',
+                programName: program?.name,
+                levelName: level?.name,
+                sportName: sport?.name,
+              })
+            }
+          })
 
-        setStats({
-          teamsCount,
-          programsByLevel,
-          sportsCount: uniqueSports.size,
-          registeredAthletes: athletesCount || 0,
-          gamesCount,
-          venuesCount,
-          staffCount,
-        })
+          setSeasonTeams(teamRows)
+
+          // Get registered athletes count
+          const { count: athletesCount } = await supabase
+            .from('team_memberships')
+            .select('*', { count: 'exact', head: true })
+            .eq('season_id', id)
+            .eq('status', 'active')
+
+          // Get games/events count (if events table exists and has season_id)
+          let gamesCount = 0
+          try {
+            const { count: eventsCount } = await supabase
+              .from('events')
+              .select('*', { count: 'exact', head: true })
+              .eq('season_id', id)
+            gamesCount = eventsCount || 0
+          } catch {
+            // Events table might not exist or have season_id
+          }
+
+          // Get venues count (distinct venues from events)
+          let venuesCount = 0
+          try {
+            const { data: venuesData } = await supabase
+              .from('events')
+              .select('venue_id')
+              .eq('season_id', id)
+              .not('venue_id', 'is', null)
+            
+            if (venuesData) {
+              const uniqueVenues = new Set(venuesData.map((e: any) => e.venue_id).filter(Boolean))
+              venuesCount = uniqueVenues.size
+            }
+          } catch {
+            // Venues might not be available
+          }
+
+          // Get staff count (users with coach/admin roles in org)
+          let staffCount = 0
+          try {
+            const { data: usersData } = await supabase
+              .from('users')
+              .select('id')
+              .eq('org_id', context.orgId)
+            
+            if (usersData) {
+              // Get user roles
+              const userIds = usersData.map((u: any) => u.id)
+              const { data: rolesData } = await (supabase as any)
+                .from('user_roles')
+                .select('user_id')
+                .in('user_id', userIds)
+                .in('role', ['coach', 'admin', 'staff'])
+              
+              if (rolesData) {
+                const uniqueStaff = new Set(rolesData.map((r: any) => r.user_id))
+                staffCount = uniqueStaff.size
+              }
+            }
+          } catch {
+            // Staff count might not be available
+          }
+
+          setStats({
+            teamsCount,
+            programsByLevel,
+            sportsCount: uniqueSports.size,
+            registeredAthletes: athletesCount || 0,
+            gamesCount,
+            venuesCount,
+            staffCount,
+          })
+        }
       } catch (err) {
         console.error('Error loading season stats:', err)
         setSeasonTeams([])
@@ -460,41 +553,24 @@ export default function SeasonDetail() {
           </Card>
 
           {/* Season Stats Card */}
-          <Card>
+          <div className="season-detail-stats-block">
             <div className="season-detail-card-header">
               <h3 className="season-detail-card-title">{t('admin.seasonDetail.seasonStats')}</h3>
               <span className="material-symbols-outlined season-detail-card-icon" aria-hidden>
                 insights
               </span>
             </div>
-            <div className="season-detail-stats-grid">
-              <div className="season-detail-stat-box">
-                <p className="season-detail-stat-label">{t('admin.seasonDetail.statRegistered')}</p>
-                <p className="season-detail-stat-value">
-                  {statsLoading ? '—' : formatNumber(stats?.registeredAthletes ?? 0)}
-                </p>
-              </div>
-              <div className="season-detail-stat-box">
-                <p className="season-detail-stat-label">{t('admin.seasonDetail.statGames')}</p>
-                <p className="season-detail-stat-value">
-                  {statsLoading ? '—' : stats?.gamesCount ?? 0}
-                </p>
-              </div>
-              <div className="season-detail-stat-box">
-                <p className="season-detail-stat-label">{t('admin.seasonDetail.statVenues')}</p>
-                <p className="season-detail-stat-value">
-                  {statsLoading ? '—' : stats?.venuesCount ?? 0}
-                </p>
-              </div>
-              <div className="season-detail-stat-box">
-                <p className="season-detail-stat-label">{t('admin.seasonDetail.statStaff')}</p>
-                <p className="season-detail-stat-value">
-                  {statsLoading ? '—' : stats?.staffCount ?? 0}
-                </p>
-              </div>
-            </div>
-          </Card>
-
+            <TopLevelStats
+              className="season-detail-stats-grid"
+              ariaLabel="Season summary metrics"
+              items={[
+                { id: 'registered', label: t('admin.seasonDetail.statRegistered'), value: statsLoading ? '-' : formatNumber(stats?.registeredAthletes ?? 0) },
+                { id: 'games', label: t('admin.seasonDetail.statGames'), value: statsLoading ? '-' : stats?.gamesCount ?? 0 },
+                { id: 'venues', label: t('admin.seasonDetail.statVenues'), value: statsLoading ? '-' : stats?.venuesCount ?? 0 },
+                { id: 'staff', label: t('admin.seasonDetail.statStaff'), value: statsLoading ? '-' : stats?.staffCount ?? 0 },
+              ]}
+            />
+          </div>
           <Card className="season-detail-galleries-card">
             <div className="season-detail-galleries-hero">
               <div className="season-detail-galleries-hero-text">
@@ -575,26 +651,30 @@ export default function SeasonDetail() {
             <span>{t('admin.seasonDetail.actionBarDescription', { season: season.name })}</span>
           </div>
           <div className="season-detail-action-buttons">
-            <Button
-              variant="secondary"
-              onClick={() =>
-                navigate(
-                  `${getLink('admin.seasons.update', { id: season.id })}?returnUrl=${encodeURIComponent(
-                    window.location.pathname
-                  )}`
-                )
-              }
-              icon="edit"
-            >
-              {t('admin.seasonDetail.editSeason')}
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => setShowArchiveDialog(true)}
-              icon="archive"
-            >
-              {t('admin.seasonDetail.archiveSeason')}
-            </Button>
+            {isOrgAdmin && (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    navigate(
+                      `${getLink('admin.seasons.update', { id: season.id })}?returnUrl=${encodeURIComponent(
+                        window.location.pathname
+                      )}`
+                    )
+                  }
+                  icon="edit"
+                >
+                  {t('admin.seasonDetail.editSeason')}
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => setShowArchiveDialog(true)}
+                  icon="archive"
+                >
+                  {t('admin.seasonDetail.archiveSeason')}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -627,3 +707,4 @@ function formatNumber(num: number): string {
   }
   return num.toString()
 }
+

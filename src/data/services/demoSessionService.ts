@@ -30,6 +30,7 @@ function toSnapshot(session: DemoSession | null): DemoSessionSnapshot {
     return {
       is_demo_session: false,
       demo_org_id: null,
+      organization_id: null,
       demo_code: null,
       expires_at: null,
     }
@@ -38,6 +39,7 @@ function toSnapshot(session: DemoSession | null): DemoSessionSnapshot {
   return {
     is_demo_session: true,
     demo_org_id: session.demo_org_id,
+    organization_id: session.organization_id ?? null,
     demo_code: session.demo_code,
     expires_at: session.expires_at,
   }
@@ -83,11 +85,23 @@ export async function createDemoSession(demoCode: string, userId: string): Promi
   }
 
   const codeDetails = await getDemoCodeDetails(normalizedCode)
+  
+  // Get organization_id from demo_organizations
+  // IMPORTANT: Always use real Supabase for fetching org data, even in fake data mode
+  // Demo codes and orgs are real, only session storage can be fake
+  const { data: demoOrgData } = await supabaseAny
+    .from('demo_organizations')
+    .select('organization_id')
+    .eq('id', codeDetails.demo_org_id)
+    .maybeSingle()
+  const organizationId = demoOrgData?.organization_id ?? null
+
   const session: DemoSession = {
     id: createId('demo-session'),
     demo_code: normalizedCode,
     user_id: userId,
     demo_org_id: codeDetails.demo_org_id,
+    organization_id: organizationId,
     started_at: nowIso(),
     last_activity_at: nowIso(),
     expires_at: codeDetails.expires_at,
@@ -106,6 +120,7 @@ export async function createDemoSession(demoCode: string, userId: string): Promi
           demo_code: session.demo_code,
           user_id: session.user_id,
           demo_org_id: session.demo_org_id,
+          organization_id: session.organization_id,
           started_at: session.started_at,
           last_activity_at: session.last_activity_at,
           expires_at: session.expires_at,
@@ -152,6 +167,7 @@ export async function getDemoSession(userId: string): Promise<DemoSession | null
         demo_code: String(data.demo_code),
         user_id: String(data.user_id),
         demo_org_id: String(data.demo_org_id),
+        organization_id: data.organization_id ? String(data.organization_id) : null,
         started_at: String(data.started_at),
         last_activity_at: String(data.last_activity_at),
         expires_at: String(data.expires_at),

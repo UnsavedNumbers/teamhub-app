@@ -1,9 +1,9 @@
 import type { SportCode } from './sports'
 
-export type DemoOrganizationStatus = 'active' | 'inactive'
+export type DemoOrganizationStatus = 'pending' | 'active' | 'inactive' | 'rejected'
 export type DemoOrgSize = 'small' | 'medium' | 'large'
 export type DemoCodeStatus = 'active' | 'revoked' | 'expired'
-export type DemoAllowedRole = 'org_admin' | 'coach' | 'parent' | 'staff' | 'athlete'
+export type DemoAllowedRole = 'org_admin' | 'coach' | 'parent' | 'staff' | 'athlete' | 'fan'
 
 export interface DemoOrganization {
   id: string
@@ -22,6 +22,8 @@ export interface DemoOrganization {
   created_by: string | null
   created_at: string
   updated_at: string
+  organization_id?: string | null
+  allowed_roles?: DemoAllowedRole[]
 }
 
 export interface DemoOrgPOC {
@@ -57,6 +59,7 @@ export interface DemoSession {
   demo_code: string
   user_id: string
   demo_org_id: string
+  organization_id: string | null
   started_at: string
   last_activity_at: string
   expires_at: string
@@ -77,7 +80,9 @@ export interface CreateDemoOrgInput {
   status?: DemoOrganizationStatus
 }
 
-export interface UpdateDemoOrgInput extends Partial<CreateDemoOrgInput> {}
+export interface UpdateDemoOrgInput extends Partial<CreateDemoOrgInput> {
+  allowed_roles?: DemoAllowedRole[]
+}
 
 export interface CreateDemoPOCInput {
   first_name: string
@@ -112,6 +117,7 @@ export interface DemoCodeValidationResult {
 export interface DemoSessionSnapshot {
   is_demo_session: boolean
   demo_org_id: string | null
+  organization_id: string | null
   demo_code: string | null
   expires_at: string | null
 }

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Invitations Dashboard
  *
  * Centralized view of all pending guardian invites and join requests for the organization.
@@ -17,6 +17,7 @@ import { showSuccess, showError } from '../../utils/toast'
 import { useT } from '../../i18n/useI18n'
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 import OfflineBanner from '../../components/admin/OfflineBanner'
+import '../../styles/orgAdmin.css'
 
 interface GuardianInvite {
     id: string
@@ -250,7 +251,7 @@ export default function Invitations() {
         {
             key: 'team',
             header: t('admin.invitations.team'),
-            render: (invite) => invite.team_name || '—',
+            render: (invite) => invite.team_name || '-',
         },
         {
             key: 'expires',
@@ -373,8 +374,8 @@ export default function Invitations() {
                     </Card>
                 )}
 
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'invites' | 'requests' | 'analytics')}>
-                    <TabsList className="mb-6">
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'invites' | 'requests' | 'analytics')} className="oa-tabs">
+                    <TabsList className="oa-mb-6">
                         <TabsTrigger value="invites">
                             {t('admin.invitations.guardianInvites')}
                             {guardianInvites.length > 0 && (
@@ -401,7 +402,11 @@ export default function Invitations() {
                             </Card>
                         ) : guardianInvites.length === 0 ? (
                             <Card className="p-8 text-center">
-                                <p className="text-slate-500 dark:text-slate-400">
+                                <p 
+                                  style={{
+                                    color: 'var(--pa-text-muted)'
+                                  }}
+                                >
                                     {t('admin.invitations.noPendingInvites')}
                                 </p>
                             </Card>
@@ -422,7 +427,11 @@ export default function Invitations() {
                             </Card>
                         ) : joinRequests.length === 0 ? (
                             <Card className="p-8 text-center">
-                                <p className="text-slate-500 dark:text-slate-400">
+                                <p 
+                                  style={{
+                                    color: 'var(--pa-text-muted)'
+                                  }}
+                                >
                                     {t('admin.invitations.noPendingRequests')}
                                 </p>
                             </Card>
@@ -579,7 +588,12 @@ export default function Invitations() {
                                         value={reviewReason}
                                         onChange={(e) => setReviewReason(e.target.value)}
                                         placeholder={t('admin.invitations.reasonPlaceholder')}
-                                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800"
+                                        className="w-full px-3 py-2 border rounded"
+                                        style={{
+                                          background: 'var(--pa-surface-panel)',
+                                          borderColor: 'var(--pa-border-default)',
+                                          color: 'var(--pa-text-primary)'
+                                        }}
                                     />
                                 </div>
                             </div>

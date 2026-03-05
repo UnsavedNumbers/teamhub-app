@@ -612,7 +612,18 @@ export default function PaymentDetail() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(getLink('admin.payments.list'))}
-              className="size-10 flex items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-[var(--org-btn-primary-bg, #137fec)] transition-colors min-h-[44px] min-w-[44px]"
+              className="size-10 flex items-center justify-center rounded-lg border transition-colors min-h-[44px] min-w-[44px]"
+              style={{
+                background: 'var(--pa-surface-panel)',
+                borderColor: 'var(--pa-border-default)',
+                color: 'var(--pa-text-muted)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--org-btn-primary-bg, #137fec)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--pa-text-muted)'
+              }}
             >
               <span className="material-symbols-outlined">arrow_back</span>
             </button>
@@ -680,7 +691,12 @@ export default function PaymentDetail() {
               <div className="space-y-4">
                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white">PAYER</h3>
                 <div className="flex items-center gap-4">
-                  <div className="size-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center">
+                  <div 
+                    className="size-12 rounded-full flex items-center justify-center"
+                    style={{
+                      background: 'var(--pa-surface-panel)'
+                    }}
+                  >
                     <span className="material-symbols-outlined text-slate-500">person</span>
                   </div>
                   <div>

@@ -1,27 +1,33 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { getAthleteById } from '../../data/services/familyService'
 import { getAthleteSports } from '../../data/services/athleteSportsService'
 import { getAthleteGuardians, linkGuardianToAthlete, removeGuardianFromAthlete, validateGuardianEmail, getAthleteInvites, cancelInvite, resendInvite } from '../../data/services/guardianService'
+import { getAthleteSensitiveAccess } from '../../data/services/sensitiveAccessService'
 import AthleteAvatar from '../../components/portal/AthleteAvatar'
 import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes'
 import { useT } from '../../i18n/useI18n'
-import { Button, Card, Table, type TableColumn, Badge, ConfirmDialog } from '../../components/admin'
-import { Tabs, TabsList, TabsTrigger, TabsContent, StatCard } from '../../components/platformAdmin'
+import { Button, Card, Table, type TableColumn, Badge, ConfirmDialog, AdminPageHeader } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getDisplayName, calculateAge, getGenderLabel, formatSports } from '../../utils/athleteHelpers'
-import { formatPhoneDisplay } from '../../utils/phoneFormatting'
 import { GuardianMatchIndicator } from '../../components/admin/GuardianMatchIndicator'
 import { checkGuardianMatch, debounce } from '../../utils/guardianMatching'
 import { useSportFieldDefinitions } from '../../hooks/useSportFieldDefinitions'
 import { useAthleteSportProfile } from '../../hooks/useAthleteSportProfile'
 import { PhotoSection } from '@/components/galleries/PhotoSection'
+import { MedicalInfoForm } from '../../components/athleteProfiles/MedicalInfoForm'
+import { TopLevelStats } from '../../components/common/TopLevelStats'
+import { redactPII, redactEmail, redactPhone } from '../../utils/dataRedaction'
+import { canViewMedicalInfo, canViewPII } from '../../utils/permissions'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import type { Athlete, Guardian, GuardianMatch, PendingGuardianInvite } from '../../types/family'
 import type { AthleteSportWithDetails } from '../../data/services/athleteSportsService'
 import type { SportCode } from '../../types/sports'
+import type { SensitiveAthleteAccess } from '../../utils/sensitiveAccess'
 import '../../styles/orgAdmin.css'
 
 interface TeamMembership {
@@ -34,32 +40,13 @@ interface TeamMembership {
   jersey_number: string | null
 }
 
-function formatUpdatedRelative(iso: string | null | undefined): string {
-  if (!iso) return 'Updated recently'
-  const dt = new Date(iso)
-  if (Number.isNaN(dt.valueOf())) return 'Updated recently'
-
-  const diffMs = Date.now() - dt.valueOf()
-  const diffSec = Math.floor(diffMs / 1000)
-  const absSec = Math.abs(diffSec)
-
-  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
-
-  if (absSec < 60) return `Updated ${rtf.format(-diffSec, 'second')}`
-  const diffMin = Math.floor(diffSec / 60)
-  const absMin = Math.abs(diffMin)
-  if (absMin < 60) return `Updated ${rtf.format(-diffMin, 'minute')}`
-  const diffHr = Math.floor(diffMin / 60)
-  const absHr = Math.abs(diffHr)
-  if (absHr < 24) return `Updated ${rtf.format(-diffHr, 'hour')}`
-  const diffDay = Math.floor(diffHr / 24)
-  return `Updated ${rtf.format(-diffDay, 'day')}`
-}
 
 export default function AthleteDetail() {
   const { id: athleteId } = useParams<{ id: string }>()
   const t = useT()
+  const { currentOrganization } = useOrganization()
   const [athlete, setAthlete] = useState<Athlete | null>(null)
+  const [sensitiveAccess, setSensitiveAccess] = useState<SensitiveAthleteAccess | null>(null)
   const [sports, setSports] = useState<AthleteSportWithDetails[]>([])
   const [guardians, setGuardians] = useState<Guardian[]>([])
   const [pendingInvites, setPendingInvites] = useState<PendingGuardianInvite[]>([])
@@ -101,6 +88,17 @@ export default function AthleteDetail() {
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
   const isMountedRef = useRef(true)
+  
+  // Permission context for redaction (moved here to be available for guardianColumns)
+  const permissionContext = useMemo(() => ({
+    org: currentOrganization,
+    userId: context.userId,
+    athleteId: athleteId || undefined,
+    sensitiveAccess,
+  }), [currentOrganization, context.userId, athleteId, sensitiveAccess])
+  
+  const canViewMedical = athleteId ? canViewMedicalInfo(permissionContext, athleteId) : false
+  const canViewSensitivePii = canViewPII(permissionContext)
 
   // Sport Profile Data Hooks
   const { profile: sportProfile, loading: sportProfileLoading } = useAthleteSportProfile(
@@ -118,6 +116,7 @@ export default function AthleteDetail() {
 
   const fetchAthleteData = useCallback(async () => {
     if (!athleteId || !isReady) {
+      setSensitiveAccess(null)
       setLoading(false)
       return
     }
@@ -126,11 +125,21 @@ export default function AthleteDetail() {
     setError(null)
 
     try {
+      const { data: accessSnapshot } = await getAthleteSensitiveAccess(athleteId, context.orgId)
+      if (isMountedRef.current) {
+        setSensitiveAccess(accessSnapshot)
+      }
+
       // Fetch athlete
-      const { data: athleteData, error: athleteError } = await getAthleteById(context, athleteId)
+      const { data: athleteData, error: athleteError } = await getAthleteById(context, athleteId, accessSnapshot)
 
       if (athleteError || !athleteData) {
         if (isMountedRef.current) {
+          // If access denied, redirect coaches to athletes list
+          if (athleteError?.message === 'Access denied') {
+            navigate(getLink('admin.athletes.list'), { replace: true })
+            return
+          }
           setError(athleteError?.message || t('admin.athletes.notFound'))
           setLoading(false)
         }
@@ -150,23 +159,26 @@ export default function AthleteDetail() {
         setSports(sportsData)
       }
 
-      // Fetch guardians
-      const { data: guardiansData } = await getAthleteGuardians(athleteId, context.orgId)
-      if (isMountedRef.current && guardiansData) {
-        setGuardians(guardiansData)
-      }
+      if (accessSnapshot.canViewPii) {
+        const { data: guardiansData } = await getAthleteGuardians(athleteId, context.orgId)
+        if (isMountedRef.current && guardiansData) {
+          setGuardians(guardiansData)
+        }
 
-      // Fetch pending invites
-      const { data: invitesData } = await getAthleteInvites(athleteId, context.orgId)
-      if (isMountedRef.current && invitesData) {
-        setPendingInvites(invitesData.map(invite => ({
-          id: invite.id,
-          email: invite.email,
-          status: invite.status,
-          expires_at: invite.expires_at,
-          created_at: invite.created_at,
-          token: invite.token
-        })))
+        const { data: invitesData } = await getAthleteInvites(athleteId, context.orgId)
+        if (isMountedRef.current && invitesData) {
+          setPendingInvites(invitesData.map(invite => ({
+            id: invite.id,
+            email: invite.email,
+            status: invite.status,
+            expires_at: invite.expires_at,
+            created_at: invite.created_at,
+            token: invite.token
+          })))
+        }
+      } else if (isMountedRef.current) {
+        setGuardians([])
+        setPendingInvites([])
       }
 
       // Fetch team memberships
@@ -204,6 +216,7 @@ export default function AthleteDetail() {
     } catch (err) {
       console.error('Error fetching athlete data:', err)
       if (isMountedRef.current) {
+        setSensitiveAccess(null)
         setError(err instanceof Error ? err.message : t('admin.athletes.errorLoading'))
         setLoading(false)
       }
@@ -710,17 +723,17 @@ export default function AthleteDetail() {
     {
       key: 'display_name',
       header: t('admin.athletes.table.name').toUpperCase(),
-      render: (guardian) => guardian.display_name || guardian.email,
+      render: (guardian) => redactPII(permissionContext, guardian.display_name || guardian.email, guardian.user_id),
     },
     {
       key: 'email',
       header: t('admin.athletes.table.email').toUpperCase(),
-      render: (guardian) => guardian.email,
+      render: (guardian) => redactEmail(permissionContext, guardian.email, guardian.user_id),
     },
     {
       key: 'phone',
       header: t('admin.athletes.table.phone').toUpperCase(),
-      render: (guardian) => guardian.phone || '—',
+      render: (guardian) => redactPhone(permissionContext, guardian.phone || null, guardian.user_id),
     },
     {
       key: 'relationship_type',
@@ -759,14 +772,14 @@ export default function AthleteDetail() {
         </Button>
       ),
     },
-  ], [t, handleRemoveGuardianClick, isLinkingGuardian, isRemovingGuardian])
+  ], [t, handleRemoveGuardianClick, isLinkingGuardian, isRemovingGuardian, permissionContext])
 
   // Pending invites table columns
   const pendingInviteColumns: TableColumn<PendingGuardianInvite>[] = useMemo(() => [
     {
       key: 'email',
       header: t('admin.athletes.table.email').toUpperCase(),
-      render: (invite) => invite.email,
+      render: (invite) => redactEmail(permissionContext, invite.email),
     },
     {
       key: 'status',
@@ -795,34 +808,36 @@ export default function AthleteDetail() {
       header: t('admin.athletes.table.action').toUpperCase(),
       align: 'right',
       render: (invite) => (
-        <div style={{ display: 'flex', gap: 'var(--oa-space-2)', justifyContent: 'flex-end' }}>
-          <Button
-            variant="secondary"
-            size="compact"
-            onClick={(e: React.MouseEvent) => {
-              e.stopPropagation()
-              handleResendInvite(invite.id)
-            }}
-            disabled={inviteActionLoading === invite.id}
-            loading={inviteActionLoading === invite.id}
-          >
-            {t('admin.athletes.guardians.resend')}
-          </Button>
-          <Button
-            variant="secondary"
-            size="compact"
-            onClick={(e: React.MouseEvent) => {
-              e.stopPropagation()
-              handleCancelInvite(invite.id)
-            }}
-            disabled={inviteActionLoading === invite.id}
-          >
-            {t('admin.athletes.guardians.cancelInvite')}
-          </Button>
-        </div>
+        hasAnyRole(currentOrganization, ['org_admin']) ? (
+          <div style={{ display: 'flex', gap: 'var(--oa-space-2)', justifyContent: 'flex-end' }}>
+            <Button
+              variant="secondary"
+              size="compact"
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation()
+                handleResendInvite(invite.id)
+              }}
+              disabled={inviteActionLoading === invite.id}
+              loading={inviteActionLoading === invite.id}
+            >
+              {t('admin.athletes.guardians.resend')}
+            </Button>
+            <Button
+              variant="secondary"
+              size="compact"
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation()
+                handleCancelInvite(invite.id)
+              }}
+              disabled={inviteActionLoading === invite.id}
+            >
+              {t('admin.athletes.guardians.cancelInvite')}
+            </Button>
+          </div>
+        ) : null
       ),
     },
-  ], [t, handleResendInvite, handleCancelInvite, inviteActionLoading])
+  ], [t, handleResendInvite, handleCancelInvite, inviteActionLoading, currentOrganization, permissionContext])
 
 
   // Early returns - after all hooks
@@ -869,8 +884,13 @@ export default function AthleteDetail() {
   const age = calculateAge(athlete.date_of_birth)
   const genderLabel = getGenderLabel(athlete.gender)
   const { plays, interested } = formatSports(athlete.sports)
-  const updatedLabel = formatUpdatedRelative(athlete.updated_at)
-  const primaryColor = 'var(--oa-theme-action-primary, var(--org-btn-primary-bg, #137fec))'
+  
+  // Build subtitle string
+  const subtitleParts: string[] = []
+  if (age !== null) subtitleParts.push(`Age ${age}`)
+  if (genderLabel !== 'Not specified') subtitleParts.push(genderLabel)
+  if (athlete.jersey_number) subtitleParts.push(`#${athlete.jersey_number}`)
+  const subtitle = subtitleParts.join(' • ')
 
   // Stats
   const activeTeams = teams.filter(t => t.status === 'active').length
@@ -890,410 +910,179 @@ export default function AthleteDetail() {
         }}
         className="md:px-8"
       >
-        {/* Breadcrumbs */}
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            gap: 'var(--oa-space-2)',
-            marginBottom: 'var(--oa-space-6)',
-          }}
-        >
-          <button
-            onClick={() => handleBreadcrumbClick(getLink('admin.organization.structure'))}
-            disabled={navigating}
-            style={{
-              color: primaryColor,
-              fontSize: '12px',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              textDecoration: 'none',
-              background: 'none',
-              border: 'none',
-              cursor: navigating ? 'not-allowed' : 'pointer',
-              opacity: navigating ? 0.6 : 1,
-              padding: 0,
-              lineHeight: 'normal',
-            }}
-          >
-            ORGANIZATIONS
-          </button>
-          <span style={{ color: 'var(--oa-n400)', fontSize: '12px', fontWeight: 700, lineHeight: 'normal' }}>/</span>
-          <button
-            onClick={() => handleBreadcrumbClick(getLink('admin.athletes.list'))}
-            disabled={navigating}
-            style={{
-              color: primaryColor,
-              fontSize: '12px',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              textDecoration: 'none',
-              background: 'none',
-              border: 'none',
-              cursor: navigating ? 'not-allowed' : 'pointer',
-              opacity: navigating ? 0.6 : 1,
-              padding: 0,
-              lineHeight: 'normal',
-            }}
-          >
-            {t('admin.athletes.breadcrumb').toUpperCase()}
-          </button>
-          <span style={{ color: 'var(--oa-n400)', fontSize: '12px', fontWeight: 700, lineHeight: 'normal' }}>/</span>
-          <span
-            style={{
-              color: 'var(--oa-n600)',
-              fontSize: '12px',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              lineHeight: 'normal',
-            }}
-            className="dark:text-slate-400"
-          >
-            {displayName.toUpperCase()}
-          </span>
+        {/* Page Header with Avatar */}
+        <AdminPageHeader
+          title={
+            <div className="oa-athlete-header-with-avatar">
+              {athlete && (
+                <div className="oa-athlete-header-avatar">
+                  <AthleteAvatar athlete={athlete} photoSize="512" className="w-full h-full object-cover" />
+                </div>
+              )}
+              <span>{displayName}</span>
+            </div>
+          }
+          subtitle={subtitle}
+          breadcrumbs={[
+            { 
+              label: 'Organizations', 
+              path: getLink('admin.organization.structure'),
+              onClick: () => handleBreadcrumbClick(getLink('admin.organization.structure'))
+            },
+            { 
+              label: t('admin.athletes.breadcrumb'),
+              path: getLink('admin.athletes.list'),
+              onClick: () => handleBreadcrumbClick(getLink('admin.athletes.list'))
+            },
+            { label: displayName },
+          ]}
+          actions={
+            <OrgAdminButton
+              onClick={handleEditClick}
+              disabled={navigating}
+              variant="primary"
+              icon="edit"
+              size="compact"
+            >
+              {t('admin.athletes.edit')}
+            </OrgAdminButton>
+          }
+        />
+
+        {/* Stats Cards */}
+        <TopLevelStats
+          ariaLabel="Athlete summary metrics"
+          className="oa-athlete-top-stats"
+          items={[
+            {
+              id: 'active-teams',
+              label: t('admin.athletes.stats.activeTeams'),
+              value: activeTeams,
+              onClick: activeTeams > 0 ? () => handleTabChange('teams') : undefined,
+            },
+            {
+              id: 'total-teams',
+              label: t('admin.athletes.stats.totalTeams'),
+              value: totalTeams,
+              icon: 'groups',
+            },
+            {
+              id: 'sports-played',
+              label: t('admin.athletes.stats.sportsPlayed'),
+              value: playsCount,
+              icon: 'sports',
+              onClick: playsCount > 0 ? () => handleTabChange('sports') : undefined,
+            },
+            {
+              id: 'guardians',
+              label: t('admin.athletes.stats.guardians'),
+              value: guardians.filter(g => g.status === 'active').length,
+              icon: 'family_history',
+              meta: pendingInvites.length > 0 ? `+${pendingInvites.length} pending` : undefined,
+              onClick: (guardians.length > 0 || pendingInvites.length > 0) ? () => handleTabChange('guardians') : undefined,
+            },
+          ]}
+        />
+
+        {/* Tabs */}
+        <div className="oa-tabs">
+          <div className="pa-tabs-list oa-athlete-detail-tabs" role="tablist" aria-label="Athlete detail tabs">
+            {[
+              { value: 'overview', label: t('admin.athletes.tabs.overview') },
+              { value: 'sport_profiles', label: 'Sport Profiles' },
+              { value: 'teams', label: t('admin.athletes.tabs.teams', { count: totalTeams }) },
+              { value: 'sports', label: t('admin.athletes.tabs.sports', { count: playsCount + interestedCount }) },
+              { value: 'guardians', label: t('admin.athletes.tabs.guardians', { count: guardians.length + pendingInvites.length }), badge: pendingInvites.length > 0 },
+              { value: 'medical', label: t('admin.athletes.tabs.medical') },
+              { value: 'galleries', label: 'Galleries' },
+            ].map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab.value}
+                onClick={() => handleTabChange(tab.value)}
+                className={`pa-tabs-trigger oa-athlete-detail-tab-trigger ${activeTab === tab.value ? 'active' : ''}`}
+              >
+                {tab.label}
+                {tab.badge && (
+                  <span className="oa-athlete-detail-tab-badge" />
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Athlete Header - ESPN/NBA Style */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--oa-space-6)',
-            marginBottom: 'var(--oa-space-8)',
-          }}
-        >
-          {/* Top Row: Avatar, Name, Edit Button */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 'var(--oa-space-6)',
-              flexWrap: 'wrap',
-            }}
-          >
-            {/* Avatar */}
-            <div
-              style={{
-                width: '120px',
-                height: '120px',
-                background: 'var(--oa-white)',
-                borderRadius: 'var(--oa-radius-l)',
-                border: '2px solid var(--oa-n200)',
-                boxShadow: 'var(--oa-shadow-2)',
-                overflow: 'hidden',
-                flexShrink: 0,
-              }}
-              className="dark:bg-slate-800 dark:border-slate-700"
-            >
-              {athlete && (
-                <AthleteAvatar athlete={athlete} photoSize="512" className="w-full h-full object-cover" />
-              )}
-            </div>
-
-            {/* Name and Info */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--oa-space-4)', flexWrap: 'wrap', marginBottom: 'var(--oa-space-3)' }}>
-                <h1
-                  style={{
-                    fontFamily: 'var(--oa-font-display)',
-                    fontSize: 'clamp(2rem, 4vw, 3rem)',
-                    fontWeight: 900,
-                    lineHeight: 1.1,
-                    letterSpacing: '-0.02em',
-                    color: 'var(--oa-n900)',
-                    margin: 0,
-                  }}
-                  className="dark:text-white"
-                >
-                  {displayName}
-                </h1>
-                <OrgAdminButton
-                  onClick={handleEditClick}
-                  disabled={navigating}
-                  variant="primary"
-                  icon="edit"
-                  size="compact"
-                >
-                  {t('admin.athletes.edit')}
-                </OrgAdminButton>
-              </div>
-
-              {/* Info Badges Row */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--oa-space-2)', alignItems: 'center' }}>
-                {age !== null && (
-                  <Badge variant="neutral">
-                    Age {age}
-                  </Badge>
-                )}
-                {genderLabel !== 'Not specified' && (
-                  <Badge variant="neutral">
-                    {genderLabel}
-                  </Badge>
-                )}
-                {athlete.jersey_number && (
-                  <Badge variant="info">
-                    #{athlete.jersey_number}
-                  </Badge>
-                )}
-                {plays.length > 0 && (
-                  <Badge variant="success">
-                    {plays.length} {plays.length === 1 ? 'Sport' : 'Sports'}
-                  </Badge>
-                )}
-                {activeTeams > 0 && (
-                  <Badge variant="info">
-                    {activeTeams} {activeTeams === 1 ? 'Active Team' : 'Active Teams'}
-                  </Badge>
-                )}
-                <Badge variant="neutral">
-                  {updatedLabel}
-                </Badge>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Cards */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: 'var(--oa-space-4)',
-              marginBottom: 'var(--oa-space-8)',
-            }}
-          >
-          <StatCard
-            label={t('admin.athletes.stats.activeTeams')}
-            value={activeTeams.toString()}
-            icon="group"
-            onClick={activeTeams > 0 ? () => handleTabChange('teams') : undefined}
-          />
-          <StatCard
-            label={t('admin.athletes.stats.totalTeams')}
-            value={totalTeams.toString()}
-            icon="groups"
-          />
-          <StatCard
-            label={t('admin.athletes.stats.sportsPlayed')}
-            value={playsCount.toString()}
-            icon="sports"
-            onClick={playsCount > 0 ? () => handleTabChange('sports') : undefined}
-          />
-          <StatCard
-            label={t('admin.athletes.stats.guardians')}
-            value={`${guardians.filter(g => g.status === 'active').length}${pendingInvites.length > 0 ? ` (+${pendingInvites.length})` : ''}`}
-            icon="family_restroom"
-            onClick={(guardians.length > 0 || pendingInvites.length > 0) ? () => handleTabChange('guardians') : undefined}
-          />
-          </div>
-
-          {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList>
-            <TabsTrigger value="overview">{t('admin.athletes.tabs.overview')}</TabsTrigger>
-            <TabsTrigger value="sport_profiles">Sport Profiles</TabsTrigger>
-            <TabsTrigger value="teams">{t('admin.athletes.tabs.teams', { count: totalTeams })}</TabsTrigger>
-            <TabsTrigger value="sports">{t('admin.athletes.tabs.sports', { count: playsCount + interestedCount })}</TabsTrigger>
-            <TabsTrigger value="guardians">
-              {t('admin.athletes.tabs.guardians', { count: guardians.length + pendingInvites.length })}
-              {pendingInvites.length > 0 && (
-                <span 
-                  style={{ 
-                    marginLeft: 'var(--oa-space-2)', 
-                    width: '8px', 
-                    height: '8px', 
-                    borderRadius: '50%', 
-                    background: 'var(--oa-warning-500, #f59e0b)',
-                    display: 'inline-block'
-                  }} 
-                />
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="medical">{t('admin.athletes.tabs.medical')}</TabsTrigger>
-            <TabsTrigger value="galleries">Galleries</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview">
-            <div style={{ display: 'grid', gap: 'var(--oa-space-6)' }}>
+        {/* Tabs Content */}
+        {activeTab === 'overview' && (
+            <div className="space-y-6">
               {/* Guardian Status Banner */}
-              {athlete && (
-                <Card style={{ 
-                  background: athlete.has_active_guardian 
-                    ? 'var(--oa-n50, #f5f6f7)' 
-                    : 'var(--oa-n25, #fafafa)', 
-                  border: `1px solid ${athlete.has_active_guardian ? 'var(--oa-n200, #d8dde3)' : 'var(--oa-n200, #d8dde3)'}`,
-                  padding: 'var(--oa-space-4)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--oa-space-3)' }}>
-                    <span 
-                      className="material-symbols-outlined" 
-                      style={{ 
-                        fontSize: '20px',
-                        color: athlete.has_active_guardian 
-                          ? 'var(--oa-success, #10b981)' 
-                          : 'var(--oa-n500, #7a8794)'
-                      }}
-                    >
-                      {athlete.has_active_guardian ? 'check_circle' : 'info'}
-                    </span>
-                    <p className="oa-body-m" style={{ margin: 0, color: 'var(--oa-n700, #2b343d)' }}>
-                      {athlete.has_active_guardian 
-                        ? 'This athlete has an active guardian account connected.'
-                        : 'This athlete does not have an active guardian account connected.'}
-                    </p>
-                  </div>
-                </Card>
-              )}
-
-              {/* Pending Guardian Invites Alert */}
-              {pendingInvites.length > 0 && (
-                <Card style={{ 
-                  background: 'var(--oa-warning-50, #fffbeb)', 
-                  border: '1px solid var(--oa-warning-200, #fde68a)' 
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--oa-space-3)' }}>
-                    <span 
-                      className="material-symbols-rounded" 
-                      style={{ color: 'var(--oa-warning-600, #d97706)', fontSize: '24px' }}
-                    >
-                      mail
-                    </span>
-                    <div style={{ flex: 1 }}>
-                      <h3 className="oa-body-l" style={{ fontWeight: 700, margin: 0, color: 'var(--oa-warning-800, #92400e)' }}>
-                        {t('admin.athletes.guardians.pendingInvitesTitle', { count: pendingInvites.length })}
-                      </h3>
-                      <p className="oa-body-s" style={{ color: 'var(--oa-warning-700, #b45309)', marginTop: 'var(--oa-space-1)', marginBottom: 'var(--oa-space-3)' }}>
-                        {pendingInvites.map(i => i.email).join(', ')}
-                      </p>
-                      <Button
-                        variant="secondary"
-                        size="compact"
-                        onClick={() => handleTabChange('guardians')}
-                      >
-                        {t('admin.athletes.guardians.viewInvites')}
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
+              {athlete && !athlete.has_active_guardian && (
+                <div className="oa-athlete-guardian-banner">
+                  <span className="material-symbols-outlined oa-athlete-guardian-banner-icon">info</span>
+                  <p className="oa-athlete-guardian-banner-text">
+                    This athlete does not have an active guardian account connected.
+                  </p>
+                </div>
               )}
 
               {/* Basic Information */}
-              <Card>
-                <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>{t('admin.athletes.basicInfo.title')}</h2>
-                <div style={{ display: 'grid', gap: 'var(--oa-space-4)' }}>
-                  <div>
-                    <label className="oa-label">{t('admin.athletes.basicInfo.fullName')}</label>
-                    <p className="oa-body-m">{athlete.first_name} {athlete.last_name}</p>
+              <Card className="p-6">
+                <h2 className="oa-card-title mb-6">{t('admin.athletes.basicInfo.title')}</h2>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-y-10">
+                  <div className="col-span-full">
+                    <p className="oa-label">{t('admin.athletes.basicInfo.fullName')}</p>
+                    <p className="oa-body-m font-bold">{athlete.first_name} {athlete.last_name}</p>
                   </div>
-                  {athlete.preferred_name && (
+                  {age !== null && (
                     <div>
-                      <label className="oa-label">{t('admin.athletes.basicInfo.preferredName')}</label>
-                      <p className="oa-body-m">{athlete.preferred_name}</p>
+                      <p className="oa-label">{t('admin.athletes.basicInfo.age')}</p>
+                      <p className="oa-body-m">{t('admin.athletes.basicInfo.yearsOld', { age })}</p>
                     </div>
                   )}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--oa-space-4)' }}>
-                    {age !== null && (
-                      <div>
-                        <label className="oa-label">{t('admin.athletes.basicInfo.age')}</label>
-                        <p className="oa-body-m">{t('admin.athletes.basicInfo.yearsOld', { age })}</p>
-                      </div>
-                    )}
-                    {genderLabel !== 'Not specified' && (
-                      <div>
-                        <label className="oa-label">{t('admin.athletes.basicInfo.gender')}</label>
-                        <p className="oa-body-m">{genderLabel}</p>
-                      </div>
-                    )}
-                    {athlete.date_of_birth && (
-                      <div>
-                        <label className="oa-label">{t('admin.athletes.basicInfo.dateOfBirth')}</label>
-                        <p className="oa-body-m">{new Date(athlete.date_of_birth).toLocaleDateString()}</p>
-                      </div>
-                    )}
-                    {athlete.jersey_number && (
-                      <div>
-                        <label className="oa-label">{t('admin.athletes.basicInfo.jerseyNumber')}</label>
-                        <p className="oa-body-m">#{athlete.jersey_number}</p>
-                      </div>
-                    )}
-                  </div>
-                  {(athlete.phone || athlete.email) && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--oa-space-4)', marginTop: 'var(--oa-space-4)' }}>
-                      {athlete.phone && (
-                        <div>
-                          <label className="oa-label">Phone</label>
-                          <p className="oa-body-m">
-                            <a href={`tel:${athlete.phone}`} className="oa-link">
-                              {formatPhoneDisplay(athlete.phone)}
-                            </a>
-                          </p>
-                        </div>
-                      )}
-                      {athlete.email && (
-                        <div>
-                          <label className="oa-label">Email</label>
-                          <p className="oa-body-m">
-                            <a href={`mailto:${athlete.email}`} className="oa-link">
-                              {athlete.email}
-                            </a>
-                          </p>
-                        </div>
-                      )}
+                  {genderLabel !== 'Not specified' && (
+                    <div>
+                      <p className="oa-label">{t('admin.athletes.basicInfo.gender')}</p>
+                      <p className="oa-body-m">{genderLabel}</p>
+                    </div>
+                  )}
+                  {athlete.date_of_birth && (
+                    <div>
+                      <p className="oa-label">{t('admin.athletes.basicInfo.dateOfBirth')}</p>
+                      <p className="oa-body-m">{new Date(athlete.date_of_birth).toLocaleDateString()}</p>
+                    </div>
+                  )}
+                  {athlete.jersey_number && (
+                    <div>
+                      <p className="oa-label">{t('admin.athletes.basicInfo.jerseyNumber')}</p>
+                      <p className="oa-body-m">#{athlete.jersey_number}</p>
                     </div>
                   )}
                 </div>
               </Card>
 
-              {/* Sports Summary */}
-              {(plays.length > 0 || interested.length > 0) && (
-                <Card>
-                  <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>{t('admin.athletes.sports.title')}</h2>
-                  <div style={{ display: 'grid', gap: 'var(--oa-space-3)' }}>
-                    {plays.length > 0 && (
-                      <div>
-                        <label className="oa-label">{t('admin.athletes.sports.plays')}</label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--oa-space-2)', marginTop: 'var(--oa-space-2)' }}>
-                          {plays.map((sport) => (
-                            <Badge key={sport} variant="success">{sport}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {interested.length > 0 && (
-                      <div>
-                        <label className="oa-label">{t('admin.athletes.sports.interested')}</label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--oa-space-2)', marginTop: 'var(--oa-space-2)' }}>
-                          {interested.map((sport) => (
-                            <Badge key={sport} variant="neutral">{sport}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              )}
-
               {/* Emergency Contact */}
               {(athlete.emergency_contact_name || athlete.emergency_contact_phone) && (
-                <Card>
-                  <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>{t('admin.athletes.emergencyContact.title')}</h2>
-                  <div style={{ display: 'grid', gap: 'var(--oa-space-4)' }}>
+                <Card className="p-6">
+                  <h2 className="oa-card-title mb-6">{t('admin.athletes.emergencyContact.title')}</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-y-10">
                     {athlete.emergency_contact_name && (
-                      <div>
-                        <label className="oa-label">{t('admin.athletes.emergencyContact.name')}</label>
-                        <p className="oa-body-m">{athlete.emergency_contact_name}</p>
+                      <div className="col-span-full">
+                        <p className="oa-label">{t('admin.athletes.emergencyContact.name')}</p>
+                        <p className="oa-body-m font-bold">{redactPII(permissionContext, athlete.emergency_contact_name)}</p>
                       </div>
                     )}
                     {athlete.emergency_contact_phone && (
-                      <div>
-                        <label className="oa-label">{t('admin.athletes.emergencyContact.phone')}</label>
+                      <div className="col-span-full">
+                        <p className="oa-label">{t('admin.athletes.emergencyContact.phone')}</p>
                         <p className="oa-body-m">
-                          <a href={`tel:${athlete.emergency_contact_phone}`} className="oa-link">
-                            {athlete.emergency_contact_phone}
-                          </a>
+                          {canViewMedical ? (
+                            <a href={`tel:${athlete.emergency_contact_phone}`} className="oa-link">
+                              {athlete.emergency_contact_phone}
+                            </a>
+                          ) : (
+                            <span>{redactPhone(permissionContext, athlete.emergency_contact_phone)}</span>
+                          )}
                         </p>
                       </div>
                     )}
@@ -1301,40 +1090,39 @@ export default function AthleteDetail() {
                 </Card>
               )}
             </div>
-          </TabsContent>
+        )}
 
-          <TabsContent value="sport_profiles">
-            <div style={{ marginBottom: 'var(--oa-space-4)' }}>
-              <Card>
-                <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>Select Sport</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 'var(--oa-space-3)' }}>
-                  {(['soccer', 'basketball', 'baseball', 'football'] as SportCode[]).map((sport) => (
-                    <button
-                      key={sport}
-                      onClick={() => setSelectedSport(sport)}
-                      className="oa-btn"
-                      style={{
-                        padding: 'var(--oa-space-4)',
-                        border: selectedSport === sport ? '2px solid var(--oa-theme-action-primary)' : '1px solid var(--oa-border-default)',
-                        background: selectedSport === sport ? 'var(--oa-theme-action-primary-bg)' : 'transparent',
-                        borderRadius: 'var(--oa-radius-md)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 'var(--oa-space-2)',
-                        transition: 'all 0.2s ease',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>sports</span>
-                      <span className="oa-body-s" style={{ fontWeight: 700, textTransform: 'capitalize' }}>
-                        {sport.replace('_', ' ')}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </Card>
-            </div>
+        {activeTab === 'sport_profiles' && (
+          <div className="space-y-6">
+            <Card className="p-6">
+              <h2 className="oa-card-title mb-6">Select Sport</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 'var(--oa-space-3)' }}>
+                {(['soccer', 'basketball', 'baseball', 'football'] as SportCode[]).map((sport) => (
+                  <button
+                    key={sport}
+                    onClick={() => setSelectedSport(sport)}
+                    className="oa-btn"
+                    style={{
+                      padding: 'var(--oa-space-4)',
+                      border: selectedSport === sport ? '2px solid var(--oa-theme-action-primary)' : '1px solid var(--oa-border-default)',
+                      background: selectedSport === sport ? 'var(--oa-theme-action-primary-bg)' : 'transparent',
+                      borderRadius: 'var(--oa-radius-md)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 'var(--oa-space-2)',
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>sports</span>
+                    <span className="oa-body-s" style={{ fontWeight: 700, textTransform: 'capitalize' }}>
+                      {sport.replace('_', ' ')}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </Card>
 
             {sportProfileLoading ? (
               <div className="oa-skeleton" style={{ height: '200px' }} />
@@ -1350,14 +1138,17 @@ export default function AthleteDetail() {
                   
                   {profileFields.length > 0 ? (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--oa-space-4)' }}>
-                      {profileFields.map((field) => (
-                        <div key={field.field_key}>
-                          <p className="oa-label">{field.field_label}</p>
-                          <p className="oa-body-m">
-                            {sportProfile?.profile_data[field.field_key]?.toString() || '—'}
-                          </p>
-                        </div>
-                      ))}
+                      {profileFields.map((field) => {
+                        const fieldValue = sportProfile?.profile_data?.[field.field_key];
+                        return (
+                          <div key={field.field_key}>
+                            <p className="oa-label">{field.field_label}</p>
+                            <p className="oa-body-m">
+                              {fieldValue?.toString() || '—'}
+                            </p>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>
@@ -1366,8 +1157,8 @@ export default function AthleteDetail() {
                   )}
                 </Card>
 
-                <Card>
-                  <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>Equipment Data</h2>
+                <Card className="p-6">
+                  <h2 className="oa-card-title mb-6">Equipment Data</h2>
                   {equipmentFields.length > 0 ? (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--oa-space-4)' }}>
                       {equipmentFields.map((field) => (
@@ -1387,61 +1178,66 @@ export default function AthleteDetail() {
                 </Card>
               </div>
             )}
-          </TabsContent>
+          </div>
+        )}
 
-          <TabsContent value="teams">
-            <Card>
-              <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>{t('admin.athletes.teams.title')}</h2>
-              {teams.length === 0 ? (
-                <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.teams.empty')}</p>
-              ) : (
-                <Table columns={teamColumns} data={teams} />
-              )}
-            </Card>
-          </TabsContent>
+        {activeTab === 'teams' && (
+            <div className="space-y-6">
+              <Card className="p-6">
+                <h2 className="oa-card-title mb-6">{t('admin.athletes.teams.title')}</h2>
+                {teams.length === 0 ? (
+                  <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.teams.empty')}</p>
+                ) : (
+                  <Table columns={teamColumns} data={teams} />
+                )}
+              </Card>
+            </div>
+        )}
 
-          <TabsContent value="sports">
-            <Card>
-              <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>{t('admin.athletes.sports.title')}</h2>
-              {sports.length === 0 ? (
-                <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.sports.empty')}</p>
-              ) : (
-                <div style={{ display: 'grid', gap: 'var(--oa-space-4)' }}>
-                  {plays.length > 0 && (
-                    <div>
-                      <h3 className="oa-body-l" style={{ fontWeight: 700, marginBottom: 'var(--oa-space-3)' }}>{t('admin.athletes.sports.plays')}</h3>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--oa-space-2)' }}>
-                        {sports.filter(s => s.sport_type === 'plays').map((sport) => (
-                          <Badge key={sport.sport_id} variant="success">{sport.sport_name}</Badge>
-                        ))}
+        {activeTab === 'sports' && (
+            <div className="space-y-6">
+              <Card className="p-6">
+                <h2 className="oa-card-title mb-6">{t('admin.athletes.sports.title')}</h2>
+                {sports.length === 0 ? (
+                  <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.sports.empty')}</p>
+                ) : (
+                  <div className="space-y-4">
+                    {plays.length > 0 && (
+                      <div>
+                        <h3 className="oa-body-l font-bold mb-3">{t('admin.athletes.sports.plays')}</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {sports.filter(s => s.sport_type === 'plays').map((sport) => (
+                            <Badge key={sport.sport_id} variant="success">{sport.sport_name}</Badge>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {interested.length > 0 && (
-                    <div>
-                      <h3 className="oa-body-l" style={{ fontWeight: 700, marginBottom: 'var(--oa-space-3)' }}>{t('admin.athletes.sports.interested')}</h3>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--oa-space-2)' }}>
-                        {sports.filter(s => s.sport_type === 'interested').map((sport) => (
-                          <Badge key={sport.sport_id} variant="neutral">{sport.sport_name}</Badge>
-                        ))}
+                    )}
+                    {interested.length > 0 && (
+                      <div>
+                        <h3 className="oa-body-l font-bold mb-3">{t('admin.athletes.sports.interested')}</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {sports.filter(s => s.sport_type === 'interested').map((sport) => (
+                            <Badge key={sport.sport_id} variant="neutral">{sport.sport_name}</Badge>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </Card>
-          </TabsContent>
+                    )}
+                  </div>
+                )}
+              </Card>
+            </div>
+        )}
 
-          <TabsContent value="guardians">
-            <div style={{ display: 'grid', gap: 'var(--oa-space-6)' }}>
+        {activeTab === 'guardians' && (
+            <div className="space-y-6">
               {/* Pending Invites Section */}
-              {pendingInvites.length > 0 && (
-                <Card>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--oa-space-4)' }}>
+              {canViewSensitivePii && pendingInvites.length > 0 && (
+                <Card className="p-6">
+                  <div className="flex justify-between items-center mb-6">
                     <h2 className="oa-card-title" style={{ margin: 0 }}>{t('admin.athletes.guardians.pendingInvites')}</h2>
                     <Badge variant="warning">{pendingInvites.length}</Badge>
                   </div>
-                  <p className="oa-body-s" style={{ color: 'var(--oa-n500)', marginBottom: 'var(--oa-space-4)' }}>
+                  <p className="oa-body-s text-slate-500 dark:text-slate-400 mb-6">
                     {t('admin.athletes.guardians.pendingInvitesDesc')}
                   </p>
                   <Table columns={pendingInviteColumns} data={pendingInvites} />
@@ -1449,9 +1245,34 @@ export default function AthleteDetail() {
               )}
 
               {/* Active Guardians Section */}
-              <Card>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--oa-space-4)' }}>
+              <Card className="p-6">
+                <div className="flex justify-between items-center mb-6">
                   <h2 className="oa-card-title" style={{ margin: 0 }}>{t('admin.athletes.guardians.title')}</h2>
+                  {hasAnyRole(currentOrganization, ['org_admin']) && canViewSensitivePii && (
+                    <OrgAdminButton
+                      variant="primary"
+                      icon="person_add"
+                      onClick={handleOpenLinkGuardianModal}
+                      disabled={isLinkingGuardian}
+                    >
+                      {t('admin.athletes.guardians.add')}
+                    </OrgAdminButton>
+                  )}
+                </div>
+                {!canViewSensitivePii ? (
+                  <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>Access restricted.</p>
+                ) : guardians.length === 0 && pendingInvites.length === 0 ? (
+                  <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.guardians.empty')}</p>
+                ) : guardians.length === 0 ? (
+                  <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.guardians.noActiveGuardians')}</p>
+                ) : (
+                  <Table columns={guardianColumns} data={guardians} />
+                )}
+              </Card>
+
+              {/* Link Guardian button - only for org admins */}
+              {hasAnyRole(currentOrganization, ['org_admin']) && canViewSensitivePii && (
+                <div className="flex justify-end gap-4 pt-2">
                   <OrgAdminButton
                     variant="primary"
                     icon="person_add"
@@ -1461,59 +1282,48 @@ export default function AthleteDetail() {
                     {t('admin.athletes.guardians.add')}
                   </OrgAdminButton>
                 </div>
-                {guardians.length === 0 && pendingInvites.length === 0 ? (
-                  <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.guardians.empty')}</p>
-                ) : guardians.length === 0 ? (
-                  <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.guardians.noActiveGuardians')}</p>
-                ) : (
-                  <Table columns={guardianColumns} data={guardians} />
-                )}
+              )}
+            </div>
+        )}
+
+        {activeTab === 'medical' && (
+          canViewMedical ? (
+            <div className="space-y-6">
+              <Card className="p-6">
+                <h2 className="oa-card-title mb-6">{t('admin.athletes.medical.title')}</h2>
+                <MedicalInfoForm athleteId={athlete.id} athleteName={getDisplayName(athlete)} />
               </Card>
             </div>
-          </TabsContent>
-
-          <TabsContent value="medical">
-            <div style={{ display: 'grid', gap: 'var(--oa-space-6)' }}>
-              <Card>
-                <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>{t('admin.athletes.medical.title')}</h2>
-                {athlete.medical_notes ? (
-                  <div>
-                    <label className="oa-label">{t('admin.athletes.medical.notes')}</label>
-                    <p className="oa-body-m" style={{ whiteSpace: 'pre-wrap', marginTop: 'var(--oa-space-2)' }}>{athlete.medical_notes}</p>
+            ) : (
+              <div className="space-y-6">
+                <Card className="p-6">
+                  <div className="py-8 text-center">
+                    <span className="material-symbols-outlined block text-5xl text-slate-400 mb-4">lock</span>
+                    <h3 className="oa-h3 mb-2">Access Restricted</h3>
+                    <p className="oa-body-m text-slate-500 dark:text-slate-400">
+                      You do not have permission to view this athlete's medical information.
+                    </p>
                   </div>
-                ) : (
-                  <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.medical.noNotes')}</p>
-                )}
-              </Card>
+                </Card>
+              </div>
+          )
+        )}
 
-              <Card>
-                <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-4)' }}>{t('admin.athletes.medical.allergies')}</h2>
-                {athlete.allergies ? (
-                  <div>
-                    <label className="oa-label">{t('admin.athletes.medical.knownAllergies')}</label>
-                    <p className="oa-body-m" style={{ whiteSpace: 'pre-wrap', marginTop: 'var(--oa-space-2)' }}>{athlete.allergies}</p>
-                  </div>
-                ) : (
-                  <p className="oa-body-m" style={{ color: 'var(--oa-n500)' }}>{t('admin.athletes.medical.noAllergies')}</p>
-                )}
+        {activeTab === 'galleries' && (
+            <div className="space-y-6">
+              <Card className="p-6">
+                <h2 className="oa-card-title mb-6">Photos</h2>
+                <PhotoSection
+                  entityType="athlete"
+                  entityId={athlete.id}
+                  orgId={athlete.org_id}
+                  title="Athlete Photos"
+                  context="admin"
+                />
               </Card>
             </div>
-          </TabsContent>
-
-          <TabsContent value="galleries">
-            <Card>
-              <h2 className="oa-card-title" style={{ marginBottom: 'var(--oa-space-3)' }}>Photos</h2>
-              <PhotoSection
-                entityType="athlete"
-                entityId={athlete.id}
-                orgId={athlete.org_id}
-                title="Athlete Photos"
-                context="admin"
-              />
-            </Card>
-          </TabsContent>
-          </Tabs>
-        </div>
+        )}
+      </div>
 
       {/* Link Guardian Modal */}
       {showLinkGuardianModal && (
@@ -1705,7 +1515,6 @@ export default function AthleteDetail() {
         />
       )}
     </div>
-  </div>
 )
 }
 

@@ -13,8 +13,10 @@ import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 import { mapDatabaseError } from './teamsService'
 import { logOrganizationJoinEvent } from '../../utils/eventLogger'
+import { USE_FAKE_DATA } from '../config'
+import * as fakeService from '../fake/joinLinksFakeService'
 
-type JoinLink = Database['public']['Tables']['join_links']['Row']
+export type JoinLink = Database['public']['Tables']['join_links']['Row']
 type JoinRequest = Database['public']['Tables']['join_requests']['Row']
 
 export interface CreateJoinLinkParams {
@@ -132,6 +134,13 @@ export async function getJoinLinkByToken(
     debug.perf.start('joinLinksService.getJoinLinkByToken')
 
     try {
+        if (USE_FAKE_DATA) {
+            const result = await fakeService.getJoinLinkByToken(token)
+            debug.perf.end('joinLinksService.getJoinLinkByToken')
+            debug.data('JoinLinksService.getJoinLinkByToken', 'Response (fake)', { token, found: !!result.data })
+            return result
+        }
+
         const { data, error } = await supabase
             .from('join_links')
             .select('*')
@@ -177,6 +186,13 @@ export async function submitJoinRequest(
     debug.perf.start('joinLinksService.submitJoinRequest')
 
     try {
+        if (USE_FAKE_DATA) {
+            const result = await fakeService.submitJoinRequest(params)
+            debug.perf.end('joinLinksService.submitJoinRequest')
+            debug.flow('JoinLinksService.submitJoinRequest', 'Join request submitted (fake)', { requestId: result.data?.requestId })
+            return result
+        }
+
         const { data, error } = await supabase.rpc('submit_join_request', {
             p_link_token: params.linkToken,
             p_child_id: params.childId,

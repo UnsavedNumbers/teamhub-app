@@ -8,6 +8,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/platformAdmin'
+import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import DemoOrgForm from '@/components/platformAdmin/DemoOrgForm'
 import POCManager from '@/components/platformAdmin/POCManager'
 import InitiateDemoDialog from '@/components/platformAdmin/InitiateDemoDialog'
@@ -15,13 +16,15 @@ import {
   getDemoOrg,
   listPOCs,
   updateDemoOrg,
+  deleteDemoOrg,
 } from '@/data/services/demoOrgService'
 import {
   extendDemoCodeExpiration,
   listDemoCodesForOrg,
   revokeDemoCode,
 } from '@/data/services/demoCodeService'
-import type { CreateDemoOrgInput, DemoCode, DemoOrgPOC, DemoOrganization } from '@/types/demoManagement'
+import { sendApprovalEmail } from '@/services/demoResultWebhookService'
+import type { CreateDemoOrgInput, DemoAllowedRole, DemoCode, DemoOrgPOC, DemoOrganization } from '@/types/demoManagement'
 import { getLink } from '@/utils/routes'
 import { useI18n } from '@/i18n/useI18n'
 
@@ -39,6 +42,14 @@ export default function DemoOrgDetail() {
   const [formOpen, setFormOpen] = useState(false)
   const [formLoading, setFormLoading] = useState(false)
   const [initiateOpen, setInitiateOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [resendConfirmOpen, setResendConfirmOpen] = useState(false)
+  const [_resendLoading, setResendLoading] = useState(false)
+  const [resendSuccess, setResendSuccess] = useState<string | null>(null)
+  const [allowedRolesEditing, setAllowedRolesEditing] = useState(false)
+  const [allowedRolesSaving, setAllowedRolesSaving] = useState(false)
+  const [selectedRoles, setSelectedRoles] = useState<DemoAllowedRole[]>([])
 
   const orgId = id ?? ''
 
@@ -62,6 +73,8 @@ export default function DemoOrgDetail() {
       setOrganization(org)
       setPocs(pocRows)
       setCodes(codeRows)
+      // Initialize selected roles from org's allowed_roles (default to all if not set)
+      setSelectedRoles(org.allowed_roles ?? ['org_admin', 'coach', 'parent', 'athlete', 'staff', 'fan'])
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : t('common.error.loadFailed'))
       setOrganization(null)
@@ -115,6 +128,52 @@ export default function DemoOrgDetail() {
     }
   }
 
+  const handleDelete = async (): Promise<void> => {
+    if (!organization) return
+
+    setDeleteLoading(true)
+    setError(null)
+
+    try {
+      await deleteDemoOrg(organization.id)
+      navigate(getLink('platformAdmin.demoManagement.list'))
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : t('common.error.deleteFailed'))
+      setDeleteLoading(false)
+    }
+  }
+
+  const handleResendApprovalEmail = async (): Promise<void> => {
+    if (!organization) return
+
+    setResendLoading(true)
+    setError(null)
+    setResendSuccess(null)
+
+    try {
+      const activeCode = codes.find((code) => code.status === 'active')
+      if (!activeCode) {
+        setError(t('platformAdmin.demoManagement.resendApprovalEmail.noActiveCode'))
+        setResendLoading(false)
+        return
+      }
+
+      const result = await sendApprovalEmail(organization.id, activeCode.demo_code, primaryPoc, organization)
+      if (result.success) {
+        setResendSuccess(t('platformAdmin.demoManagement.resendApprovalEmail.success'))
+      } else {
+        setError(result.statusCode 
+          ? t('platformAdmin.demoManagement.resendApprovalEmail.errorWithStatus', { status: result.statusCode })
+          : t('platformAdmin.demoManagement.resendApprovalEmail.error'))
+      }
+      setResendConfirmOpen(false)
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : t('platformAdmin.demoManagement.resendApprovalEmail.error'))
+    } finally {
+      setResendLoading(false)
+    }
+  }
+
   if (loading) {
     return <div>{t('common.loading')}</div>
   }
@@ -146,8 +205,8 @@ export default function DemoOrgDetail() {
 
       {error && <div className="pa-text-danger pa-mb-3">{error}</div>}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="oa-tabs">
+        <TabsList className="oa-mb-6">
           <TabsTrigger value="overview">{t('platformAdmin.demoManagement.detail.tabs.overview')}</TabsTrigger>
           <TabsTrigger value="pocs">{t('platformAdmin.demoManagement.detail.tabs.pocs')}</TabsTrigger>
           <TabsTrigger value="codes">{t('platformAdmin.demoManagement.detail.tabs.codes')}</TabsTrigger>
@@ -163,9 +222,148 @@ export default function DemoOrgDetail() {
             <div><strong>{t('platformAdmin.demoManagement.form.fields.sports')}:</strong> {organization.sports_sponsored.join(', ')}</div>
             <div>
               <strong>{t('platformAdmin.demoManagement.table.primaryPoc')}:</strong>{' '}
-              {primaryPoc ? `${primaryPoc.first_name} ${primaryPoc.last_name}` : t('platformAdmin.demoManagement.table.none')}
+              {primaryPoc ? `${primaryPoc.first_name} ${primaryPoc.last_name}`.trim() || '—' : t('platformAdmin.demoManagement.table.none')}
             </div>
+            {primaryPoc && (
+              <>
+                <div>
+                  <strong>{t('platformAdmin.demoManagement.pocs.fields.email')}:</strong>{' '}
+                  {primaryPoc.email || '—'}
+                </div>
+                <div>
+                  <strong>{t('platformAdmin.demoManagement.pocs.fields.phone')}:</strong>{' '}
+                  {primaryPoc.phone || '—'}
+                </div>
+              </>
+            )}
           </div>
+
+          {/* Allowed Roles Section */}
+          <div className="pa-card pa-mt-4 pa-stack" style={{ gap: 'var(--pa-space-2)' }}>
+            <div className="pa-flex pa-items-center pa-justify-between">
+              <div>
+                <strong>{t('platformAdmin.demoManagement.detail.allowedRoles.title')}</strong>
+                <div className="pa-text-sm pa-text-muted">
+                  {t('platformAdmin.demoManagement.detail.allowedRoles.description')}
+                </div>
+              </div>
+              {!allowedRolesEditing && (
+                <Button variant="ghost" size="small" onClick={() => setAllowedRolesEditing(true)}>
+                  {t('common.edit')}
+                </Button>
+              )}
+            </div>
+
+            {allowedRolesEditing ? (
+              <div className="pa-stack" style={{ gap: 'var(--pa-space-2)' }}>
+                {(['org_admin', 'coach', 'parent', 'athlete', 'staff', 'fan'] as DemoAllowedRole[]).map((role) => {
+                  const roleLabels: Record<DemoAllowedRole, string> = {
+                    org_admin: t('platformAdmin.demoManagement.detail.allowedRoles.orgAdmin'),
+                    coach: t('platformAdmin.demoManagement.detail.allowedRoles.coach'),
+                    parent: t('platformAdmin.demoManagement.detail.allowedRoles.guardian'),
+                    athlete: t('platformAdmin.demoManagement.detail.allowedRoles.athlete'),
+                    staff: t('platformAdmin.demoManagement.detail.allowedRoles.volunteer'),
+                    fan: t('platformAdmin.demoManagement.detail.allowedRoles.fan'),
+                  }
+                  return (
+                    <label key={role} className="pa-flex pa-items-center pa-gap-2 pa-cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedRoles.includes(role)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedRoles([...selectedRoles, role])
+                          } else {
+                            setSelectedRoles(selectedRoles.filter((r) => r !== role))
+                          }
+                        }}
+                        className="pa-checkbox"
+                      />
+                      <span>{roleLabels[role]}</span>
+                    </label>
+                  )
+                })}
+                <div className="pa-flex pa-gap-2 pa-mt-2">
+                  <Button
+                    size="small"
+                    onClick={async () => {
+                      if (!organization) return
+                      setAllowedRolesSaving(true)
+                      try {
+                        await updateDemoOrg(organization.id, { allowed_roles: selectedRoles })
+                        setAllowedRolesEditing(false)
+                        await loadData()
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : t('common.error.updateFailed'))
+                      } finally {
+                        setAllowedRolesSaving(false)
+                      }
+                    }}
+                    disabled={allowedRolesSaving || selectedRoles.length === 0}
+                  >
+                    {allowedRolesSaving ? t('common.saving') : t('common.save')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="small"
+                    onClick={() => {
+                      setAllowedRolesEditing(false)
+                      setSelectedRoles(organization.allowed_roles ?? ['org_admin', 'coach', 'parent', 'athlete', 'staff', 'fan'])
+                    }}
+                    disabled={allowedRolesSaving}
+                  >
+                    {t('common.cancel')}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="pa-text-sm">
+                {selectedRoles.length > 0 ? (
+                  <div className="pa-flex pa-flex-wrap pa-gap-2">
+                    {selectedRoles.map((role) => {
+                      const roleLabels: Record<DemoAllowedRole, string> = {
+                        org_admin: t('platformAdmin.demoManagement.detail.allowedRoles.orgAdmin'),
+                        coach: t('platformAdmin.demoManagement.detail.allowedRoles.coach'),
+                        parent: t('platformAdmin.demoManagement.detail.allowedRoles.guardian'),
+                        athlete: t('platformAdmin.demoManagement.detail.allowedRoles.athlete'),
+                        staff: t('platformAdmin.demoManagement.detail.allowedRoles.volunteer'),
+                        fan: t('platformAdmin.demoManagement.detail.allowedRoles.fan'),
+                      }
+                      return (
+                        <span key={role} className="pa-badge pa-badge-secondary">
+                          {roleLabels[role]}
+                        </span>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <span className="pa-text-muted">{t('platformAdmin.demoManagement.detail.allowedRoles.none')}</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="pa-mt-4 pa-flex pa-gap-2">
+            {organization.status === 'active' && codes.some((code) => code.status === 'active') && (
+              <Button
+                onClick={() => setResendConfirmOpen(true)}
+              >
+                {t('platformAdmin.demoManagement.resendApprovalEmail.button')}
+              </Button>
+            )}
+            <Button
+              variant="danger"
+              onClick={() => setDeleteConfirmOpen(true)}
+            >
+              {t('common.delete')}
+            </Button>
+          </div>
+
+          {resendSuccess && (
+            <div className="pa-mt-4 pa-p-3 pa-bg-green-50 pa-text-green-800 pa-rounded">
+              {resendSuccess}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="pocs">
@@ -223,6 +421,29 @@ export default function DemoOrgDetail() {
           void loadData()
         }}
       />
+
+      <ConfirmDialog
+        open={resendConfirmOpen}
+        title={t('platformAdmin.demoManagement.resendApprovalEmail.title')}
+        description={t('platformAdmin.demoManagement.resendApprovalEmail.description')}
+        confirmLabel={t('platformAdmin.demoManagement.resendApprovalEmail.confirm')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={handleResendApprovalEmail}
+        onCancel={() => setResendConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title={t('platformAdmin.demoManagement.delete.title')}
+        description={t('platformAdmin.demoManagement.delete.description', { name: organization.name })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteConfirmOpen(false)}
+        variant="danger"
+      >
+        {deleteLoading && <div>{t('common.loading')}</div>}
+      </ConfirmDialog>
     </div>
   )
 }

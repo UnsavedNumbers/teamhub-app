@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, Card, Button, PlatformDataTable, type ColumnConfig, OfflineBanner, ErrorState, Tabs, TabsTrigger, TabsContent, Modal, Input, Switch, Select, ConfirmDialog } from '../../components/platformAdmin'
+import { PageHeader, Badge, Card, Button, PlatformDataTable, type ColumnConfig, OfflineBanner, ErrorState, Tabs, TabsList, TabsTrigger, TabsContent, Modal, Input, Switch, Select, ConfirmDialog } from '../../components/platformAdmin'
 import { EntitySelect } from '../../components/common/EntitySelect'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
-import { isValidUUID } from '../../utils/uuid'
+import { isValidUuid } from '../../utils/uuid'
 import { isNotFoundError } from '../../utils/errorUtils'
 import { mapFeatureFlag, mapFeatureFlagOverride, mapFeatureFlagAuditLog } from '../../utils/domainMappers'
 import { getLink } from '../../utils/routes'
@@ -81,7 +81,7 @@ export default function FeatureFlagDetail() {
   // Validate route parameter
   const isValidId = useMemo(() => {
     if (!id) return false
-    return isValidUUID(id)
+    return isValidUuid(id)
   }, [id])
   
   const fetchFlag = useCallback(async () => {
@@ -995,18 +995,18 @@ export default function FeatureFlagDetail() {
         <div className="pa-ff-env-list">
           {(['dev', 'staging', 'prod'] as const).map((env) => {
             const envFlag = flagsByEnv[env]
-            const hasValue = envFlag && (
-              (envFlag.valueType === 'boolean' && envFlag.defaultValueBoolean !== null) ||
-              (envFlag.valueType === 'integer' && envFlag.defaultValueInteger !== null) ||
-              (envFlag.valueType === 'double' && envFlag.defaultValueDouble !== null)
-            )
-            const valueText = envFlag && hasValue
+            // For boolean flags, null means false (default behavior), so they always have a value
+            // For integer/double, null means not set
+            // For boolean flags, show false even if defaultValueBoolean is null
+            const valueText = envFlag
               ? (envFlag.valueType === 'boolean'
-                  ? String(envFlag.defaultValueBoolean)
+                  ? String(envFlag.defaultValueBoolean ?? false)
                   : envFlag.valueType === 'integer'
-                    ? String(envFlag.defaultValueInteger)
-                    : String(envFlag.defaultValueDouble))
-              : null
+                    ? (envFlag.defaultValueInteger !== null ? String(envFlag.defaultValueInteger) : null)
+                    : (envFlag.defaultValueDouble !== null ? String(envFlag.defaultValueDouble) : null))
+              : flag?.valueType === 'boolean'
+                ? 'false' // Show false for boolean flags even if envFlag doesn't exist
+                : null
 
             return (
               <div key={env} className="pa-ff-env-row">
@@ -1038,15 +1038,15 @@ export default function FeatureFlagDetail() {
       </div>
       
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'overrides' | 'audit')}>
-        <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2 pa-mb-4 pa-ff-tabs-bar">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'overrides' | 'audit')} className="oa-tabs">
+        <TabsList className="oa-mb-4 pa-ff-tabs-bar">
           <TabsTrigger value="overrides">
             {t('platformAdmin.featureFlags.detail.overridesTab')} ({overrides.length})
           </TabsTrigger>
           <TabsTrigger value="audit">
             {t('platformAdmin.featureFlags.detail.auditLogTab')} ({auditLog.length})
           </TabsTrigger>
-        </div>
+        </TabsList>
         
         {/* Overrides Tab */}
         <TabsContent value="overrides">

@@ -38,7 +38,7 @@ export default function LicenseTierDetail() {
   const isNew = id === 'new'
 
   const [tier, setTier] = useState<Partial<LicenseTier>>({
-    tier_key: 'basic',
+    tier_key: '',
     tier_name: '',
     description: '',
     stripe_price_id: '',
@@ -56,7 +56,7 @@ export default function LicenseTierDetail() {
   const [archivedFeaturesCount, setArchivedFeaturesCount] = useState(0)
   const [notFound, setNotFound] = useState(false)
   const [invalidRoute, setInvalidRoute] = useState(false)
-  const [organizationsUsingTier, setOrganizationsUsingTier] = useState<Array<{ id: string; name: string; license_plan: string }>>([])
+  const [organizationsUsingTier, setOrganizationsUsingTier] = useState<Array<{ id: string; name: string; tier_name: string; tier_key: string }>>([])
   const [loadingOrgs, setLoadingOrgs] = useState(false)
   const [archiveDialog, setArchiveDialog] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
@@ -224,13 +224,13 @@ export default function LicenseTierDetail() {
     }
 
     if (!tier.tier_name || !tier.stripe_price_id) {
-      setError('Tier name and Stripe Price ID are required')
+      setError(t('platformAdmin.licenses.tierDetail.errors.tierNameRequired'))
       return
     }
 
     for (const assignment of Object.values(assignments)) {
       if (assignment.limit_value !== null && assignment.limit_value <= 0) {
-        setError('Limit values must be positive integers')
+        setError(t('platformAdmin.licenses.tierDetail.errors.limitValueInvalid'))
         return
       }
     }
@@ -600,7 +600,7 @@ export default function LicenseTierDetail() {
                   style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>refresh</span>
-                  Refresh
+                  {t('platformAdmin.licenses.tierDetail.actions.refresh')}
                 </Button>
                 <Button
                   variant="blue"
@@ -610,7 +610,7 @@ export default function LicenseTierDetail() {
                   style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}
                 >
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>content_copy</span>
-                  {duplicating ? 'Duplicating...' : 'Duplicate'}
+                  {duplicating ? t('platformAdmin.licenses.tierDetail.actions.duplicating') : t('platformAdmin.licenses.tierDetail.actions.duplicate')}
                 </Button>
                 <Button
                   variant={tier.status === 'active' ? 'blue' : 'primary'}
@@ -622,7 +622,7 @@ export default function LicenseTierDetail() {
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
                     {tier.status === 'active' ? 'archive' : 'unarchive'}
                   </span>
-                  {tier.status === 'active' ? 'Archive' : 'Activate'}
+                  {tier.status === 'active' ? t('platformAdmin.licenses.tierDetail.actions.archive') : t('platformAdmin.licenses.tierDetail.actions.activate')}
                 </Button>
                 <Button
                   variant="ghost"
@@ -681,51 +681,56 @@ export default function LicenseTierDetail() {
               handleRefresh()
             }
           }}
-          retryLabel={isNew ? 'Reset Form' : 'Reload'}
+          retryLabel={isNew ? t('platformAdmin.licenses.tierDetail.actions.resetForm') : t('platformAdmin.licenses.tierDetail.actions.reload')}
         />
       )}
 
       <div className="pa-grid pa-grid-cols-1 lg:pa-grid-cols-2" style={{ gap: 'var(--pa-space-5)' }}>
         {/* Tier Settings */}
-        <Card title="Tier Settings">
+        <Card title={t('platformAdmin.licenses.tierDetail.tierSettingsTitle')}>
           <div className="pa-form-group">
-            <label className="pa-label pa-label--required">Tier Key</label>
-            <Select
-              value={tier.tier_key || 'basic'}
-              onChange={(e) => setTier({ ...tier, tier_key: e.target.value as 'basic' | 'power' })}
+            <label className="pa-label">{t('platformAdmin.licenses.tierDetail.tierKeyLabel')}</label>
+            <Input
+              value={tier.tier_key || ''}
+              onChange={(e) => setTier({ ...tier, tier_key: e.target.value })}
               disabled={!isNew}
-              options={[
-                { value: 'basic', label: 'Basic' },
-                { value: 'power', label: 'Power' },
-              ]}
+              placeholder={isNew ? t('platformAdmin.licenses.tierDetail.tierKeyLabel') : ''}
+              readOnly={!isNew}
             />
-            <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
-              Immutable after creation
-            </div>
+            {isNew && (
+              <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
+                {t('platformAdmin.licenses.tierDetail.tierKeyHelper')}
+              </div>
+            )}
+            {!isNew && (
+              <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
+                {t('platformAdmin.licenses.tierDetail.tierKeyReadOnly')}
+              </div>
+            )}
           </div>
 
           <div className="pa-form-group">
-            <label className="pa-label pa-label--required">Tier Name</label>
+            <label className="pa-label pa-label--required">{t('platformAdmin.licenses.tierDetail.tierNameLabel')}</label>
             <Input
               value={tier.tier_name || ''}
               onChange={(e) => setTier({ ...tier, tier_name: e.target.value })}
-              placeholder="e.g., Basic License"
+              placeholder={t('platformAdmin.licenses.tierDetail.tierNamePlaceholder')}
             />
           </div>
 
           <div className="pa-form-group">
-            <label className="pa-label">Description</label>
+            <label className="pa-label">{t('platformAdmin.licenses.tierDetail.descriptionLabel')}</label>
             <textarea
               className="pa-input pa-textarea"
               value={tier.description || ''}
               onChange={(e) => setTier({ ...tier, description: e.target.value })}
-              placeholder="Short marketing-style description"
+              placeholder={t('platformAdmin.licenses.tierDetail.descriptionPlaceholder')}
               rows={3}
             />
           </div>
 
           <div className="pa-form-group">
-            <label className="pa-label pa-label--required">Stripe Price ID</label>
+            <label className="pa-label pa-label--required">{t('platformAdmin.licenses.tierDetail.stripePriceIdLabel')}</label>
             <div style={{ display: 'flex', gap: 'var(--pa-space-2)' }}>
               <Input
                 value={tier.stripe_price_id || ''}
@@ -739,7 +744,7 @@ export default function LicenseTierDetail() {
                 disabled={verifying || !tier.stripe_price_id}
                 size="dense"
               >
-                {verifying ? 'Verifying...' : 'Re-verify'}
+                {verifying ? t('platformAdmin.licenses.tierDetail.actions.saving') : t('platformAdmin.licenses.tierDetail.verifyButton')}
               </Button>
             </div>
             {stripeVerification && (
@@ -748,7 +753,7 @@ export default function LicenseTierDetail() {
                   <div 
                     className="pa-card" 
                     style={{ 
-                      background: 'linear-gradient(135deg, var(--pa-success-bg) 0%, rgba(34, 197, 94, 0.05) 100%)',
+                      background: 'var(--pa-success-bg)',
                       border: '1px solid var(--pa-success)',
                       borderRadius: 'var(--pa-radius-lg)',
                       padding: 'var(--pa-space-5)',
@@ -775,7 +780,7 @@ export default function LicenseTierDetail() {
                         </div>
                         <div>
                           <div className="pa-body-m" style={{ fontWeight: 600, color: 'var(--pa-n900)' }}>
-                            Stripe Price Verified
+                            {t('platformAdmin.licenses.tierDetail.stripeVerificationValid')}
                           </div>
                           {tier.stripe_verified_at && isStripeVerificationValid(tier.stripe_verified_at) && (
                             <div className="pa-body-s" style={{ color: 'var(--pa-n600)', marginTop: '2px' }}>
@@ -908,22 +913,22 @@ export default function LicenseTierDetail() {
           </div>
 
           <div className="pa-form-group">
-            <label className="pa-label">Status</label>
+            <label className="pa-label">{t('platformAdmin.licenses.tierDetail.statusLabel')}</label>
             <Select
               value={tier.status || 'active'}
               onChange={(e) => setTier({ ...tier, status: e.target.value as 'active' | 'archived' })}
               options={[
-                { value: 'active', label: 'Active' },
-                { value: 'archived', label: 'Archived' },
+                { value: 'active', label: t('platformAdmin.licenses.tierDetail.statusActive') },
+                { value: 'archived', label: t('platformAdmin.licenses.tierDetail.statusArchived') },
               ]}
             />
           </div>
         </Card>
 
         {/* Feature Assignments */}
-        <Card title="Included Features" style={{ maxHeight: '600px', overflowY: 'auto' }}>
+        <Card title={t('platformAdmin.licenses.tierDetail.featuresTitle')} style={{ maxHeight: '600px', overflowY: 'auto' }}>
           <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginBottom: 'var(--pa-space-4)' }}>
-            Select features to include in this tier. Use limits and role toggles for granular control.
+            {t('platformAdmin.licenses.tierDetail.featuresDescription')}
           </div>
 
           <Accordion
@@ -972,6 +977,37 @@ export default function LicenseTierDetail() {
                                 <Badge variant="info" style={{ fontSize: '11px', padding: '2px 8px' }}>
                                   {feature.rollout_status.toUpperCase()}
                                 </Badge>
+                                <a
+                                  href={getLink('platformAdmin.licenses.featureDetail', { id: feature.id })}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: '24px',
+                                    height: '24px',
+                                    borderRadius: 'var(--pa-radius-sm)',
+                                    color: 'var(--pa-n600)',
+                                    textDecoration: 'none',
+                                    transition: 'all 0.2s ease',
+                                    cursor: 'pointer',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = 'var(--pa-n100)'
+                                    e.currentTarget.style.color = 'var(--pa-n900)'
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = 'transparent'
+                                    e.currentTarget.style.color = 'var(--pa-n600)'
+                                  }}
+                                  title={t('platformAdmin.licenses.tierDetail.openFeatureDetail')}
+                                >
+                                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                                    open_in_new
+                                  </span>
+                                </a>
                               </div>
                               {feature.description && (
                                 <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px' }}>
@@ -1053,7 +1089,7 @@ export default function LicenseTierDetail() {
       {/* Tier Usage Details */}
       {!isNew && tier.id && (
         <Card 
-          title="Organizations Using This Tier" 
+          title={t('platformAdmin.licenses.tierDetail.organizationsTitle')} 
           style={{ marginTop: 'var(--pa-space-5)' }}
           actions={
             <Button
@@ -1062,7 +1098,7 @@ export default function LicenseTierDetail() {
               onClick={fetchOrganizationsUsingTier}
               disabled={loadingOrgs}
             >
-              {loadingOrgs ? 'Loading...' : 'Refresh'}
+              {loadingOrgs ? t('common.loading') : t('platformAdmin.licenses.tierDetail.actions.refresh')}
             </Button>
           }
         >
@@ -1071,7 +1107,10 @@ export default function LicenseTierDetail() {
           ) : organizationsUsingTier.length > 0 ? (
             <div>
               <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginBottom: 'var(--pa-space-3)' }}>
-                {organizationsUsingTier.length} organization{organizationsUsingTier.length === 1 ? '' : 's'} currently using this tier
+                {t('platformAdmin.licenses.tierDetail.organizationsCount', { 
+                  count: organizationsUsingTier.length,
+                  plural: organizationsUsingTier.length === 1 ? '' : 's'
+                })}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-2)', maxHeight: '300px', overflowY: 'auto' }}>
                 {organizationsUsingTier.map((org) => (
@@ -1088,7 +1127,7 @@ export default function LicenseTierDetail() {
                       <div>
                         <div className="pa-body-m" style={{ fontWeight: 600 }}>{org.name}</div>
                         <div className="pa-body-s" style={{ color: 'var(--pa-n500)' }}>
-                          License Plan: {org.license_plan}
+                          Tier: {org.tier_name}
                         </div>
                       </div>
                       <span className="material-symbols-outlined" style={{ color: 'var(--pa-n500)' }}>chevron_right</span>
@@ -1099,7 +1138,7 @@ export default function LicenseTierDetail() {
             </div>
           ) : (
             <div className="pa-body-s" style={{ color: 'var(--pa-n500)' }}>
-              No organizations are currently using this tier.
+              {t('platformAdmin.licenses.tierDetail.organizationsEmpty')}
             </div>
           )}
         </Card>
@@ -1141,13 +1180,13 @@ export default function LicenseTierDetail() {
 
       <ConfirmDialog
         open={archiveDialog}
-        title={tier.status === 'active' ? 'Archive License Tier' : 'Activate License Tier'}
+        title={tier.status === 'active' ? t('platformAdmin.licenses.tierDetail.archiveDialog.title') : t('platformAdmin.licenses.tierDetail.activateDialog.title')}
         description={
           tier.status === 'active'
-            ? `Are you sure you want to archive "${tier.tier_name}"? This will mark the tier as archived but will not affect organizations currently using it.`
-            : `Are you sure you want to activate "${tier.tier_name}"? This will make the tier available for new organizations.`
+            ? t('platformAdmin.licenses.tierDetail.archiveDialog.description', { tierName: tier.tier_name || '' })
+            : t('platformAdmin.licenses.tierDetail.activateDialog.description', { tierName: tier.tier_name || '' })
         }
-        confirmLabel={tier.status === 'active' ? 'Archive' : 'Activate'}
+        confirmLabel={tier.status === 'active' ? t('platformAdmin.licenses.tierDetail.archiveDialog.confirm') : t('platformAdmin.licenses.tierDetail.activateDialog.confirm')}
         variant={tier.status === 'active' ? 'warning' : 'info'}
         loading={saving}
         onConfirm={handleArchive}

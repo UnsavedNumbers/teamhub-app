@@ -19,6 +19,9 @@ import {
   type SearchEntityResult 
 } from '../../data/services/fanService'
 import type { FanOrgFollow } from '../../types/staffAndFan'
+import { USE_FAKE_DATA } from '../../data/config'
+import { getTeamsForOrg, getTeamMembersForSeason, getTeamWithDetails } from '../../data/fake/fakeTeams'
+import { getChildById } from '../../data/fake/fakeUsers'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import AthleteAvatar from '../../components/portal/AthleteAvatar'
@@ -30,6 +33,26 @@ import '../../styles/fan-layouts.css'
 
 type TabType = 'following' | 'discover'
 type EntityType = 'org' | 'team' | 'athlete'
+
+interface FollowedTeam {
+  id: string
+  org_id: string
+  name: string
+  org_name?: string
+  sport?: string
+  logo_url?: string
+  season_id?: string | null
+}
+
+interface FollowedAthlete {
+  id: string
+  first_name: string
+  last_name: string
+  org_id: string
+  photo_url?: string | null
+  team_name?: string
+  sport?: string
+}
 
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 
@@ -93,8 +116,8 @@ function MyFollowingTab({ onSwitchToDiscover }: MyFollowingTabProps) {
   
   // Data state
   const [organizations, setOrganizations] = useState<FanOrgFollow[]>([])
-  const [teams, setTeams] = useState<any[]>([])
-  const [athletes, setAthletes] = useState<any[]>([])
+  const [teams, setTeams] = useState<FollowedTeam[]>([])
+  const [athletes, setAthletes] = useState<FollowedAthlete[]>([])
   const [loading, setLoading] = useState(true)
   
   // Filter state
@@ -115,25 +138,76 @@ function MyFollowingTab({ onSwitchToDiscover }: MyFollowingTabProps) {
       setOrganizations(data)
     }
     
-    // Teams and athletes would come from separate endpoints
-    // For now, these are empty until the API is available
-    setTeams([])
-    setAthletes([])
+    if (USE_FAKE_DATA && data) {
+      const teamMap = new Map<string, FollowedTeam>()
+      const athleteMap = new Map<string, FollowedAthlete>()
+
+      for (const follow of data) {
+        const org = follow.org as { name?: string } | undefined
+        const orgName = org?.name || 'Organization'
+        const orgTeams = getTeamsForOrg(follow.org_id).filter((team) => team.is_active).slice(0, 10)
+
+        for (const team of orgTeams) {
+          if (!teamMap.has(team.id)) {
+            const teamDetails = getTeamWithDetails(team.id)
+            teamMap.set(team.id, {
+              id: team.id,
+              org_id: follow.org_id,
+              name: team.name,
+              org_name: orgName,
+              sport: teamDetails?.sport?.name,
+              season_id: teamDetails?.activeSeason?.id ?? null,
+            })
+          }
+
+          const activeSeasonId = getTeamWithDetails(team.id)?.activeSeason?.id
+          if (!activeSeasonId) continue
+          const members = getTeamMembersForSeason(team.id, activeSeasonId)
+            .filter((member) => member.status === 'active')
+            .slice(0, 8)
+
+          for (const member of members) {
+            const athlete = getChildById(member.athlete_id)
+            if (!athlete || athleteMap.has(athlete.id)) continue
+            const teamDetails = getTeamWithDetails(team.id)
+            athleteMap.set(athlete.id, {
+              id: athlete.id,
+              first_name: athlete.first_name,
+              last_name: athlete.last_name,
+              org_id: follow.org_id,
+              photo_url: athlete.photo_url,
+              team_name: team.name,
+              sport: teamDetails?.sport?.name,
+            })
+          }
+        }
+      }
+
+      setTeams(Array.from(teamMap.values()))
+      setAthletes(Array.from(athleteMap.values()))
+    } else {
+      setTeams([])
+      setAthletes([])
+    }
     
     setLoading(false)
   }
 
-  const handleUnfollow = async (type: EntityType, id: string) => {
+  const handleUnfollow = async (type: EntityType, id: string, orgId?: string) => {
+    const targetOrgId = type === 'org' ? id : (orgId || id)
+
     // Optimistic update
     if (type === 'org') {
       setOrganizations(prev => prev.filter(o => o.org_id !== id))
+      setTeams(prev => prev.filter(t => t.org_id !== id))
+      setAthletes(prev => prev.filter(a => a.org_id !== id))
     } else if (type === 'team') {
       setTeams(prev => prev.filter(t => t.id !== id))
     } else {
       setAthletes(prev => prev.filter(a => a.id !== id))
     }
 
-    const { error } = await unfollowOrg(id)
+    const { error } = await unfollowOrg(targetOrgId)
     
     if (error) {
       showError('Failed to unfollow')
@@ -145,12 +219,12 @@ function MyFollowingTab({ onSwitchToDiscover }: MyFollowingTabProps) {
   }
 
   const handleEntityClick = (type: EntityType, id: string, slug?: string) => {
-    if (type === 'org' && slug) {
-      navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { slug }))
+    if (type === 'org') {
+      navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { orgId: slug || id }))
     } else if (type === 'team') {
-      navigate(getLink(RouteKeys.FAN_TEAM_PROFILE, { id }))
+      navigate(getLink(RouteKeys.FAN_TEAM_PROFILE, { teamId: id }))
     } else if (type === 'athlete') {
-      navigate(getLink(RouteKeys.FAN_ATHLETE_PROFILE, { id }))
+      navigate(getLink(RouteKeys.FAN_ATHLETE_PROFILE, { athleteId: id }))
     }
   }
 
@@ -231,7 +305,7 @@ function MyFollowingTab({ onSwitchToDiscover }: MyFollowingTabProps) {
                 logoUrl={team.logo_url}
                 subtitle={team.org_name}
                 sport={team.sport}
-                onUnfollow={() => handleUnfollow('team', team.id)}
+                onUnfollow={() => handleUnfollow('team', team.id, team.org_id)}
                 onClick={() => handleEntityClick('team', team.id)}
               />
             ))}
@@ -262,11 +336,11 @@ function MyFollowingTab({ onSwitchToDiscover }: MyFollowingTabProps) {
                 type="athlete"
                 id={athlete.id}
                 name={`${athlete.first_name} ${athlete.last_name}`}
-                logoUrl={athlete.photo_url}
+                logoUrl={athlete.photo_url || undefined}
                 athlete={athlete}
                 subtitle={athlete.team_name}
                 sport={athlete.sport}
-                onUnfollow={() => handleUnfollow('athlete', athlete.id)}
+                onUnfollow={() => handleUnfollow('athlete', athlete.id, athlete.org_id)}
                 onClick={() => handleEntityClick('athlete', athlete.id)}
               />
             ))}
@@ -415,7 +489,8 @@ function DiscoverTab() {
       prev.map(e => e.id === entity.id ? { ...e, isFollowing: true } : e)
     )
 
-    const { error } = await followOrg(entity.id)
+    const targetOrgId = entity.entity_type === 'org' ? entity.id : (entity.parent_org_id || entity.id)
+    const { error } = await followOrg(targetOrgId)
 
     if (error) {
       showError('Failed to follow')
@@ -434,7 +509,8 @@ function DiscoverTab() {
       prev.map(e => e.id === entity.id ? { ...e, isFollowing: false } : e)
     )
 
-    const { error } = await unfollowOrg(entity.id)
+    const targetOrgId = entity.entity_type === 'org' ? entity.id : (entity.parent_org_id || entity.id)
+    const { error } = await unfollowOrg(targetOrgId)
 
     if (error) {
       showError('Failed to unfollow')
@@ -446,12 +522,12 @@ function DiscoverTab() {
   }
 
   const handleEntityClick = (entity: SearchEntityResult) => {
-    if (entity.entity_type === 'org' && entity.slug) {
-      navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { slug: entity.slug }))
+    if (entity.entity_type === 'org') {
+      navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { orgId: entity.slug || entity.id }))
     } else if (entity.entity_type === 'team') {
-      navigate(getLink(RouteKeys.FAN_TEAM_PROFILE, { id: entity.id }))
+      navigate(getLink(RouteKeys.FAN_TEAM_PROFILE, { teamId: entity.id }))
     } else if (entity.entity_type === 'athlete') {
-      navigate(getLink(RouteKeys.FAN_ATHLETE_PROFILE, { id: entity.id }))
+      navigate(getLink(RouteKeys.FAN_ATHLETE_PROFILE, { athleteId: entity.id }))
     }
   }
 

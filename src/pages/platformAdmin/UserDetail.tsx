@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { Badge, Card } from '../../components/platformAdmin'
 import { canPerformAction } from '../../utils/platformAdminPermissions'
 import { getDisplayEmail } from '../../utils/platformAdminMasking'
-import { isValidUUID } from '../../utils/uuid'
+import { isValidUuid } from '../../utils/uuid'
 import { useAuth } from '../../hooks/useAuth'
 import { useT } from '../../i18n/useI18n'
 import { normalizeAdminUser } from '../../utils/userDataHelpers'
@@ -94,7 +94,7 @@ export default function UserDetail() {
       return
     }
 
-    if (!isValidUUID(id)) {
+    if (!isValidUuid(id)) {
       setFetchError({
         type: 'invalid_uuid',
         message: t('errors.invalidUserId'),
@@ -194,7 +194,7 @@ export default function UserDetail() {
 
   // Technical Mitigation #2, #8: AbortController for request cancellation
   const fetchUser = useCallback(async () => {
-    if (!id || !isValidUUID(id)) {
+    if (!id || !isValidUuid(id)) {
       return
     }
 
@@ -286,7 +286,7 @@ export default function UserDetail() {
 
   // Fetch family info
   const fetchFamilyInfo = useCallback(async (familyId: string) => {
-    if (!mountedRef.current || !familyId || !isValidUUID(familyId)) return
+    if (!mountedRef.current || !familyId || !isValidUuid(familyId)) return
 
     setLoadingFamily(true)
     
@@ -355,7 +355,7 @@ export default function UserDetail() {
   }, [])
 
   useEffect(() => {
-    if (id && isValidUUID(id)) {
+    if (id && isValidUuid(id)) {
       fetchUser()
     }
   }, [id, fetchUser])

@@ -10,6 +10,7 @@ import { usePlaybackToken } from '@/hooks/useVideos'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import Icon from '@/components/portal/Icon'
 import { cn } from '@/utils/cn'
+import { captureEvent } from '@/lib/analytics/analytics'
 
 export interface VideoPlayerRef {
   seekTo: (seconds: number) => void
@@ -126,6 +127,12 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
 }, ref) => {
   const playerRef = useRef<HTMLElement>(null)
   const nativeVideoRef = useRef<HTMLVideoElement>(null)
+  const videoViewedRef = useRef(false)
+  const lastVideoIdRef = useRef(videoId)
+  if (lastVideoIdRef.current !== videoId) {
+    lastVideoIdRef.current = videoId
+    videoViewedRef.current = false
+  }
   const [isScriptLoaded, setIsScriptLoaded] = useState(false)
   const [playerError, setPlayerError] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState(0)
@@ -188,6 +195,10 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({
     }
     
     const handlePlay = () => {
+      if (!videoViewedRef.current) {
+        videoViewedRef.current = true
+        captureEvent('video_viewed', { video_id: videoId })
+      }
       setIsPlaying(true)
       onPlay?.()
     }

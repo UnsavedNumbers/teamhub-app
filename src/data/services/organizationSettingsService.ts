@@ -19,6 +19,7 @@ import type {
   VisibilitySettings,
   NotificationSettings,
   AdvancedSettings,
+  MessagingSettings,
 } from '../../types/organizationSettings'
 import {
   getDefaultSettings,
@@ -29,6 +30,7 @@ import {
   visibilitySettingsSchema,
   notificationSettingsSchema,
   advancedSettingsSchema,
+  messagingSettingsSchema,
 } from '../../types/organizationSettings'
 import {
   getOrganizationSettings as getFakeOrganizationSettings,
@@ -45,6 +47,7 @@ import {
 type OrgSettingsContext = UserContext
 type PublicTableName = Extract<keyof SupabaseExtended['public']['Tables'], string>
 const fromTable = <T extends PublicTableName>(table: T) => supabase.from(table)
+const supabaseAny = supabase as any
 
 type OrganizationSettingsRow = SupabaseExtended['public']['Tables']['organization_settings']['Row']
 type DefaultsSettingsRow = SupabaseExtended['public']['Tables']['organization_defaults']['Row']
@@ -53,6 +56,20 @@ type RegistrationSettingsRow = SupabaseExtended['public']['Tables']['organizatio
 type VisibilitySettingsRow = SupabaseExtended['public']['Tables']['organization_visibility_settings']['Row']
 type NotificationSettingsRow = SupabaseExtended['public']['Tables']['organization_notification_settings']['Row']
 type AdvancedSettingsRow = SupabaseExtended['public']['Tables']['organization_advanced_settings']['Row']
+interface MessagingSettingsRow {
+  org_id: string
+  settings_version: number | null
+  effective_from: string | null
+  precedence_contract: MessagingSettings['precedence_contract'] | null
+  enable_parent_to_parent_dms: boolean | null
+  enable_minor_to_minor_dms: boolean | null
+  require_parent_approval_for_minor_dm: boolean | null
+  enable_admin_audit_access: boolean | null
+  enable_minor_group_parent_visibility: boolean | null
+  require_read_receipts_safety_critical: boolean | null
+  retention_days: number | null
+  updated_at: string | null
+}
 
 function sanitizeFanVisibilityDefaults(
   defaults: unknown
@@ -107,7 +124,7 @@ export async function getOrganizationSettings(
   }
   try {
     // Fetch all settings tables in parallel
-    const [general, defaults, attendance, registration, visibility, notifications, advanced] =
+    const [general, defaults, attendance, registration, visibility, notifications, advanced, messaging] =
       await Promise.all([
         getGeneralSettings(context),
         getDefaultsSettings(context),
@@ -116,6 +133,7 @@ export async function getOrganizationSettings(
         getVisibilitySettings(context),
         getNotificationSettings(context),
         getAdvancedSettings(context),
+        getMessagingSettings(context),
       ])
 
     // Check for errors
@@ -127,6 +145,7 @@ export async function getOrganizationSettings(
       visibility.error,
       notifications.error,
       advanced.error,
+      messaging.error,
     ].filter(Boolean)
 
     if (errors.length > 0) {
@@ -144,6 +163,7 @@ export async function getOrganizationSettings(
         visibility: visibility.data!,
         notifications: notifications.data!,
         advanced: advanced.data!,
+        messaging: messaging.data!,
       },
       error: null,
     }
@@ -169,6 +189,33 @@ export async function getOrganizationThemeSettings(
   console.groupCollapsed(`%cgetOrganizationThemeSettings: ${context.orgId}`, 'color: #666; font-weight: bold;');
   debug.data('OrganizationSettingsService.getOrganizationThemeSettings', 'Request', { orgId: context.orgId })
   debug.perf.start('organizationSettingsService.getOrganizationThemeSettings')
+
+  if (USE_FAKE_DATA) {
+    // In fake data mode, use in-memory store for theme settings
+    const themeStore = (globalThis as any).__fakeThemeStore || new Map<string, OrganizationThemeSettings>()
+    if (!(globalThis as any).__fakeThemeStore) {
+      (globalThis as any).__fakeThemeStore = themeStore
+    }
+    
+    const existing = themeStore.get(context.orgId)
+    if (existing) {
+      debug.perf.end('organizationSettingsService.getOrganizationThemeSettings')
+      debug.data('OrganizationSettingsService.getOrganizationThemeSettings', 'Response (fake)', { orgId: context.orgId, themeId: existing.theme_id })
+      console.groupEnd()
+      return { data: existing, error: null }
+    }
+    
+    const defaultTheme: OrganizationThemeSettings = {
+      org_id: context.orgId,
+      theme_id: null,
+      updated_at: null,
+    }
+    themeStore.set(context.orgId, defaultTheme)
+    debug.perf.end('organizationSettingsService.getOrganizationThemeSettings')
+    debug.data('OrganizationSettingsService.getOrganizationThemeSettings', 'Response (fake, default)', { orgId: context.orgId })
+    console.groupEnd()
+    return { data: defaultTheme, error: null }
+  }
 
   try {
     const { data, error } = await fromTable('organization_settings')
@@ -221,9 +268,26 @@ export async function updateOrganizationThemeSettings(
   debug.flow('OrganizationSettingsService.updateOrganizationThemeSettings', 'Updating theme settings', { orgId: context.orgId, themeId })
   debug.perf.start('organizationSettingsService.updateOrganizationThemeSettings')
 
-  // In fake data mode, just return success (theme is applied via CSS variables in memory)
+  // In fake data mode, store theme in memory and trigger theme refresh
   if (USE_FAKE_DATA) {
     console.log('[organizationSettingsService] Fake data mode - theme update simulated:', themeId)
+    const themeStore = (globalThis as any).__fakeThemeStore || new Map<string, OrganizationThemeSettings>()
+    if (!(globalThis as any).__fakeThemeStore) {
+      (globalThis as any).__fakeThemeStore = themeStore
+    }
+    
+    const updated: OrganizationThemeSettings = {
+      org_id: context.orgId,
+      theme_id: themeId,
+      updated_at: new Date().toISOString(),
+    }
+    themeStore.set(context.orgId, updated)
+    
+    // Trigger theme refresh in the UI
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('org-theme-updated', { detail: { orgId: context.orgId, themeId } }))
+    }
+    
     debug.perf.end('organizationSettingsService.updateOrganizationThemeSettings')
     debug.flow('OrganizationSettingsService.updateOrganizationThemeSettings', 'Theme updated (fake)', { orgId: context.orgId, themeId })
     console.groupEnd()
@@ -592,6 +656,51 @@ async function getAdvancedSettings(
   }
 }
 
+async function getMessagingSettings(
+  context: OrgSettingsContext
+): Promise<{ data: MessagingSettings | null; error: Error | null }> {
+  try {
+    const { data, error } = await supabaseAny
+      .from('organization_messaging_settings')
+      .select('*')
+      .eq('org_id', context.orgId)
+      .maybeSingle()
+
+    if (error) throw error
+
+    if (!data) {
+      const defaults = getDefaultSettings(context.orgId, '')
+      return { data: defaults.messaging, error: null }
+    }
+
+    const row = data as MessagingSettingsRow
+
+    const settings: MessagingSettings = {
+      org_id: row.org_id,
+      settings_version: row.settings_version ?? 1,
+      effective_from: row.effective_from ?? new Date(0).toISOString(),
+      precedence_contract: row.precedence_contract ?? {
+        platform_floor: 'enforced',
+        org_policy: 'authoritative',
+        user_preference: 'allowed_when_safe',
+      },
+      enable_parent_to_parent_dms: row.enable_parent_to_parent_dms ?? true,
+      enable_minor_to_minor_dms: row.enable_minor_to_minor_dms ?? true,
+      require_parent_approval_for_minor_dm: row.require_parent_approval_for_minor_dm ?? false,
+      enable_admin_audit_access: row.enable_admin_audit_access ?? true,
+      enable_minor_group_parent_visibility: row.enable_minor_group_parent_visibility ?? true,
+      require_read_receipts_safety_critical: row.require_read_receipts_safety_critical ?? false,
+      retention_days: row.retention_days ?? 730,
+      updated_at: row.updated_at ?? new Date().toISOString(),
+    }
+
+    return { data: settings, error: null }
+  } catch (err) {
+    console.error('[organizationSettingsService] Error getting messaging settings:', err)
+    return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
 // ============================================================================
 // Update Operations (with optimistic locking - Issue 7)
 // ============================================================================
@@ -946,6 +1055,69 @@ export async function updateAdvancedSettings(
     debug.error('OrganizationSettingsService.updateAdvancedSettings', 'Failed to update advanced settings', { error: err, orgId: context.orgId })
     console.groupEnd()
     console.error('[organizationSettingsService] Error updating advanced settings:', err)
+    return { error: err instanceof Error ? err : new Error('Unknown error') }
+  }
+}
+
+export async function updateMessagingSettings(
+  context: OrgSettingsContext,
+  settings: Partial<MessagingSettings>,
+  currentUpdatedAt: string
+): Promise<{ error: Error | null }> {
+  console.groupCollapsed(`%cupdateMessagingSettings: ${context.orgId}`, 'color: #666; font-weight: bold;');
+  debug.flow('OrganizationSettingsService.updateMessagingSettings', 'Updating messaging settings', { orgId: context.orgId, updates: Object.keys(settings) })
+  debug.perf.start('organizationSettingsService.updateMessagingSettings')
+
+  try {
+    const validated = messagingSettingsSchema.partial().parse(settings)
+    const payload = {
+      ...validated,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { data: existing, error: existingError } = await supabaseAny
+      .from('organization_messaging_settings')
+      .select('updated_at')
+      .eq('org_id', context.orgId)
+      .maybeSingle()
+
+    if (existingError) {
+      throw existingError
+    }
+
+    if (existing?.updated_at && existing.updated_at !== currentUpdatedAt) {
+      throw new Error('Settings were modified by another user. Please refresh and try again.')
+    }
+
+    const { error } = await supabaseAny
+      .from('organization_messaging_settings')
+      .upsert(
+        {
+          org_id: context.orgId,
+          ...payload,
+        },
+        { onConflict: 'org_id' },
+      )
+
+    if (error) {
+      if (error.message.includes('updated_at')) {
+        debug.perf.end('organizationSettingsService.updateMessagingSettings')
+        debug.error('OrganizationSettingsService.updateMessagingSettings', 'Optimistic locking failure', { error, orgId: context.orgId })
+        console.groupEnd()
+        throw new Error('Settings were modified by another user. Please refresh and try again.')
+      }
+      throw error
+    }
+
+    debug.perf.end('organizationSettingsService.updateMessagingSettings')
+    debug.flow('OrganizationSettingsService.updateMessagingSettings', 'Messaging settings updated successfully', { orgId: context.orgId })
+    console.groupEnd()
+    return { error: null }
+  } catch (err) {
+    debug.perf.end('organizationSettingsService.updateMessagingSettings')
+    debug.error('OrganizationSettingsService.updateMessagingSettings', 'Failed to update messaging settings', { error: err, orgId: context.orgId })
+    console.groupEnd()
+    console.error('[organizationSettingsService] Error updating messaging settings:', err)
     return { error: err instanceof Error ? err : new Error('Unknown error') }
   }
 }

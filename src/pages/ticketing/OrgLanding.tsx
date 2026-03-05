@@ -8,6 +8,7 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getTicketedEvents } from '@/data/services'
+import { getParentSubConfig } from '@/data/services/subOrgService'
 import type { OrgContext } from '@/utils/orgResolution'
 import { OrgScopedRoute } from '@/components/OrgScopedRoute'
 import { getLink, RouteKeys } from '@/utils/routes'
@@ -29,10 +30,19 @@ function OrgLandingContent({ org }: { org: OrgContext }) {
     },
   })
 
+  // Check if this is a parent org that allows sub-org registration
+  const { data: parentConfig } = useQuery({
+    queryKey: ['parent-sub-config', org.id],
+    queryFn: () => getParentSubConfig(org.id),
+    enabled: !!org.id,
+    select: (result) => result.data,
+  })
+
   const eventsResponseAny = eventsResponse as any
   const previewEvents = (Array.isArray(eventsResponseAny) ? eventsResponseAny : eventsResponseAny?.data || [])
 
   const hasTicketing = previewEvents.length > 0
+  const showSubOrgRegistration = parentConfig?.sub_org_public_registration_enabled === true
 
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white">
@@ -55,6 +65,17 @@ function OrgLandingContent({ org }: { org: OrgContext }) {
           <p className="text-xl text-[#617589] dark:text-gray-400 max-w-2xl mx-auto">
             Welcome to our public portal. Browse events, purchase tickets, and stay connected.
           </p>
+          {showSubOrgRegistration && (
+            <div className="mt-8">
+              <Link
+                to={getLink(RouteKeys.PORTAL_SUB_ORG_REGISTRATION, { orgSlug })}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#137fec] text-white font-bold rounded-lg hover:bg-[#0f6bc7] transition-colors"
+              >
+                <span className="material-symbols-outlined">add</span>
+                Register Your School/League
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Feature Navigation */}

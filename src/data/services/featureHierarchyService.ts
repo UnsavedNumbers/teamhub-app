@@ -12,6 +12,7 @@
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug';
 import type { FeatureEntitlement } from '../../types/domain/License';
+import { clearFeatureGateCache } from '../../lib/featureGate/api';
 
 /**
  * Feature with hierarchy metadata
@@ -229,12 +230,15 @@ export async function getFeatureHierarchyFlat(
       is_system_feature: boolean | null;
       platform_admin_only: boolean | null;
       parent_feature_key: string | null;
+      excluded_from_discovery: boolean | null;
     };
 
-    // Get all features
+    // Get all features (exclude features marked as "not a feature")
     let query = (supabase as any)
       .from('feature_entitlements')
       .select('*')
+      // Filter out excluded features - only show legitimate features
+      .or('excluded_from_discovery.is.null,excluded_from_discovery.eq.false')
       .order('parent_feature_key', { ascending: true, nullsFirst: true })
       .order('display_name', { ascending: true });
 
@@ -243,7 +247,7 @@ export async function getFeatureHierarchyFlat(
     }
 
     const { data, error } = await query;
-    const features = (data ?? []) as FeatureEntitlementRowWithParent[];
+    let features = (data ?? []) as FeatureEntitlementRowWithParent[];
 
     if (error) {
       debug.perf.end('featureHierarchyService.getFeatureHierarchyFlat')
@@ -252,6 +256,9 @@ export async function getFeatureHierarchyFlat(
       console.error('[FeatureHierarchy] Error fetching features:', error);
       return [];
     }
+
+    // Additional client-side filter to ensure excluded features are not included
+    features = features.filter(f => !(f as any).excluded_from_discovery);
 
     if (!features || features.length === 0) {
       debug.perf.end('featureHierarchyService.getFeatureHierarchyFlat')
@@ -374,6 +381,9 @@ export async function updateFeatureParent(
       console.error('[FeatureHierarchy] Error updating parent:', error);
       return { success: false, error: error.message };
     }
+
+    // Clear feature gate cache since parent changes affect child access
+    clearFeatureGateCache();
 
     debug.perf.end('featureHierarchyService.updateFeatureParent')
     debug.flow('FeatureHierarchyService.updateFeatureParent', 'Parent updated successfully', { featureId, featureKey, newParentKey })

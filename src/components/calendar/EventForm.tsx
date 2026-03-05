@@ -5,7 +5,8 @@ import { useForm, Controller } from 'react-hook-form'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 import { debug } from '../../lib/debug'
-import { getSports, getPrograms } from '../../data/services/sportsService'
+import { getSports, getPrograms, getProgram } from '../../data/services/sportsService'
+import { getVenueById } from '../../data/services/venueService'
 import { getTeams } from '../../data/services/teamsService'
 import { supabase } from '../../lib/supabase'
 import { 
@@ -184,6 +185,63 @@ export default function EventForm({ initialValues, onSubmit, loading: parentLoad
     
     setTeams((teamsData || []).filter(t => allowed.has(t.id)).map(t => ({ id: t.id, name: t.name })))
   }, [context, watchSportId, watchProgramId])
+
+  // Pre-fill location when program with default_location_id is selected
+  useEffect(() => {
+    if (!watchProgramId || !isReady || !context?.orgId) return
+
+    let cancelled = false
+
+    const loadProgramAndPreFillLocation = async () => {
+      try {
+        const programResult = await getProgram(context, watchProgramId)
+        if (cancelled) return
+
+        if (programResult.error || !programResult.data) return
+
+        const program = programResult.data
+        if (!program.default_location_id) return
+
+        // Check if location is already set (only pre-fill if empty)
+        const currentVenueName = watch('location.venue_name')
+        const currentAddress = watch('location.address_line1')
+        if ((currentVenueName && currentVenueName.trim()) || (currentAddress && currentAddress.trim())) {
+          // User already set location, don't override
+          return
+        }
+
+        // Fetch venue details
+        try {
+          const venue = await getVenueById(program.default_location_id)
+          if (cancelled) return
+
+          // Pre-fill location fields
+          setValue('location.venue_name', venue.name || '')
+          setValue('location.address_line1', venue.address_line1 || venue.address || '')
+          setValue('location.address_line2', venue.address_line2 || '')
+          setValue('location.city', venue.city || '')
+          setValue('location.state', venue.state || '')
+          setValue('location.postal_code', venue.postal_code || '')
+          setValue('location.place_id', venue.google_place_id || '')
+          setValue('location.latitude', venue.latitude?.toString() || '')
+          setValue('location.longitude', venue.longitude?.toString() || '')
+          setValue('location.is_virtual', venue.is_virtual || false)
+          setValue('location.virtual_link', venue.virtual_link || '')
+        } catch (venueErr) {
+          console.error('[EventForm] Error loading venue:', venueErr)
+          // Don't fail if venue can't be loaded, just skip pre-fill
+        }
+      } catch (err) {
+        console.error('[EventForm] Error loading program:', err)
+      }
+    }
+
+    loadProgramAndPreFillLocation()
+
+    return () => {
+      cancelled = true
+    }
+  }, [watchProgramId, isReady, context, setValue, watch])
 
   // Effects
   useEffect(() => { fetchSports() }, [fetchSports])

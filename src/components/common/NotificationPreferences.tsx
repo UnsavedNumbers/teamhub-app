@@ -39,6 +39,7 @@ export interface NotificationPreferencesProps {
   onToggleQuietHours?: (groupId: NotificationGroup['id'], enabled: boolean) => void
   onUpdateQuietHours?: (groupId: NotificationGroup['id'], start: string, end: string) => void
   onUpdateTimezone?: (groupId: NotificationGroup['id'], timezone: string) => void
+  pushChannelSupported?: boolean
   saving?: boolean
 }
 
@@ -53,6 +54,7 @@ export function NotificationPreferences({
   onToggleQuietHours,
   onUpdateQuietHours,
   onUpdateTimezone,
+  pushChannelSupported = true,
   saving = false,
 }: NotificationPreferencesProps) {
   const t = useT()
@@ -127,6 +129,12 @@ export function NotificationPreferences({
                     active={group.channels.includes('email')}
                     onClick={() => onToggleChannel(group.id, 'email', !group.channels.includes('email'))}
                     disabled={saving}
+                  />
+                  <ChannelChip
+                    label={t('portal.settings.notifications.toggles.push')}
+                    active={group.channels.includes('push')}
+                    onClick={() => onToggleChannel(group.id, 'push', !group.channels.includes('push'))}
+                    disabled={saving || !pushChannelSupported}
                   />
                   <span className="text-[11px] text-slate-400">{t('portal.settings.notifications.toggles.urgentNotice')}</span>
                 </div>

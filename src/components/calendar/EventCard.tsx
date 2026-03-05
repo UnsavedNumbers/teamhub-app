@@ -45,9 +45,16 @@ export default function EventCard({ event, sport = null, onClick, compact = fals
         >
           <div className="flex justify-between items-end">
             <div className="flex flex-col">
-              <span className={`text-xs font-black uppercase tracking-wider mb-1 ${isCancelled ? 'text-red-400 line-through' : 'text-white/80'}`}>
-                {typeLabel}
-              </span>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-xs font-black uppercase tracking-wider ${isCancelled ? 'text-red-400 line-through' : 'text-white/80'}`}>
+                  {typeLabel}
+                </span>
+                {event.ticketed_event && !isCancelled && (
+                  <span className="text-xs font-black uppercase tracking-wider text-green-300 bg-green-900/50 px-1.5 py-0.5 rounded">
+                    Tickets
+                  </span>
+                )}
+              </div>
               <span className="text-sm font-bold text-white">
                 {formatEventTimeRange(event.start_time, event.end_time, event.timezone)}
               </span>
@@ -74,6 +81,12 @@ export default function EventCard({ event, sport = null, onClick, compact = fals
           {isCancelled && (
             <div className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold px-2 py-1 inline-block mt-2">
               {safeT('calendar.event.cancelled', 'Cancelled')} {event.cancellation_reason ? `: ${event.cancellation_reason}` : ''}
+            </div>
+          )}
+          
+          {event.rsvp_config?.enabled && !isCancelled && (
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              RSVP {event.rsvp_config.type === 'athlete' ? 'required' : 'available'}
             </div>
           )}
 

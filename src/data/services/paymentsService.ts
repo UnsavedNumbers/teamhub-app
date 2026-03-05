@@ -8,10 +8,10 @@
  * Each method includes a TODO comment showing the equivalent Supabase query pattern.
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_TRANSACTION_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_TRANSACTION_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { debug } from '../../lib/debug'
-import { calculatePermissions } from '../fake/userContext'
+import { calculatePermissions, resolveDemoUserId } from '../fake/userContext'
 import {
     fakeFeeAssignments,
     getFeeById,
@@ -32,6 +32,8 @@ import {
     type FakePayment,
 } from '../fake/fakePayments'
 import { getChildrenForUserId, getAssignedTeamsForCoach } from '../fake/relationships'
+import { getChildById, getFamilyById, getUserById, getFamilyMembersForFamily } from '../fake/fakeUsers'
+import { getGuardianCanonicalUserId } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
 import { buildFeeAssignmentQuery } from './queryHelpers'
 import { normalizeSupabaseResponse } from './responseHelpers'
@@ -50,9 +52,11 @@ async function simulateDelay(): Promise<void> {
 }
 
 function buildPermissions(context: UserContext): PermissionSet {
-    const childIds = getChildrenForUserId(context.userId)
+    const effectiveUserId = getGuardianCanonicalUserId(context)
+    const childIds = getChildrenForUserId(effectiveUserId)
+    const coachLookupUserId = (context.email && resolveDemoUserId(context.email)) || context.userId
     const assignedTeamIds = context.roles.includes('coach')
-        ? getAssignedTeamsForCoach(context.userId)
+        ? getAssignedTeamsForCoach(coachLookupUserId)
         : []
 
     return calculatePermissions(context, assignedTeamIds, childIds, [])
@@ -124,7 +128,8 @@ export async function getFees(
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
-            const fees = activeOnly ? getActiveFeesForOrg(context.orgId) : getFeesForOrg(context.orgId)
+            const fakeOrgId = DEMO_ORG_A_ID
+            const fees = activeOnly ? getActiveFeesForOrg(fakeOrgId) : getFeesForOrg(fakeOrgId)
             return { data: fees, error: null }
         } catch (err) {
             return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
@@ -167,7 +172,8 @@ export async function getFeeDetails(
         try {
             await simulateDelay()
             const fee = getFeeById(feeId)
-            if (!fee || fee.org_id !== context.orgId) {
+            const fakeOrgId = DEMO_ORG_A_ID
+            if (!fee || fee.org_id !== fakeOrgId) {
                 return { data: null, error: null }
             }
             return { data: fee, error: null }
@@ -216,24 +222,91 @@ export async function getFeeAssignmentsForUser(
             const permissions = buildPermissions(context)
 
             if (permissions.canViewAllOrgData) {
-                const fees = getFeesForOrg(context.orgId)
+                const fakeOrgId = DEMO_ORG_A_ID
+                const fees = getFeesForOrg(fakeOrgId)
                 const feeIds = fees.map((f) => f.id)
                 const allAssignments = fakeFeeAssignments.filter((fa) => feeIds.includes(fa.fee_id))
 
                 return {
-                    data: allAssignments.map((fa) => ({
-                        ...fa,
-                        fee: getFeeById(fa.fee_id),
-                        payments: getPaymentsForAssignment(fa.id),
-                    })),
+                    data: allAssignments.map((fa) => {
+                        const athlete = getChildById(fa.athlete_id)
+                        // Get parent/guardian info from family
+                        let parent = null
+                        if (athlete?.family_id) {
+                            const family = getFamilyById(athlete.family_id)
+                            if (family) {
+                                const familyMembers = getFamilyMembersForFamily(family.id)
+                                const guardianMember = familyMembers.find(m => m.role === 'owner' || m.role === 'guardian')
+                                if (guardianMember) {
+                                    const guardianUser = getUserById(guardianMember.user_id)
+                                    if (guardianUser) {
+                                        parent = {
+                                            id: guardianUser.id,
+                                            email: guardianUser.email,
+                                            display_name: guardianUser.display_name,
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        return {
+                            ...fa,
+                            fee: getFeeById(fa.fee_id),
+                            payments: getPaymentsForAssignment(fa.id),
+                            athlete: athlete ? {
+                                id: athlete.id,
+                                first_name: athlete.first_name,
+                                last_name: athlete.last_name,
+                                family_id: athlete.family_id,
+                            } : undefined,
+                            parent: parent || undefined,
+                        }
+                    }),
                     error: null,
                 }
             }
 
-            const childIds = getChildrenForUserId(context.userId)
+            const effectiveUserId = getGuardianCanonicalUserId(context)
+            const childIds = getChildrenForUserId(effectiveUserId)
             const assignments = childIds.flatMap((childId) => getFeeAssignmentsWithDetailsForChild(childId))
 
-            return { data: assignments, error: null }
+            // Enrich assignments with athlete and parent information
+            const enrichedAssignments = assignments.map((fa) => {
+                const athlete = getChildById(fa.athlete_id)
+                // Get parent/guardian info from family
+                let parent = null
+                if (athlete?.family_id) {
+                    const family = getFamilyById(athlete.family_id)
+                    if (family) {
+                        const familyMembers = getFamilyMembersForFamily(family.id)
+                        const guardianMember = familyMembers.find(m => m.role === 'owner' || m.role === 'guardian')
+                        if (guardianMember) {
+                            const guardianUser = getUserById(guardianMember.user_id)
+                            if (guardianUser) {
+                                parent = {
+                                    id: guardianUser.id,
+                                    email: guardianUser.email,
+                                    display_name: guardianUser.display_name,
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return {
+                    ...fa,
+                    athlete: athlete ? {
+                        id: athlete.id,
+                        first_name: athlete.first_name,
+                        last_name: athlete.last_name,
+                        family_id: athlete.family_id,
+                    } : undefined,
+                    parent: parent || undefined,
+                }
+            })
+
+            return { data: enrichedAssignments, error: null }
         } catch (err) {
             return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
         }
@@ -277,51 +350,30 @@ export async function getFeeAssignmentById(
     context: UserContext,
     assignmentId: string
 ): Promise<{ data: (FakeFeeAssignment & { fee?: FakeFee; payments?: FakePayment[]; athlete?: any; parent?: any }) | null; error: Error | null }> {
-    console.log('[paymentsService] getFeeAssignmentById called:', { 
-        assignmentId, 
-        userId: context.userId, 
-        orgId: context.orgId,
-        roles: context.roles,
-        useFakeData: USE_FAKE_DATA 
-    })
-
     if (USE_FAKE_DATA) {
         try {
-            console.log('[paymentsService] Using fake data')
             await simulateDelay()
             const assignment = getFeeAssignmentWithDetails(assignmentId)
-            console.log('[paymentsService] Fake data assignment:', assignment)
             if (!assignment) {
-                console.log('[paymentsService] No fake assignment found')
                 return { data: null, error: null }
             }
-            // Check permissions - user must be parent of the athlete or admin
             const permissions = buildPermissions(context)
-            console.log('[paymentsService] Permissions:', permissions)
             if (!permissions.canViewAllOrgData) {
-                const childIds = getChildrenForUserId(context.userId)
-                console.log('[paymentsService] Non-admin, childIds:', childIds)
+                const effectiveUserId = getGuardianCanonicalUserId(context)
+                const childIds = getChildrenForUserId(effectiveUserId)
                 if (!childIds.includes((assignment as any).athlete_id ?? (assignment as any).child_id)) {
-                    console.log('[paymentsService] Access denied - not child\'s parent')
                     return { data: null, error: new Error('Access denied') }
                 }
             }
-            console.log('[paymentsService] Returning fake assignment')
             return { data: assignment, error: null }
         } catch (err) {
-            console.error('[paymentsService] Fake data error:', err)
             return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
         }
     }
 
-    // Real Supabase implementation
     try {
-        console.log('[paymentsService] Using real Supabase data')
         const isAdmin = isOrgAdmin(context)
-        console.log('[paymentsService] isAdmin:', isAdmin)
-        
         const childIds = isAdmin ? [] : await getAthleteIdsForUser(context.userId, context.orgId)
-        console.log('[paymentsService] childIds:', childIds)
 
         let query = buildFeeAssignmentQuery(supabase)
             .eq('id', assignmentId)
@@ -329,53 +381,39 @@ export async function getFeeAssignmentById(
 
         if (!isAdmin) {
             if (childIds.length === 0) {
-                console.log('[paymentsService] Non-admin with no children, returning null')
                 return { data: null, error: null }
             }
             query = query.in('athlete_id', childIds)
         }
 
-        console.log('[paymentsService] Executing Supabase query')
         const { data, error } = await query.single()
-        console.log('[paymentsService] Supabase query result:', { hasData: !!data, error })
-        
+
         if (error) {
-            console.error('[paymentsService] Supabase error:', error)
             throw error
         }
 
-        // Normalize and map response
-        console.log('[paymentsService] Normalizing response')
         const normalizedData = normalizeSupabaseResponse(data, false)
         if (!normalizedData) {
-            console.log('[paymentsService] No normalized data')
             return { data: null, error: null }
         }
 
-        console.log('[paymentsService] Mapping to domain model')
         const mappedAssignment = mapSupabaseFeeAssignmentToDomain(normalizedData)
-        
-        // Fetch parent info
+
         const parentId = (normalizedData as any).parent_id
         if (parentId) {
-            console.log('[paymentsService] Fetching parent info for:', parentId)
             const { data: parentData } = await supabase
                 .from('users')
                 .select('id, email, display_name')
                 .eq('id', parentId)
                 .single()
-            console.log('[paymentsService] Parent data:', parentData)
             if (parentData) {
                 (mappedAssignment as any).parent = parentData
             }
         }
 
-        console.log('[paymentsService] Successfully mapped assignment:', mappedAssignment)
         return { data: mappedAssignment, error: null }
     } catch (err) {
-        console.error('[paymentsService] Caught error:', err)
         const classifiedError = classifySupabaseError(err)
-        console.error('[paymentsService] Classified error:', classifiedError)
         return { data: null, error: classifiedError }
     }
 }
@@ -390,7 +428,8 @@ export async function getUnpaidFeeAssignments(
         try {
             await simulateDelay()
 
-            const childIds = getChildrenForUserId(context.userId)
+            const effectiveUserId = getGuardianCanonicalUserId(context)
+            const childIds = getChildrenForUserId(effectiveUserId)
             const unpaid = childIds.flatMap((childId) =>
                 getUnpaidFeeAssignmentsForChild(childId).map((fa) => ({
                     ...fa,
@@ -688,7 +727,8 @@ export async function getPayments(
                 return { data: [], error: new Error('Access denied: Admin only') }
             }
 
-            let payments = getPaymentsForOrg(context.orgId)
+            const fakeOrgId = DEMO_ORG_A_ID
+            let payments = getPaymentsForOrg(fakeOrgId)
             payments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
             if (limit && limit > 0) {
@@ -787,8 +827,9 @@ export async function getOrgPaymentSummary(
                 return { data: null, error: new Error('Access denied: Admin only') }
             }
 
-            const totalPaidCents = getTotalPaidForOrg(context.orgId)
-            const totalOutstandingCents = getTotalOutstandingForOrg(context.orgId)
+            const fakeOrgId = DEMO_ORG_A_ID
+            const totalPaidCents = getTotalPaidForOrg(fakeOrgId)
+            const totalOutstandingCents = getTotalOutstandingForOrg(fakeOrgId)
 
             const fees = getFeesForOrg(context.orgId)
             const feeIds = fees.map((f) => f.id)
@@ -1006,7 +1047,8 @@ export async function getParentPaymentSummary(
         try {
             await simulateDelay()
 
-            const childIds = getChildrenForUserId(context.userId)
+            const effectiveUserId = getGuardianCanonicalUserId(context)
+            const childIds = getChildrenForUserId(effectiveUserId)
             const assignments = childIds.flatMap((childId) => getFeeAssignmentsForChild(childId))
 
             const totalPaidCents = assignments.reduce((sum, a) => sum + a.amount_paid_cents, 0)

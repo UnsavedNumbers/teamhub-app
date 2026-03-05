@@ -1,0 +1,249 @@
+/**
+ * Demo Welcome Page Styles
+ */
+
+.demo-welcome {
+  min-height: 100vh;
+  background: var(--org-surface-default, #ffffff);
+  padding: 40px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:root[data-theme="dark"] .demo-welcome,
+.dark .demo-welcome {
+  background: var(--org-surface-default-dark, #0f172a);
+}
+
+.demo-welcome-container {
+  max-width: 1200px;
+  width: 100%;
+}
+
+/* Header */
+.demo-welcome-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.demo-welcome-title {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--org-text-primary, #111827);
+  margin: 0 0 16px 0;
+  line-height: 1.2;
+}
+
+:root[data-theme="dark"] .demo-welcome-title,
+.dark .demo-welcome-title {
+  color: var(--org-text-primary-dark, #ffffff);
+}
+
+.demo-welcome-subtitle {
+  font-size: 18px;
+  color: var(--org-text-secondary, #64748b);
+  margin: 0;
+  line-height: 1.6;
+}
+
+:root[data-theme="dark"] .demo-welcome-subtitle,
+.dark .demo-welcome-subtitle {
+  color: var(--org-text-secondary-dark, #94a3b8);
+}
+
+/* Features */
+.demo-welcome-features-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--org-text-primary, #111827);
+  margin: 0 0 24px 0;
+}
+
+:root[data-theme="dark"] .demo-welcome-features-title,
+.dark .demo-welcome-features-title {
+  color: var(--org-text-primary-dark, #ffffff);
+}
+
+.demo-welcome-features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+  margin-bottom: 48px;
+}
+
+@media (max-width: 768px) {
+  .demo-welcome-features-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Feature Card */
+.demo-welcome-feature-card {
+  background: var(--org-surface-card, #ffffff);
+  border: 1px solid var(--org-border-default, #e2e8f0);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 200ms, transform 200ms;
+}
+
+.demo-welcome-feature-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+:root[data-theme="dark"] .demo-welcome-feature-card,
+.dark .demo-welcome-feature-card {
+  background: var(--org-surface-card-dark, #1e293b);
+  border-color: var(--org-border-default-dark, rgba(255, 255, 255, 0.1));
+}
+
+.demo-welcome-feature-name {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--org-text-primary, #111827);
+  margin: 0 0 12px 0;
+}
+
+:root[data-theme="dark"] .demo-welcome-feature-name,
+.dark .demo-welcome-feature-name {
+  color: var(--org-text-primary-dark, #ffffff);
+}
+
+.demo-welcome-feature-description {
+  font-size: 15px;
+  color: var(--org-text-secondary, #475569);
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+  flex: 1;
+}
+
+:root[data-theme="dark"] .demo-welcome-feature-description,
+.dark .demo-welcome-feature-description {
+  color: var(--org-text-secondary-dark, #cbd5e1);
+}
+
+.demo-welcome-feature-quickstart {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px 0;
+}
+
+.demo-welcome-feature-quickstart li {
+  font-size: 14px;
+  color: var(--org-text-secondary, #64748b);
+  padding: 4px 0 4px 20px;
+  position: relative;
+  line-height: 1.5;
+}
+
+.demo-welcome-feature-quickstart li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--org-btn-primary-bg, #137fec);
+  font-weight: bold;
+}
+
+:root[data-theme="dark"] .demo-welcome-feature-quickstart li,
+.dark .demo-welcome-feature-quickstart li {
+  color: var(--org-text-secondary-dark, #94a3b8);
+}
+
+.demo-welcome-feature-button {
+  padding: 10px 20px;
+  background: var(--org-btn-primary-bg, #137fec);
+  color: var(--org-btn-primary-text, #ffffff);
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms, opacity 150ms;
+  margin-top: auto;
+}
+
+.demo-welcome-feature-button:hover {
+  background: var(--org-btn-primary-hover, #0f6fd6);
+  opacity: 0.9;
+}
+
+.demo-welcome-feature-button:active {
+  opacity: 0.8;
+}
+
+/* No Features */
+.demo-welcome-no-features {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--org-text-secondary, #64748b);
+}
+
+:root[data-theme="dark"] .demo-welcome-no-features,
+.dark .demo-welcome-no-features {
+  color: var(--org-text-secondary-dark, #94a3b8);
+}
+
+/* Footer */
+.demo-welcome-footer {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding-top: 32px;
+  border-top: 1px solid var(--org-border-default, #e2e8f0);
+}
+
+:root[data-theme="dark"] .demo-welcome-footer,
+.dark .demo-welcome-footer {
+  border-top-color: var(--org-border-default-dark, rgba(255, 255, 255, 0.1));
+}
+
+.demo-welcome-primary-button {
+  padding: 12px 32px;
+  background: var(--org-btn-primary-bg, #137fec);
+  color: var(--org-btn-primary-text, #ffffff);
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms, opacity 150ms;
+}
+
+.demo-welcome-primary-button:hover {
+  background: var(--org-btn-primary-hover, #0f6fd6);
+  opacity: 0.9;
+}
+
+.demo-welcome-skip-button {
+  padding: 12px 32px;
+  background: transparent;
+  color: var(--org-text-secondary, #64748b);
+  border: 1px solid var(--org-border-default, #e2e8f0);
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 150ms, border-color 150ms, color 150ms;
+}
+
+.demo-welcome-skip-button:hover {
+  background: var(--org-surface-hover, rgba(0, 0, 0, 0.04));
+  border-color: var(--org-border-hover, #cbd5e1);
+  color: var(--org-text-primary, #111827);
+}
+
+:root[data-theme="dark"] .demo-welcome-skip-button,
+.dark .demo-welcome-skip-button {
+  color: var(--org-text-secondary-dark, #cbd5e1);
+  border-color: var(--org-border-default-dark, rgba(255, 255, 255, 0.1));
+}
+
+:root[data-theme="dark"] .demo-welcome-skip-button:hover,
+.dark .demo-welcome-skip-button:hover {
+  background: var(--org-surface-hover-dark, rgba(255, 255, 255, 0.1));
+  border-color: var(--org-border-hover-dark, rgba(255, 255, 255, 0.2));
+  color: var(--org-text-primary-dark, #ffffff);
+}

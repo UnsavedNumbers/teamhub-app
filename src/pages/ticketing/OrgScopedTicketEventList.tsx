@@ -151,14 +151,14 @@ function EventCard({ event, orgSlug }: { event: TicketedEvent; orgSlug: string }
         </div>
         <div className="mt-auto flex items-center justify-between gap-4 border-t border-gray-100 dark:border-gray-800 pt-5">
           {minPrice !== null && !ticketStateLabel ? (
-            <p className="text-[#111418] dark:text-gray-200 text-sm font-semibold leading-normal whitespace-nowrap">
+            <p className="text-[#111418] dark:text-gray-200 text-sm font-semibold leading-normal">
               Starting from <span className="text-lg font-bold text-[#137fec]">{formatCurrency(minPrice)}</span>
             </p>
           ) : (
             <p className="text-[#111418] dark:text-gray-200 text-sm font-semibold">{ticketStateLabel || 'Tickets Available'}</p>
           )}
           <button
-            className={`flex-1 flex min-w-[120px] items-center justify-center overflow-hidden rounded-lg h-12 px-4 text-sm font-black leading-normal tracking-[0.05em] transition-all uppercase ${
+            className={`flex-1 flex min-w-0 sm:min-w-[120px] items-center justify-center overflow-hidden rounded-lg h-12 px-4 text-sm font-black leading-normal tracking-[0.05em] transition-all uppercase ${
               ctaDisabled
                 ? 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed'
                 : 'cursor-pointer bg-[#137fec] text-white shadow-[0_8px_15px_-3px_rgba(19,127,236,0.3),0_4px_6px_-2px_rgba(19,127,236,0.05)] hover:brightness-110 active:scale-[0.98]'

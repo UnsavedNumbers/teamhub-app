@@ -7,7 +7,7 @@ interface EventsHeaderProps {
     viewMode: EventViewMode
     onTimeContextChange: (context: EventTimeContext) => void
     onViewModeChange: (mode: EventViewMode) => void
-    onCreateClick: () => void
+    onCreateClick?: () => void
     upcomingCount?: number
 }
 
@@ -90,9 +90,11 @@ export default function EventsHeader({
                 </div>
 
                 {/* Create Event Button - oa-btn--primary only */}
-                <OrgAdminButton onClick={onCreateClick} variant="primary" icon="add" className="whitespace-nowrap">
-                    Create Event
-                </OrgAdminButton>
+                {onCreateClick && (
+                    <OrgAdminButton onClick={onCreateClick} variant="primary" icon="add" className="whitespace-nowrap">
+                        Create Event
+                    </OrgAdminButton>
+                )}
             </div>
         </div>
     )

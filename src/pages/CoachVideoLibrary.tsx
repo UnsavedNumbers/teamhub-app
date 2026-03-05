@@ -23,12 +23,14 @@ import { cn } from '@/utils/cn'
 import type { VideoCategory, VideoStatus } from '@/types/video'
 import type { VideoFilters } from '@/components/video/VideoFilterPanel'
 import { getTeams } from '@/data/services/teamsService'
-import { AdminPageHeader, Card } from '@/components/platformAdmin'
+import { AdminPageHeader, Card, Modal } from '@/components/platformAdmin'
 import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import Button from '@/components/portal/Button'
 import Icon from '@/components/portal/Icon'
-import { t } from '@/i18n'
+import type { TranslationKey } from '@/i18n'
 import { showSuccess, showError } from '@/utils/toast'
+import { isInDemoSession } from '@/utils/demoMode'
+import { useI18n } from '@/i18n/useI18n'
 import '@/styles/orgAdmin.css'
 
 type SortOption = 'created_at' | 'title' | 'duration' | 'view_count'
@@ -44,6 +46,7 @@ interface FilterState {
 export default function CoachVideoLibrary() {
   const { currentOrganization } = useOrganization()
   const { context, isReady: isUserContextReady } = useUserContext()
+  const { t } = useI18n()
   void useVideoSearch
   
   // State for filters and sorting
@@ -67,6 +70,7 @@ export default function CoachVideoLibrary() {
   const [sortBy, setSortBy] = useState<SortOption>('created_at')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [showUploader, setShowUploader] = useState(false)
+  const [showDemoModal, setShowDemoModal] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 12
   
@@ -320,7 +324,13 @@ export default function CoachVideoLibrary() {
         actions={
           <Button
             variant="primary"
-            onClick={() => setShowUploader(true)}
+            onClick={() => {
+              if (isInDemoSession()) {
+                setShowDemoModal(true)
+              } else {
+                setShowUploader(true)
+              }
+            }}
           >
             <Icon name="upload" size="text-sm" className="mr-2" />
             Upload Video
@@ -532,6 +542,22 @@ export default function CoachVideoLibrary() {
           </div>
         </div>
       )}
+
+      {/* Demo Mode Modal */}
+      <Modal
+        open={showDemoModal}
+        onClose={() => setShowDemoModal(false)}
+        title={t('videos.demoMode.title' as TranslationKey) || 'Demo Mode Active'}
+      >
+        <p className="oa-text-sm oa-text-muted oa-mb-4">
+          {t('videos.demoMode.message' as TranslationKey) || 'Video upload is not available in demo mode. Please sign in to upload videos.'}
+        </p>
+        <div className="oa-flex oa-justify-end">
+          <Button variant="primary" onClick={() => setShowDemoModal(false)}>
+            {t('common.ok') || 'OK'}
+          </Button>
+        </div>
+      </Modal>
       
       {/* Edit Video Modal */}
       {editingVideo && (

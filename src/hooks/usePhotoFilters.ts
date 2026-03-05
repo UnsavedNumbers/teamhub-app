@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { isValidUUID } from '../utils/uuid'
+import { isValidUuid } from '../utils/uuid'
 
 export type PhotoDensity = 'comfortable' | 'compact'
 
@@ -14,6 +14,7 @@ export interface PhotoFilters {
   status: string
   org: string | null
   density: PhotoDensity
+  hideEmpty: boolean
 }
 
 export interface UsePhotoFiltersOptions {
@@ -27,6 +28,7 @@ export interface UsePhotoFiltersOptions {
   persistOrg?: boolean
   persistDensity?: boolean
   defaultDensity?: PhotoDensity
+  defaultHideEmpty?: boolean
 }
 
 type FilterUpdates = Partial<PhotoFilters>
@@ -78,6 +80,7 @@ export function usePhotoFilters(options: UsePhotoFiltersOptions) {
     persistOrg = true,
     persistDensity = true,
     defaultDensity = DEFAULT_DENSITY,
+    defaultHideEmpty = true,
   } = options
 
   const [searchParams, setSearchParams] = useSearchParams()
@@ -95,6 +98,7 @@ export function usePhotoFilters(options: UsePhotoFiltersOptions) {
     const sortParam = searchParams.get('sort')
     const statusParam = searchParams.get('status')
     const orgParam = searchParams.get('org')
+    const hideEmptyParam = searchParams.get('hideEmpty')
 
     const storedSort = persistSort ? getStoredValue(sortStorageKey) : null
     const storedOrg = persistOrg ? getStoredValue(orgStorageKey) : null
@@ -112,25 +116,28 @@ export function usePhotoFilters(options: UsePhotoFiltersOptions) {
       ? defaultStatus
       : DEFAULT_STATUS
 
-    const resolvedOrg = isValidUUID(orgParam) ? orgParam : isValidUUID(storedOrg) ? storedOrg : defaultOrg
+    const resolvedOrg = isValidUuid(orgParam) ? orgParam : isValidUuid(storedOrg) ? storedOrg : defaultOrg
 
     const resolvedDensity: PhotoDensity =
       storedDensity === 'compact' || storedDensity === 'comfortable'
         ? (storedDensity as PhotoDensity)
         : defaultDensity
 
+    const resolvedHideEmpty = hideEmptyParam === 'true' ? true : hideEmptyParam === 'false' ? false : defaultHideEmpty
+
     const isFavoritesAlbum = albumParam === 'favorites'
 
     return {
       q: qParam,
-      album: isFavoritesAlbum ? 'favorites' : isValidUUID(albumParam) ? albumParam : null,
-      athlete: isValidUUID(athleteParam) ? athleteParam : null,
+      album: isFavoritesAlbum ? 'favorites' : isValidUuid(albumParam) ? albumParam : null,
+      athlete: isValidUuid(athleteParam) ? athleteParam : null,
       from: isValidDateString(fromParam) ? fromParam : null,
       to: isValidDateString(toParam) ? toParam : null,
       sort: resolvedSort,
       status: resolvedStatus,
       org: resolvedOrg,
       density: resolvedDensity,
+      hideEmpty: resolvedHideEmpty,
     }
   }, [
     searchParams,
@@ -146,6 +153,7 @@ export function usePhotoFilters(options: UsePhotoFiltersOptions) {
     orgStorageKey,
     densityStorageKey,
     defaultDensity,
+    defaultHideEmpty,
   ])
 
   const setFilters = useCallback(
@@ -168,6 +176,7 @@ export function usePhotoFilters(options: UsePhotoFiltersOptions) {
       if ('sort' in updates) updateParam('sort', updates.sort || '')
       if ('status' in updates) updateParam('status', updates.status || '')
       if ('org' in updates) updateParam('org', updates.org || '')
+      if ('hideEmpty' in updates) updateParam('hideEmpty', updates.hideEmpty ? 'true' : 'false')
 
       if (persistSort && updates.sort) {
         setStoredValue(sortStorageKey, updates.sort)
@@ -195,8 +204,9 @@ export function usePhotoFilters(options: UsePhotoFiltersOptions) {
       to: null,
       status: defaultStatus,
       org: defaultOrg,
+      hideEmpty: defaultHideEmpty,
     })
-  }, [setFilters, defaultStatus, defaultOrg])
+  }, [setFilters, defaultStatus, defaultOrg, defaultHideEmpty])
 
   const setDensity = useCallback(
     (density: PhotoDensity) => {

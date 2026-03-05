@@ -4,11 +4,36 @@ import { useAuth } from '../hooks/useAuth'
 import { useOrganization } from '../contexts/OrganizationContext'
 import { useLicense } from '../hooks/useLicense'
 import { useLoadingState } from '../contexts/LoadingStateContext'
+import { debug } from '../lib/debug'
 import { NoOrganizationEmptyState } from './admin/NoOrganizationEmptyState'
 import { hasAnyRole } from '@/utils/roleHelpers'
 import { getLink, getPath, RouteKeys } from '@/utils/routes'
 import { isTrialExpired } from '@/utils/licenseUtils'
 import type { OrgMemberRole } from '@/contexts/OrganizationContext'
+
+const DEMO_SWITCH_IN_PROGRESS_KEY = 'DEMO_SWITCH_IN_PROGRESS'
+const DEMO_SWITCH_GRACE_MS = 20_000
+
+function isDemoRoleSwitchInProgress(): boolean {
+  if (typeof window === 'undefined') return false
+
+  const rawValue = window.sessionStorage.getItem(DEMO_SWITCH_IN_PROGRESS_KEY)
+  if (!rawValue) return false
+
+  const switchTimestamp = Number(rawValue)
+  if (!Number.isFinite(switchTimestamp)) return false
+
+  const ageMs = Date.now() - switchTimestamp
+  return ageMs >= 0 && ageMs < DEMO_SWITCH_GRACE_MS
+}
+
+function DemoRoleSwitchingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900">
+      <div className="text-sm text-slate-600 dark:text-slate-300">Switching role...</div>
+    </div>
+  )
+}
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -35,9 +60,37 @@ export function ProtectedRoute({
     { requireOrganization: isAdminRoute && !isPlatformAdmin }
   )
   const hasIdentity = !!user && !!profile
+  const demoRoleSwitching = isDemoRoleSwitchInProgress()
 
   // Track whether we've set loading to true using a ref (survives through cleanup)
   const hasSetLoadingRef = useRef(false)
+  const lastDecisionRef = useRef<string>('')
+
+  const logDecision = (decision: string, extra?: Record<string, unknown>) => {
+    const traceId = typeof window !== 'undefined'
+      ? window.sessionStorage.getItem('auth_debug_trace_id')
+      : null
+    const payload = {
+      traceId,
+      path: location.pathname,
+      search: location.search,
+      loading,
+      hasIdentity,
+      hasUser: !!user,
+      hasProfile: !!profile,
+      userId: user?.id ?? null,
+      profileId: profile?.id ?? null,
+      orgCount: profile?.organizations.length ?? 0,
+      isAdminRoute,
+      isPlatformAdmin,
+      licenseLoading,
+      ...extra,
+    }
+    const decisionKey = JSON.stringify({ decision, ...payload })
+    if (lastDecisionRef.current === decisionKey) return
+    lastDecisionRef.current = decisionKey
+    debug.flow('ProtectedRoute', decision, payload)
+  }
 
   // Handle all loading states in a single effect to prevent conflicts
   // IMPORTANT: Only call setLoading when state actually changes to avoid counter imbalance
@@ -56,7 +109,7 @@ export function ProtectedRoute({
       setLoading(false)
       hasSetLoadingRef.current = false
     }
-  }, [loading, isAdminRoute, isPlatformAdmin, licenseLoading, user, profile, setLoading])
+  }, [loading, hasIdentity, isAdminRoute, isPlatformAdmin, licenseLoading, user, profile, setLoading])
 
   // Cleanup loading state on unmount - always decrement if we incremented
   useEffect(() => {
@@ -71,20 +124,28 @@ export function ProtectedRoute({
   // Always wait for auth loading. Do NOT globally block on orgLoading;
   // platform admins and admin routes must be able to render without an org selected.
   if (loading && !hasIdentity) {
+    logDecision('Hold render: auth loading')
     return null
   }
 
   if (isAdminRoute && !isPlatformAdmin && licenseLoading) {
+    logDecision('Hold render: license loading')
     return null
   }
 
   // Redirect to login if not authenticated
   if (!user) {
+    if (demoRoleSwitching) {
+      logDecision('Hold render: demo role switching (suppress login redirect)')
+      return <DemoRoleSwitchingScreen />
+    }
+    logDecision('Redirect: unauthenticated -> login')
     return <Navigate to={getLink(RouteKeys.AUTH_LOGIN)} state={{ from: location }} replace />
   }
 
   // Wait for profile to load
   if (!profile) {
+    logDecision('Hold render: waiting for profile')
     return null
   }
 
@@ -94,6 +155,7 @@ export function ProtectedRoute({
   const onboardingPath = getPath(RouteKeys.ADMIN_ONBOARDING)
   const isOnboardingRoute = location.pathname === onboardingPath
   if (!profile.isPlatformAdmin && profile.requiresOrgSetup && !isOnboardingRoute) {
+    logDecision('Redirect: requires org setup', { onboardingPath })
     return <Navigate to={getLink(RouteKeys.ADMIN_ONBOARDING)} replace />
   }
 
@@ -117,11 +179,13 @@ export function ProtectedRoute({
     profile.organizations.length === 0 && 
     !isAllowedAdminRoute
   ) {
+    logDecision('Render: no organization empty state', { isAllowedAdminRoute })
     return <NoOrganizationEmptyState />
   }
 
   // Check if organization is required but user has no orgs
   if (requireOrganization && !profile.isPlatformAdmin && profile.organizations.length === 0) {
+    logDecision('Render: requireOrganization without org')
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900">
         <div className="max-w-md text-center p-8">
@@ -163,6 +227,21 @@ export function ProtectedRoute({
     )
     
     if (!hasAllowedRole && !hasLegacyRole) {
+      if (demoRoleSwitching) {
+        logDecision('Hold render: demo role switching (suppress unauthorized redirect)', {
+          allowedRoles,
+          normalizedRoles,
+          hasAllowedRole,
+          hasLegacyRole,
+        })
+        return <DemoRoleSwitchingScreen />
+      }
+      logDecision('Redirect: role unauthorized', {
+        allowedRoles,
+        normalizedRoles,
+        hasAllowedRole,
+        hasLegacyRole,
+      })
       return <Navigate to={getLink(RouteKeys.AUTH_UNAUTHORIZED)} replace />
     }
   }
@@ -197,10 +276,18 @@ export function ProtectedRoute({
     const shouldBlock = isPastGracePeriod || trialIsExpired || trialStatusButNotActive || trialHasZeroDays
     
     if (shouldBlock && !isPaywallAllowedRoute) {
+      logDecision('Redirect: trial/license gating', {
+        isPastGracePeriod,
+        trialIsExpired,
+        trialStatusButNotActive,
+        trialHasZeroDays,
+        isPaywallAllowedRoute,
+      })
       return <Navigate to={getLink(RouteKeys.ADMIN_TRIAL_EXPIRED)} state={{ from: location }} replace />
     }
   }
 
   // All checks passed - render children
+  logDecision('Allow: render protected content')
   return <>{children}</>
 }

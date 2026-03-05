@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { useAuth } from '../hooks/useAuth'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { getTeamByInviteCode, getTeamDetails, createTeamMembership } from '../data/services/teamsService'
 import { getAthletes } from '../data/services/familyService'
+import { canRegisterAsTeam } from '../utils/registrationMode'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
@@ -31,7 +32,7 @@ interface Season {
 // Minimal layout for unauthenticated users - no portal navigation
 function MinimalLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-slate-100 antialiased relative">
+    <div className="min-h-screen bg-background-light dark:bg-background-dark font-impact text-gray-900 dark:text-gray-100 antialiased relative">
       {/* Background Field Markings (Grid) */}
       <div 
         className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1]"
@@ -42,7 +43,7 @@ function MinimalLayout({ children }: { children: React.ReactNode }) {
       />
       
       {/* Simple header with logo */}
-      <header className="py-6 px-6 border-b border-slate-200 dark:border-slate-700">
+      <header className="py-6 px-6 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-[1200px] mx-auto flex items-center">
           <span className="text-xl font-bold text-primary-600">YouthSports Team Hub</span>
         </div>
@@ -147,6 +148,17 @@ export default function JoinTeam() {
       setError(errorMessage)
       setLoading(false)
       return
+    }
+
+    // Check if program allows team registration
+    const programId = (teamDetails as any).program?.id || teamData.program_id
+    if (programId) {
+      const allowsTeamRegistration = await canRegisterAsTeam(programId)
+      if (!allowsTeamRegistration) {
+        setError(t('portal.joinTeam.teamRegistrationNotAllowed'))
+        setLoading(false)
+        return
+      }
     }
 
     // Extract seasons from team details
@@ -260,7 +272,7 @@ export default function JoinTeam() {
         <div className="max-w-md mx-auto">
           <div className="mb-12 text-center">
             <PageTitle>{t('portal.joinTeam.title')}</PageTitle>
-            <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
+            <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide mt-2">
               {t('portal.joinTeam.description')}
             </p>
           </div>
@@ -315,7 +327,7 @@ export default function JoinTeam() {
                     type="text"
                     value={inviteCode}
                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                    className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-3 text-center text-2xl tracking-widest font-black text-slate-900 dark:text-white placeholder:text-slate-400"
+                    className="w-full bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded px-4 py-3 text-center text-2xl tracking-widest font-black text-gray-900 dark:text-white placeholder:text-gray-400"
                     placeholder="XXXXXXXX"
                     maxLength={8}
                     autoFocus
@@ -330,11 +342,11 @@ export default function JoinTeam() {
             {step === 'signin' && team && (
               <>
                 <Card className="mb-6 border-[var(--org-btn-primary-bg, #137fec)]/30 bg-[var(--org-btn-primary-bg)]/10 p-4 text-center">
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('portal.joinTeam.joiningTeam')}</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('portal.joinTeam.joiningTeam')}</p>
                   <CardTitle className="text-lg">{team.name}</CardTitle>
                 </Card>
                 <div className="text-center py-4">
-                  <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.joinTeam.signInToJoin')}</p>
+                  <p className="text-gray-500 dark:text-gray-400 mb-6">{t('portal.joinTeam.signInToJoin')}</p>
                   <div className="space-y-3">
                     <Button variant="primary" onClick={handleSignIn} className="w-full">
                       {t('portal.joinTeam.signIn')}
@@ -353,13 +365,13 @@ export default function JoinTeam() {
             {step === 'select' && team && (
               <>
                 <Card className="mb-6 border-[var(--org-btn-primary-bg, #137fec)]/30 bg-[var(--org-btn-primary-bg)]/10 p-4 text-center">
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('portal.joinTeam.joiningTeam')}</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('portal.joinTeam.joiningTeam')}</p>
                   <CardTitle className="text-lg">{team.name}</CardTitle>
                 </Card>
 
                 {children.length === 0 ? (
                   <div className="text-center py-4">
-                    <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.joinTeam.addChildFirst')}</p>
+                    <p className="text-gray-500 dark:text-gray-400 mb-6">{t('portal.joinTeam.addChildFirst')}</p>
                     <Link to="/portal/athletes">
                       <Button variant="primary">
                         {t('portal.joinTeam.add')}
@@ -370,11 +382,11 @@ export default function JoinTeam() {
                   <>
                     <div className="space-y-4 mb-6">
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">{t('portal.joinTeam.selectChild')}</label>
+                        <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">{t('portal.joinTeam.selectChild')}</label>
                         <select
                           value={selectedChild}
                           onChange={(e) => setSelectedChild(e.target.value)}
-                          className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white"
+                          className="w-full bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded px-4 py-2 text-sm text-gray-900 dark:text-white"
                         >
                           <option value="">{t('portal.joinTeam.chooseChild')}</option>
                           {children.map((c) => (
@@ -385,11 +397,11 @@ export default function JoinTeam() {
 
                       {seasons.length > 0 && (
                         <div>
-                          <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">{t('portal.joinTeam.selectSeason')}</label>
+                          <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">{t('portal.joinTeam.selectSeason')}</label>
                           <select
                             value={selectedSeason}
                             onChange={(e) => setSelectedSeason(e.target.value)}
-                            className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white"
+                            className="w-full bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded px-4 py-2 text-sm text-gray-900 dark:text-white"
                           >
                             {seasons.map((s) => (
                               <option key={s.id} value={s.id}>{s.name}</option>
@@ -417,7 +429,7 @@ export default function JoinTeam() {
                   <Icon name="check_circle" size="text-4xl" className="text-emerald-500 dark:text-emerald-400" />
                 </div>
                 <CardTitle className="mb-2">{t('portal.joinTeam.teamJoined')}</CardTitle>
-                <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.joinTeam.success')} {team?.name}.</p>
+                <p className="text-gray-500 dark:text-gray-400 mb-6">{t('portal.joinTeam.success')} {team?.name}.</p>
                 <Button variant="primary" onClick={() => {
                   sessionStorage.removeItem('pending_join_team_code')
                   navigate('/portal/dashboard')
@@ -430,7 +442,7 @@ export default function JoinTeam() {
 
           {user && (
             <div className="mt-6 text-center">
-              <Link to="/portal/dashboard" className="text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+              <Link to="/portal/dashboard" className="text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                 {t('portal.joinTeam.backToDashboard')}
               </Link>
             </div>
@@ -439,3 +451,4 @@ export default function JoinTeam() {
       </Layout>
   )
 }
+

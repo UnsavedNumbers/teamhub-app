@@ -1,350 +1,365 @@
+﻿/**
+ * Messages Page
+ *
+ * Dedicated direct user-to-user messaging surface.
+ * Team and organization chat stays in /portal/huddles.
+ */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { StreamChat, Channel as StreamChannel } from 'stream-chat'
+import {
+  Chat,
+  Channel,
+  ChannelHeader,
+  MessageList,
+  MessageInput,
+  Window,
+} from 'stream-chat-react'
+import 'stream-chat-react/dist/css/v2/index.css'
+
 import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
-import { 
-  getAnnouncements, 
-  getMessages, 
-  createMessage, 
-  createAnnouncement, 
-  subscribeToMessages,
-  type Announcement, 
-  type Message 
-} from '../data/services/messagesService'
-import { getTeamsForParent, getTeams } from '../data/services/teamsService'
-import PortalLayout from '../components/portal/PortalLayout'
-import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
-import Card from '../components/portal/Card'
-import Button from '../components/portal/Button'
-import Icon from '../components/portal/Icon'
-import CreateAnnouncementModal from '../components/portal/CreateAnnouncementModal'
-import { showError, showSuccess } from '../utils/toast'
-import { getAnnouncementEmoji } from '../utils/announcementTypes'
+import { useTheme } from '../hooks/useTheme'
+import { getStreamToken, startDirectMessage } from '../data/services/huddlesService'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
+import {
+  getStreamClient,
+  connectUser,
+  disconnectUser,
+  getDMChannel,
+  getUserDMChannels,
+} from '../lib/streamChat'
+import { getTeamsForParent, getTeams } from '../data/services/teamsService'
+import { DEMO_USER_IDS, USE_FAKE_DATA } from '../data/config'
+import {
+  DEFAULT_ORG_MESSAGING_SETTINGS,
+  evaluateDmAttempt,
+  type DmPolicyDecision,
+  type MessagingRoleContext,
+} from '../lib/messaging'
+
+import PortalLayout from '../components/portal/PortalLayout'
+import { PageTitle } from '../components/portal/Typography'
+import EmptyState from '../components/portal/EmptyState'
+import ChannelList from '../components/huddles/ChannelList'
+import { showError } from '../utils/toast'
 
 interface Team {
   id: string
   name: string
 }
 
-type Tab = 'announcements' | 'chat'
+interface DemoRecipient {
+  id: string
+  userId: string
+  name: string
+  teamName: string
+  roleContext: MessagingRoleContext
+}
+
+const DEMO_DIRECT_MESSAGE_RECIPIENTS: Array<{
+  userId: string
+  name: string
+  roleContext: MessagingRoleContext
+}> = [
+  { userId: DEMO_USER_IDS['coach-only@example.com'], name: 'Coach Jordan Reed', roleContext: 'coach' },
+  { userId: DEMO_USER_IDS['parent-coach@example.com'], name: 'Coach Mia Carter', roleContext: 'coach' },
+  { userId: DEMO_USER_IDS['admin-only@example.com'], name: 'Admin Alex Lee', roleContext: 'org_admin' },
+  { userId: DEMO_USER_IDS['staff-only@example.com'], name: 'Team Manager Sam Patel', roleContext: 'staff' },
+]
 
 export default function Messages() {
   useDebugLifecycle('Messages')
-  
-  const [teams, setTeams] = useState<Team[]>([])
-  const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
-  const [tab, setTab] = useState<Tab>('announcements')
-  const [announcements, setAnnouncements] = useState<Announcement[]>([])
-  const [messages, setMessages] = useState<Message[]>([])
-  const [newMessage, setNewMessage] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [sending, setSending] = useState(false)
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [fetchingAnnouncements, setFetchingAnnouncements] = useState(false)
-  const [fetchingMessages, setFetchingMessages] = useState(false)
-  const [fetchingTeams, setFetchingTeams] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
   const { context, isReady } = useUserContext()
-  const [searchParams] = useSearchParams()
-  const hasInitializedTeamRef = useRef(false)
+  const { resolvedTheme } = useTheme()
 
-  // Parse query parameter on mount to restore team selection
-  useEffect(() => {
-    if (!hasInitializedTeamRef.current) {
-      const teamParam = searchParams.get('team')
-      if (teamParam && !selectedTeam) {
-        setSelectedTeam(teamParam)
+  const [streamClient, setStreamClient] = useState<StreamChat | null>(null)
+  const [streamConnected, setStreamConnected] = useState(false)
+  const [selectedChannel, setSelectedChannel] = useState<StreamChannel | null>(null)
+  const [dmChannels, setDmChannels] = useState<StreamChannel[]>([])
+  const [loading, setLoading] = useState(true)
+  const [streamLoading, setStreamLoading] = useState(false)
+  const [teams, setTeams] = useState<Team[]>([])
+  const [actingRoleContext, setActingRoleContext] = useState<MessagingRoleContext>('parent')
+  const [policyDecisionByChannelId, setPolicyDecisionByChannelId] = useState<Record<string, DmPolicyDecision>>({})
+  const chatTheme = resolvedTheme === 'dark' ? 'messaging dark' : 'messaging light'
+
+  const hasInitializedStream = useRef(false)
+  const seededDemoChannelIds = useRef<Set<string>>(new Set())
+
+  const demoRecipients = useMemo<DemoRecipient[]>(() => {
+    if (!USE_FAKE_DATA || teams.length === 0) return []
+    return teams.slice(0, DEMO_DIRECT_MESSAGE_RECIPIENTS.length).map((team, index) => {
+      const recipient = DEMO_DIRECT_MESSAGE_RECIPIENTS[index]
+      return {
+        id: `demo-recipient-${recipient.userId}-${team.id}`,
+        userId: recipient.userId,
+        name: recipient.name,
+        teamName: team.name,
+        roleContext: recipient.roleContext,
       }
-      hasInitializedTeamRef.current = true
+    }).filter((recipient) => recipient.userId !== user?.id)
+  }, [teams, user?.id])
+
+  const roleContextOptions = useMemo<Array<{ value: MessagingRoleContext; label: string }>>(() => {
+    const options: Array<{ value: MessagingRoleContext; label: string }> = []
+    const roles = context.roles || []
+
+    if (roles.includes('org_admin')) options.push({ value: 'org_admin', label: 'Org Admin' })
+    if (roles.includes('coach')) options.push({ value: 'coach', label: 'Coach' })
+    if (roles.includes('staff')) options.push({ value: 'staff', label: 'Staff' })
+    if (roles.includes('parent') || roles.includes('guardian')) options.push({ value: 'parent', label: 'Parent' })
+    if (roles.includes('athlete')) options.push({ value: 'athlete_minor', label: 'Athlete' })
+
+    if (options.length === 0) options.push({ value: 'parent', label: 'Parent' })
+    return options
+  }, [context.roles])
+
+  useEffect(() => {
+    if (roleContextOptions.length === 0) return
+    setActingRoleContext((previous) => {
+      const exists = roleContextOptions.some((option) => option.value === previous)
+      return exists ? previous : roleContextOptions[0].value
+    })
+  }, [roleContextOptions])
+
+  useEffect(() => {
+    if (!isReady || !user || hasInitializedStream.current) return
+    hasInitializedStream.current = true
+
+    const initializeStreamChat = async () => {
+      setStreamLoading(true)
+      try {
+        const result = await getStreamToken()
+
+        if ('error' in result) {
+          console.error('Failed to get Stream token:', result.error)
+          showError('Failed to connect to messages')
+          setStreamLoading(false)
+          return
+        }
+
+        const client = getStreamClient()
+        await connectUser(user.id, result.token, result.user)
+        setStreamClient(client)
+        setStreamConnected(true)
+      } catch (error) {
+        console.error('Error initializing direct messages:', error)
+        showError('Failed to connect to messages')
+      } finally {
+        setStreamLoading(false)
+      }
     }
-  }, [searchParams, selectedTeam])
 
-  // Safe computation: only check roles when context is ready
-  // Valid roles: 'parent', 'coach', 'org_admin'
-  const canCreateAnnouncements = isReady && (
-    context.roles.includes('coach') || 
-    context.roles.includes('org_admin') || 
-    profile?.isPlatformAdmin === true
-  )
+    initializeStreamChat()
 
-  const fetchTeams = useCallback(async () => {
+    return () => {
+      if (hasInitializedStream.current) {
+        disconnectUser()
+        hasInitializedStream.current = false
+      }
+    }
+  }, [isReady, user])
+
+  useEffect(() => {
     if (!isReady) return
 
-    setFetchingTeams(true)
-    setError(null)
+    const fetchTeams = async () => {
+      try {
+        const isParent = context.roles?.includes('parent') && !context.roles?.includes('org_admin')
+        const result = isParent
+          ? await getTeamsForParent(context)
+          : await getTeams(context, { activeOnly: true })
 
-    try {
-      // Use the service to get teams based on user role
-      // Safe access: isReady guarantees context.roles is an array
-      const isParent = context.roles?.includes('parent') && !context.roles?.includes('org_admin')
-      
-      let result
-      if (isParent) {
-        result = await getTeamsForParent(context)
-      } else {
-        result = await getTeams(context, { activeOnly: true })
-      }
+        if (result.error) {
+          console.error('Error fetching teams for messages:', result.error)
+          setTeams([])
+          return
+        }
 
-      if (result.error) {
-        setError(result.error.message || 'Failed to load teams')
-        showError(result.error.message || 'Failed to load teams')
+        const nextTeams = (result.data ?? []).map((team: Team) => ({ id: team.id, name: team.name }))
+        setTeams(nextTeams)
+      } catch (error) {
+        console.error('Error fetching teams for messages:', error)
         setTeams([])
-      } else if (result.data) {
-        setTeams(result.data.map(t => ({ id: t.id, name: t.name })))
-        // Auto-select first team if none selected (use functional form to avoid dependency)
-        setSelectedTeam(prev => {
-          if (!prev && result.data && result.data.length > 0) {
-            return result.data[0].id
-          }
-          return prev
-        })
-      } else {
-        setTeams([])
+      } finally {
+        setLoading(false)
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load teams'
-      setError(errorMessage)
-      showError(errorMessage)
-      setTeams([])
-    } finally {
-      setFetchingTeams(false)
-      setLoading(false)
     }
-  }, [context, isReady])
 
-  const fetchAnnouncementsData = useCallback(async () => {
-    if (!isReady || !selectedTeam) return
-
-    setFetchingAnnouncements(true)
-    try {
-      const { data, error } = await getAnnouncements(context, { teamId: selectedTeam, includeOrgWide: true })
-      
-      if (error) {
-        showError(error.message || 'Failed to load announcements')
-        setAnnouncements([])
-      } else if (data) {
-        // Ensure all announcements have required properties with safe defaults
-        const safeAnnouncements = (data as Announcement[]).map(ann => ({
-          ...ann,
-          priority: ann.priority || 'normal' as const,
-          type: ann.type || 'general' as const,
-          title: ann.title || '',
-          content: ann.content || '',
-          created_at: ann.created_at || new Date().toISOString(),
-          updated_at: ann.updated_at || new Date().toISOString(),
-        }))
-        setAnnouncements(safeAnnouncements)
-      } else {
-        setAnnouncements([])
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load announcements'
-      showError(errorMessage)
-      setAnnouncements([])
-    } finally {
-      setFetchingAnnouncements(false)
-    }
-  }, [context, isReady, selectedTeam])
-
-  const fetchMessagesData = useCallback(async () => {
-    if (!isReady || !selectedTeam) return
-
-    setFetchingMessages(true)
-    try {
-      const { data, error } = await getMessages(selectedTeam)
-      if (error) {
-        showError(error.message || 'Failed to load messages')
-        setMessages([])
-      } else if (data) {
-        // Ensure all messages have required properties with safe defaults
-        const safeMessages = data.map(msg => ({
-          ...msg,
-          content: msg.content || '',
-          created_at: msg.created_at || new Date().toISOString(),
-        }))
-        setMessages(safeMessages)
-      } else {
-        setMessages([])
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load messages'
-      showError(errorMessage)
-      setMessages([])
-    } finally {
-      setFetchingMessages(false)
-    }
-  }, [isReady, selectedTeam])
-
-  useEffect(() => {
     fetchTeams()
-  }, [fetchTeams])
+  }, [isReady, context])
 
-  useEffect(() => {
-    if (!selectedTeam) return
+  const seedDemoChannel = useCallback(async (channel: StreamChannel, recipient: DemoRecipient) => {
+    if (!USE_FAKE_DATA || !channel.id) return
+    if (seededDemoChannelIds.current.has(channel.id)) return
 
-    if (tab === 'announcements') {
-      fetchAnnouncementsData()
-    } else if (tab === 'chat') {
-      fetchMessagesData()
-      // Subscribe to realtime messages
-      const subscription = subscribeToMessages(selectedTeam, (incomingMsg) => {
-          setMessages(prev => {
-            // Prevent duplicates by checking if message ID already exists
-            const exists = prev.some(m => m.id === incomingMsg.id)
-            if (exists) return prev
-            return [...prev, incomingMsg]
-          })
-      })
-      return () => {
-          subscription.unsubscribe()
-      }
-    }
-  }, [selectedTeam, tab, fetchAnnouncementsData, fetchMessagesData])
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  async function handleSendMessage() {
-    if (!user) {
-      showError('You must be logged in to send messages')
+    if (channel.state.messages.length > 0) {
+      seededDemoChannelIds.current.add(channel.id)
       return
     }
-    if (!newMessage.trim() || !selectedTeam || sending) return
-    
-    const messageContent = newMessage.trim()
-    setSending(true)
-    
+
     try {
-      const { data, error } = await createMessage(messageContent, selectedTeam, user.id)
-      
-      if (error) {
-        showError(error.message || 'Failed to send message')
-      } else if (data) {
-        setNewMessage('')
-        // Realtime subscription will add the message, but we can also add it optimistically
-        // to avoid duplicates, check if message ID already exists
-        setMessages(prev => {
-          const exists = prev.some(m => m.id === data.id)
-          return exists ? prev : [...prev, data]
+      await channel.sendMessage({
+        type: 'system',
+        text: `Direct message thread started with ${recipient.name} (${recipient.teamName}).`,
+      })
+      await channel.sendMessage({
+        text: `Hi ${recipient.name.split(' ')[1] ?? recipient.name}, checking in about ${recipient.teamName}.`,
+      })
+      await channel.sendMessage({
+        text: `Can you confirm arrival time for the next ${recipient.teamName} event?`,
+      })
+    } catch (error) {
+      console.error('Error seeding demo direct message channel:', error)
+    } finally {
+      seededDemoChannelIds.current.add(channel.id)
+    }
+  }, [])
+
+  const loadDirectMessageChannels = useCallback(async () => {
+    if (!isReady || !streamClient || !user) return
+
+    try {
+      let channels = await getUserDMChannels()
+
+      if (USE_FAKE_DATA && channels.length === 0 && demoRecipients.length > 0) {
+        for (const recipient of demoRecipients) {
+          const channel = await getDMChannel(user.id, recipient.userId, {
+            name: `${recipient.name} - ${recipient.teamName}`,
+          })
+          await seedDemoChannel(channel, recipient)
+        }
+        channels = await getUserDMChannels()
+      }
+
+      setDmChannels(channels)
+
+      if (!selectedChannel) {
+        const firstChannel = channels[0]
+        if (firstChannel) {
+          setSelectedChannel(firstChannel)
+        }
+      }
+    } catch (error) {
+      console.error('Error loading direct message channels:', error)
+    }
+  }, [isReady, streamClient, user, demoRecipients, seedDemoChannel, selectedChannel])
+
+  useEffect(() => {
+    if (streamConnected && streamClient) {
+      loadDirectMessageChannels()
+    }
+  }, [streamConnected, streamClient, loadDirectMessageChannels])
+
+  const handleStartDemoDirectMessage = useCallback(async (recipient: DemoRecipient) => {
+    if (!user) return
+    if (!streamConnected || !streamClient) {
+      showError('Messages are still connecting. Please try again in a moment.')
+      return
+    }
+
+    setStreamLoading(true)
+    try {
+      let decision: DmPolicyDecision
+      let channelIdOverride: string | undefined
+      let members: string[] | undefined
+
+      if (USE_FAKE_DATA) {
+        decision = evaluateDmAttempt({
+          actor_user_id: user.id,
+          recipient_user_id: recipient.userId,
+          org_id: context.orgId,
+          channel_mode: 'dm',
+          acting_role_context: actingRoleContext,
+          recipient_role_context: recipient.roleContext,
+          org_settings: {
+            org_id: context.orgId,
+            ...DEFAULT_ORG_MESSAGING_SETTINGS,
+          },
+          is_same_team: true,
         })
       } else {
-        showError('Failed to send message')
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to send message'
-      showError(errorMessage)
-    } finally {
-      setSending(false)
-    }
-  }
+        const dmResult = await startDirectMessage({
+          actor_user_id: user.id,
+          recipient_user_id: recipient.userId,
+          org_id: context.orgId,
+          acting_role_context: actingRoleContext,
+          recipient_role_context: recipient.roleContext,
+          idempotency_key: `messages:${user.id}:${recipient.userId}:${Date.now()}`,
+        })
 
-  async function handleCreateAnnouncement(
-    title: string, 
-    content: string, 
-    priority: 'normal' | 'urgent', 
-    teamId: string,
-    type: 'general' | 'reminder' | 'schedule_change' | 'urgent' | 'payment' | 'travel' = 'general',
-    isOrgWide: boolean = false
-  ) {
-      if (!user) {
-        showError('You must be logged in to create announcements')
-        return
-      }
-
-      if (!context.orgId) {
-        showError('Organization context is required')
-        return
-      }
-
-      try {
-        const { data, error } = await createAnnouncement(
-          context,
-          title, 
-          content, 
-          priority, 
-          isOrgWide ? null : teamId, 
-          user.id,
-          context.orgId,
-          type,
-          isOrgWide
-        )
-        
-        if (error) {
-          showError(error.message || 'Failed to create announcement')
-          throw error
-        } else if (data) {
-          showSuccess('Announcement created successfully')
-          setIsCreateModalOpen(false)
-          // Refresh announcements if valid
-          if (teamId === selectedTeam || isOrgWide) {
-            await fetchAnnouncementsData()
-          }
-        } else {
-          showError('Failed to create announcement')
+        if ('error' in dmResult) {
+          const reasonCode = dmResult.decision?.reason_code
+          const errorMessage = reasonCode
+            ? `Message blocked by policy: ${reasonCode}`
+            : dmResult.error.message
+          showError(errorMessage)
+          return
         }
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to create announcement'
-        showError(errorMessage)
-        throw err
+
+        decision = dmResult.data.decision
+        channelIdOverride = dmResult.data.channel.stream_channel_id
+        members = dmResult.data.decision.final_recipients
       }
-  }
 
-  function formatTime(dateStr: string) {
-    return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-  }
+      if (!decision.allowed) {
+        showError(`Message blocked by policy: ${decision.reason_code}`)
+        return
+      }
 
-  function formatDate(dateStr: string) {
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }
+      const channel = await getDMChannel(user.id, recipient.userId, {
+        name: `${recipient.name} - ${recipient.teamName}`,
+        channelId: channelIdOverride,
+        members,
+        data: {
+          policy_version: decision.policy_version,
+          rule_id_at_creation: decision.rule_id,
+          guardian_copy_mode: decision.guardian_copy_targets.length > 0 ? 'full_thread' : 'none',
+          created_by_role_context: actingRoleContext,
+          requires_parental_copy_notice: decision.requires_parental_copy_notice,
+        },
+      })
+      await seedDemoChannel(channel, recipient)
 
-  const quickReplies = [
-    { icon: 'directions_run', text: 'Running Late' },
-    { icon: 'help', text: 'Question' },
-    { icon: 'check_circle', text: 'Be there soon' },
-    { icon: 'cancel', text: "Can't make it" },
-    { icon: 'location_on', text: 'Where are you?' }
-  ]
-  
-  // Show loading state if context is not ready or initial data is loading
+      if (channel.id) {
+        setPolicyDecisionByChannelId((previous) => ({
+          ...previous,
+          [channel.id!]: decision,
+        }))
+      }
+
+      await loadDirectMessageChannels()
+      setSelectedChannel(channel)
+    } catch (error) {
+      console.error('Error creating direct message channel:', error)
+      showError('Failed to start direct message')
+    } finally {
+      setStreamLoading(false)
+    }
+  }, [user, streamConnected, streamClient, seedDemoChannel, loadDirectMessageChannels, context.orgId, actingRoleContext])
+
+  const selectedChannelPolicyNotice = useMemo(() => {
+    if (!selectedChannel?.id) return null
+    const selectedChannelData = selectedChannel.data as Record<string, unknown> | undefined
+    const decision = policyDecisionByChannelId[selectedChannel.id]
+    if (decision?.requires_parental_copy_notice) {
+      return "This message will be visible to the athlete's guardians."
+    }
+    const channelNotice = selectedChannelData?.requires_parental_copy_notice
+    if (channelNotice) {
+      return "This message will be visible to the athlete's guardians."
+    }
+    return null
+  }, [selectedChannel, policyDecisionByChannelId])
+
   if (!isReady || loading) {
     return (
       <PortalLayout>
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
         </div>
-      </PortalLayout>
-    )
-  }
-
-  // Show full-window empty state when no teams are available
-  if (!fetchingTeams && teams.length === 0) {
-    return (
-      <PortalLayout
-        breadcrumbs={[
-          { label: 'Home', path: '/portal/dashboard' },
-          { label: 'Huddles' },
-        ]}
-      >
-        <div className="mb-12">
-          <PageTitle>Huddles</PageTitle>
-          <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
-            Team chat and announcements.
-          </p>
-        </div>
-        
-        <Card className="text-center py-12">
-          <Icon name="chat_bubble" size="text-6xl" className="text-slate-400 mb-4" />
-          <CardTitle className="mb-2">No Teams Available</CardTitle>
-          <p className="text-slate-500 dark:text-slate-400">
-            {error ? 'Failed to load teams. Please try again later.' : 'You are not currently associated with any teams.'}
-          </p>
-        </Card>
       </PortalLayout>
     )
   }
@@ -353,290 +368,142 @@ export default function Messages() {
     <PortalLayout
       breadcrumbs={[
         { label: 'Home', path: '/portal/dashboard' },
-        { label: 'Huddles' },
+        { label: 'Messages' },
       ]}
     >
-      <div className="mb-8">
-        <PageTitle>Huddles</PageTitle>
-        <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
-          Team chat and announcements.
+      <div className="mb-6 sm:mb-8">
+        <PageTitle>Messages</PageTitle>
+        <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide mt-1">
+          Direct messages between users.
         </p>
       </div>
-      
-      <div className="fixed left-0 right-0 top-[4rem] bottom-0 overflow-hidden" style={{ top: '14rem' }}>
-        <div className="flex h-full">
-          <div className="w-64 bg-white dark:bg-slate-900/50 border-r border-slate-100 dark:border-slate-800 flex flex-col">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-              <PageTitle className="text-2xl mb-2">Huddles</PageTitle>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Team chat</p>
+
+      <div className="flex gap-6 h-[calc(100vh-280px)] min-h-[600px]">
+        <div className="w-[360px] flex-shrink-0 flex flex-col border border-gray-200 dark:border-neutral-700 bg-white dark:bg-black">
+          <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-900 dark:text-white">
+                Direct Messages
+              </h2>
+              <span className="text-xs font-bold text-gray-400">
+                {dmChannels.length}
+              </span>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3">
-              <SectionHeader className="mb-4 px-2">All Chats</SectionHeader>
-              {fetchingTeams ? (
-                <div className="flex justify-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
-                </div>
-              ) : teams.length === 0 ? (
-                <div className="text-center py-4 text-sm text-slate-500 dark:text-slate-400">
-                  {error ? 'Failed to load teams' : 'No teams available'}
-                </div>
-              ) : (
-                teams.map((team) => (
+            <div className="mb-3 rounded border border-gray-200 dark:border-neutral-700 px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
+                Sending As
+              </p>
+              <select
+                value={actingRoleContext}
+                onChange={(event) => setActingRoleContext(event.target.value as MessagingRoleContext)}
+                className="w-full text-sm rounded border border-gray-300 dark:border-neutral-700 bg-white dark:bg-black px-2 py-1"
+              >
+                {roleContextOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+              Messaging policies now enforce youth safety visibility and role-based restrictions.
+            </div>
+
+            {USE_FAKE_DATA && demoRecipients.length > 0 && (
+              <div className="space-y-2">
+                {demoRecipients.map((recipient) => (
                   <button
-                    key={team.id}
-                    onClick={() => {
-                      if (selectedTeam !== team.id) {
-                        setSelectedTeam(team.id)
-                      }
-                    }}
-                    disabled={fetchingTeams || fetchingAnnouncements || fetchingMessages}
-                    className={`w-full text-left px-3 py-2 rounded mb-1 transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed ${
-                      selectedTeam === team.id
-                        ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)] dark:text-[var(--org-link-color)]'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
-                    }`}
+                    key={recipient.id}
+                    onClick={() => handleStartDemoDirectMessage(recipient)}
+                    className="w-full text-left px-3 py-2 rounded border border-gray-200 dark:border-neutral-700 text-sm hover:bg-gray-50 dark:hover:bg-neutral-900 transition-colors"
                   >
-                    {team.name}
+                    <p className="font-semibold text-gray-900 dark:text-white">{recipient.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{recipient.teamName}</p>
                   </button>
-                ))
-              )}       
-            </div>
-
-            {canCreateAnnouncements && (
-                <div className="p-3 border-t border-slate-100 dark:border-slate-800">
-                <Button 
-                  variant="primary" 
-                  className="w-full" 
-                  onClick={() => setIsCreateModalOpen(true)}
-                  disabled={fetchingTeams || !teams.length}
-                >
-                    <Icon name="campaign" size="text-sm" className="mr-2" />
-                    New Announcement
-                </Button>
-                </div>
+                ))}
+              </div>
             )}
           </div>
 
-          <div className="flex-1 flex flex-col relative h-full overflow-hidden">
-            {!selectedTeam ? (
-              <div className="flex-1 flex items-center justify-center p-6">
-                <Card className="text-center py-12 max-w-md w-full">
-                  <Icon name="chat_bubble" size="text-6xl" className="text-slate-400 mb-4" />
-                  <CardTitle className="mb-2">Select a Team</CardTitle>
-                  <p className="text-slate-500 dark:text-slate-400">Choose a team to view messages.</p>
-                </Card>
+          <div className="flex-1 overflow-y-auto">
+            {streamLoading ? (
+              <div className="p-4 space-y-3">
+                {[1, 2, 3].map((index) => (
+                  <div key={index} className="h-16 bg-gray-100 dark:bg-neutral-900 rounded animate-pulse" />
+                ))}
+              </div>
+            ) : !streamConnected || !streamClient ? (
+              <div className="p-8">
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-gray-900 dark:border-white mx-auto mb-2"></div>
+                  <p className="text-xs text-gray-500">Connecting to messages...</p>
+                </div>
+              </div>
+            ) : dmChannels.length === 0 ? (
+              <div className="p-8">
+                <EmptyState
+                  icon="mail"
+                  title="No direct messages yet"
+                  description="Start a new direct message to chat one-to-one."
+                />
               </div>
             ) : (
-              <>
-                <div className="bg-white dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 px-6 py-4 flex-shrink-0">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">{teams.find(t => t.id === selectedTeam)?.name}</CardTitle>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          if (tab !== 'announcements') {
-                            setTab('announcements')
-                          }
-                        }}
-                        disabled={fetchingAnnouncements || fetchingMessages}
-                        className={`px-4 py-1.5 rounded text-sm font-bold uppercase tracking-widest transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                          tab === 'announcements'
-                            ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)]'
-                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                        }`}
-                      >
-                        Announcements
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (tab !== 'chat') {
-                            setTab('chat')
-                          }
-                        }}
-                        disabled={fetchingAnnouncements || fetchingMessages}
-                        className={`px-4 py-1.5 rounded text-sm font-bold uppercase tracking-widest transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                          tab === 'chat'
-                            ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)]'
-                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                        }`}
-                      >
-                        Team Chat
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
-                  {tab === 'announcements' ? (
-                    <div className="space-y-4 max-w-3xl mx-auto">
-                      {fetchingAnnouncements ? (
-                        <Card className="text-center py-12">
-                          <div className="flex justify-center mb-4">
-                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
-                          </div>
-                          <p className="text-slate-500 dark:text-slate-400">Loading announcements...</p>
-                        </Card>
-                      ) : announcements.length === 0 ? (
-                        <Card className="text-center py-12">
-                          <Icon name="campaign" size="text-6xl" className="text-slate-400 mb-4" />
-                          <CardTitle className="mb-2">No announcements</CardTitle>
-                          <p className="text-slate-500 dark:text-slate-400">Team announcements will appear here.</p>
-                        </Card>
-                      ) : (
-                        announcements.map((ann) => {
-                          // Safe access: ensure priority exists and is a string
-                          const priority = (ann.priority || 'normal').toLowerCase()
-                          const announcementType = ann.type || 'general'
-                          const emoji = getAnnouncementEmoji(announcementType)
-                          const isOrgWide = ann.team_id === null
-                          const detailUrl = `/portal/messages/${ann.id}${selectedTeam ? `?team=${selectedTeam}` : ''}`
-                          return (
-                          <Link
-                            key={ann.id}
-                            to={detailUrl}
-                            className="block"
-                          >
-                            <Card
-                              className={`p-6 border-l-4 transition-all hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 cursor-pointer ${
-                                priority === 'urgent' ? 'border-red-500' : 'border-[var(--org-btn-primary-bg, #137fec)]'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xl">{emoji}</span>
-                                  {isOrgWide && (
-                                    <span className="px-2 py-0.5 text-xs font-bold uppercase tracking-widest rounded bg-purple-500/10 text-purple-500 dark:text-purple-400">
-                                      Org-Wide
-                                    </span>
-                                  )}
-                                  <span className={`px-2 py-0.5 text-xs font-bold uppercase tracking-widest rounded ${
-                                    (ann.author?.role || 'admin') === 'coach'
-                                      ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)]'
-                                      : 'bg-purple-500/10 text-purple-500 dark:text-purple-400'
-                                  }`}>
-                                    {ann.author?.role || 'Admin'}
-                                  </span>
-                                  <CardTitle className="text-lg">{ann.title}</CardTitle>
-                                </div>
-                                <span className="text-xs font-bold uppercase tracking-widest text-slate-400">{formatDate(ann.created_at)}</span>
-                              </div>
-
-                            </Card>
-                          </Link>
-                          )
-                        })
-                      )}
-                    </div>
-                  ) : (
-                    <div className="max-w-3xl mx-auto space-y-4 pb-2">
-                      {fetchingMessages ? (
-                        <Card className="text-center py-8 mb-4">
-                          <div className="flex justify-center mb-4">
-                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
-                          </div>
-                          <p className="text-slate-500 dark:text-slate-400 text-sm">Loading messages...</p>
-                        </Card>
-                      ) : messages.length === 0 ? (
-                        <Card className="text-center py-12 mb-4">
-                          <Icon name="chat" size="text-6xl" className="text-slate-400 mb-4" />
-                          <CardTitle className="mb-2">No messages yet</CardTitle>
-                          <p className="text-slate-500 dark:text-slate-400">Start a conversation with your team.</p>
-                        </Card>
-                      ) : null}
-                      {messages.map((msg) => {
-                        // Safe access: guard against undefined user and author
-                        const isMe = user?.id && msg.author_id === user.id
-                        const role = msg.author?.role || 'parent'
-                        const authorEmail = msg.author?.email || ''
-                        return (
-                          <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-xs md:max-w-md rounded-xl px-4 py-2 shadow-sm ${
-                              isMe
-                                ? 'bg-[var(--org-btn-primary-bg)] text-white rounded-br-sm'
-                                : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-bl-sm border border-slate-100 dark:border-slate-700'
-                            }`}>
-                              {!isMe && (
-                                <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${
-                                    role === 'coach' ? 'text-[var(--org-link-color)]' : 'text-slate-400'
-                                }`}>
-                                  {role === 'coach' ? 'Coach' : (authorEmail ? authorEmail.split('@')[0] : 'User')}
-                                </p>
-                              )}
-                              <p className="font-bold whitespace-pre-wrap leading-tight">{msg.content}</p>
-                              <p className={`text-[10px] mt-1 font-bold uppercase tracking-widest text-right ${
-                                isMe ? 'text-blue-100' : 'text-slate-300'
-                              }`}>
-                                {formatTime(msg.created_at)}
-                              </p>
-                            </div>
-                          </div>
-                        )
-                      })}
-                      <div ref={messagesEndRef} />
-                    </div>
-                  )}
-                </div>
-
-                {tab === 'chat' && (
-                  <div className="bg-white dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 p-4 flex-shrink-0">
-                    <div className="max-w-3xl mx-auto">
-                      <div className="flex gap-2 mb-3 flex-wrap">
-                        {quickReplies.map((reply) => (
-                          <button
-                            key={reply.text}
-                            onClick={() => setNewMessage(reply.text)}
-                            disabled={sending || fetchingMessages}
-                            className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <Icon name={reply.icon} size="text-sm" />
-                            {reply.text}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="flex gap-3">
-                        <input
-                          type="text"
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter' && !sending && newMessage.trim()) {
-                              handleSendMessage()
-                            }
-                          }}
-                          placeholder="Type a message..."
-                          disabled={sending || fetchingMessages}
-                          className="flex-1 px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-slate-800 dark:text-white placeholder:text-slate-400 font-bold focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        />
-                        <button
-                          onClick={handleSendMessage}
-                          disabled={sending || !newMessage.trim() || fetchingMessages}
-                          className="w-10 h-10 bg-[var(--org-btn-primary-bg)] text-white rounded-full flex items-center justify-center hover:bg-[var(--org-btn-primary-bg)]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-95"
-                          title={sending ? 'Sending...' : !newMessage.trim() ? 'Enter a message' : 'Send message'}
-                        >
-                          {sending ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                          ) : (
-                            <Icon name="send" size="text-sm" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
+              <div className="divide-y divide-gray-200 dark:divide-neutral-700">
+                <Chat client={streamClient} theme={chatTheme}>
+                  <ChannelList
+                    teamChannels={[]}
+                    orgChannels={[]}
+                    dmChannels={dmChannels}
+                    selectedChannel={selectedChannel}
+                    onChannelSelect={setSelectedChannel}
+                    loading={streamLoading}
+                  />
+                </Chat>
+              </div>
             )}
           </div>
         </div>
 
-        <CreateAnnouncementModal 
-            isOpen={isCreateModalOpen}
-            onClose={() => setIsCreateModalOpen(false)}
-            onSubmit={handleCreateAnnouncement}
-            teams={teams}
-            selectedTeamId={selectedTeam}
-        />
+        <div className="flex-1 flex flex-col border border-gray-200 dark:border-neutral-700 bg-white dark:bg-black">
+          {streamConnected && streamClient && selectedChannel ? (
+            <Chat client={streamClient} theme={chatTheme}>
+              <Channel channel={selectedChannel}>
+                <Window>
+                  <div className="px-4 py-2 border-b border-gray-200 dark:border-neutral-700 text-xs text-gray-600 dark:text-gray-300 flex items-center justify-between">
+                    <span>
+                      Active role: <strong>{roleContextOptions.find((option) => option.value === actingRoleContext)?.label ?? actingRoleContext}</strong>
+                    </span>
+                    {Boolean((selectedChannel.data as Record<string, unknown> | undefined)?.created_by_role_context) && (
+                      <span className="uppercase tracking-wide text-[10px] text-gray-500">
+                        Thread role: {String((selectedChannel.data as Record<string, unknown>).created_by_role_context)}
+                      </span>
+                    )}
+                  </div>
+                  {selectedChannelPolicyNotice && (
+                    <div className="mx-4 mt-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      {selectedChannelPolicyNotice}
+                    </div>
+                  )}
+                  <ChannelHeader />
+                  <MessageList />
+                  <MessageInput />
+                </Window>
+              </Channel>
+            </Chat>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <EmptyState
+                icon="mail"
+                title={!streamConnected ? 'Connecting to messages' : 'Select a conversation'}
+                description={!streamConnected ? 'Connecting to direct messages...' : 'Choose a direct message from the list.'}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </PortalLayout>
   )
 }
+

@@ -8,15 +8,18 @@
  * Design: FanConnect Minimalist Light
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useI18n } from '../../i18n/useI18n'
+import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 import { getFanCalendar } from '../../data/services/fanService'
 import type { CalendarEvent } from '../../types/staffAndFan'
+import { buildIcsDataUrl, sanitizeCalendarFilename } from '../../features/calendar/addToCalendar'
 import BookmarkButton from '../../components/fan/BookmarkButton'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import { showError } from '../../utils/toast'
 import { getLink, RouteKeys } from '../../utils/routes'
+import { useOnlineStatus } from '../../hooks/useOnlineStatus'
 import '../../styles/fan.css'
 import '../../styles/fan-layouts.css'
 
@@ -26,13 +29,12 @@ type EventTypeFilter = 'all' | 'game' | 'practice' | 'event' | 'meeting'
 // Persist view preference
 const VIEW_STORAGE_KEY = 'fan_schedule_view'
 
-import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
-
 export default function FanSchedule() {
   useDebugLifecycle('FanSchedule')
   
   const navigate = useNavigate()
   const { t } = useI18n()
+  const { isOnline } = useOnlineStatus()
   
   // Data state
   const [events, setEvents] = useState<CalendarEvent[]>([])
@@ -50,17 +52,12 @@ export default function FanSchedule() {
   const [loading, setLoading] = useState(true)
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
 
-  // Load events on mount and date change
-  useEffect(() => {
-    loadEvents()
-  }, [currentDate, viewMode])
-
   // Persist view preference
   useEffect(() => {
     localStorage.setItem(VIEW_STORAGE_KEY, viewMode)
   }, [viewMode])
 
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     setLoading(true)
     
     // Calculate date range based on view mode
@@ -115,6 +112,37 @@ export default function FanSchedule() {
     }
     
     setLoading(false)
+  }, [currentDate, entityFilter, t, typeFilter, viewMode])
+
+  // Load events on mount and date change
+  useEffect(() => {
+    loadEvents()
+  }, [loadEvents])
+
+  const handleExportCalendar = () => {
+    const icsUrl = buildIcsDataUrl(events.map((event) => ({
+      id: event.id,
+      title: event.title,
+      startTime: event.start_time,
+      endTime: event.end_time,
+      location: event.location,
+      description: event.description,
+      url: typeof window === 'undefined'
+        ? undefined
+        : `${window.location.origin}${getLink(RouteKeys.FAN_EVENT_DETAIL, { eventId: event.id })}`,
+    })))
+
+    if (!icsUrl) {
+      showError(t('calendar.errors.exportFailed'))
+      return
+    }
+
+    const link = document.createElement('a')
+    link.href = icsUrl
+    link.download = `${sanitizeCalendarFilename(getViewTitle(), 'fan-schedule')}.ics`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   // Navigation handlers
@@ -214,6 +242,15 @@ export default function FanSchedule() {
 
       {/* Calendar Content */}
       <div className="fan-schedule-content">
+        {!isOnline && (
+          <div className="fan-schedule-empty" style={{ marginBottom: '16px' }}>
+            <div className="fan-schedule-empty-icon">
+              <span className="material-symbols-outlined">wifi_off</span>
+            </div>
+            <h3 className="fan-schedule-empty-title">{t('calendar.errors.offlineTitle')}</h3>
+            <p className="fan-schedule-empty-text">{t('calendar.errors.offlineDescription')}</p>
+          </div>
+        )}
         {loading ? (
           <div className="fan-schedule-loading">
             <LoadingSpinner size="large" />
@@ -269,7 +306,7 @@ export default function FanSchedule() {
             <span className="material-symbols-outlined">filter_list</span>
             Filter Teams
           </button>
-          <button className="fan-schedule-action-btn primary">
+          <button className="fan-schedule-action-btn primary" onClick={handleExportCalendar} disabled={events.length === 0}>
             <span className="material-symbols-outlined">download</span>
             Export
           </button>
@@ -610,7 +647,16 @@ function EventCard({ event, compact = false, onClick }: EventCardProps) {
         </div>
 
         {event.org_name && !compact && (
-          <span className="fan-event-card-org">{event.org_name}</span>
+          <span className="fan-event-card-org">
+            <span className="fan-event-card-org-avatar">
+              {event.org_logo_url ? (
+                <img src={event.org_logo_url} alt={event.org_name} />
+              ) : (
+                <span className="material-symbols-outlined">business</span>
+              )}
+            </span>
+            {event.org_name}
+          </span>
         )}
       </div>
 

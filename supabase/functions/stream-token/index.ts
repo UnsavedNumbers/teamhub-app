@@ -192,6 +192,10 @@ serve(async (req: Request) => {
       primaryRole = "org_admin"
     } else if (memberships?.some(m => m.role === "coach")) {
       primaryRole = "coach"
+    } else if (memberships?.some(m => m.role === "staff")) {
+      primaryRole = "staff"
+    } else if (memberships?.some(m => m.role === "parent")) {
+      primaryRole = "parent"
     }
 
     console.log("Building Stream user data")

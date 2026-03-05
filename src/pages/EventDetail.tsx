@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+﻿import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { useAuth } from '../hooks/useAuth'
@@ -6,25 +6,31 @@ import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { supabase } from '../lib/supabase'
 import { getEventDetails, updateRSVP, getAthletes, deleteEvent } from '../data/services'
 import { useOrganization } from '../contexts/OrganizationContext'
-import type { RSVPStatus } from '../types/calendar'
-import { getSportFromEvent } from '../utils/sportContext'
+import type { EventLocation, RSVPStatus } from '../types/calendar'
+import { getSportFromEvent, type SportInfo } from '../utils/sportContext'
+import { getSportImagePath } from '../utils/sportImages'
 import { getDisplayLocation } from '../utils/homeLocation'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import AddToCalendarActions from '../components/calendar/AddToCalendarActions'
 import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
 import { PhotoSection } from '../components/galleries/PhotoSection'
 import { ConfirmDialog } from '../components/admin/ConfirmDialog'
 import { useT } from '../i18n/useI18n'
 import { getLink, RouteKeys } from '@/utils/routes'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
+import { readCalendarCache, writeCalendarCache } from '../features/calendar/cache'
+import type { CalendarExportEvent } from '../features/calendar/addToCalendar'
 import BookmarkButton from '../components/fan/BookmarkButton'
 import { useQuery } from '@tanstack/react-query'
 import { getBookmarkedEvents } from '../data/services/fanService'
 import type { FanEventBookmark } from '../types/staffAndFan'
 import { USE_FAKE_DATA } from '../data/config'
+import { isValidUUID } from '../utils/routeValidation'
 
 interface Event {
   id: string
@@ -37,13 +43,7 @@ interface Event {
   location: string | null
   notes: string | null
   team: { name: string; id: string }
-  event_location?: {
-    place_id: string | null
-    venue_name: string | null
-    venue_address: string | null
-    latitude: number | null
-    longitude: number | null
-  } | null
+  event_location?: EventLocationDetails | null
   ticketed_event?: {
     id: string
     status: string
@@ -125,59 +125,19 @@ function lyftLink(address: string | null | undefined): string | null {
   return `https://lyft.com/ride?destination[address]=${dest}`
 }
 
-function googleCalendarLink(event: { title: string; startTime: string; endTime: string; location?: string; notes?: string }): string | null {
-  try {
-    const startDate = new Date(event.startTime)
-    const endDate = new Date(event.endTime)
-    
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      console.error('Invalid date in calendar link:', event)
-      return null
-    }
-    
-    const start = startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    const end = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    const details = event.notes ? encodeURIComponent(event.notes) : ''
-    const location = event.location ? encodeURIComponent(event.location) : ''
-    const text = encodeURIComponent(event.title || 'Event')
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}/${end}&details=${details}&location=${location}`
-  } catch (err) {
-    console.error('Error generating Google Calendar link:', err)
-    return null
-  }
-}
-
-function appleCalendarLink(event: { title: string; startTime: string; endTime: string; location?: string }): string | null {
-  try {
-    const startDate = new Date(event.startTime)
-    const endDate = new Date(event.endTime)
-    
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      console.error('Invalid date in calendar link:', event)
-      return null
-    }
-    
-    // Download .ics file format
-    const start = startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    const end = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    const location = event.location || ''
-    const title = event.title || 'Event'
-    
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-BEGIN:VEVENT
-DTSTART:${start}
-DTEND:${end}
-SUMMARY:${title.replace(/[,;\\]/g, '')}
-LOCATION:${location.replace(/[,;\\]/g, '')}
-END:VEVENT
-END:VCALENDAR`
-    
-    return `data:text/calendar;charset=utf8,${encodeURIComponent(icsContent)}`
-  } catch (err) {
-    console.error('Error generating Apple Calendar link:', err)
-    return null
-  }
+type EventLocationDetails = Pick<
+  EventLocation,
+  | 'place_id'
+  | 'venue_name'
+  | 'address_line1'
+  | 'address_line2'
+  | 'city'
+  | 'state'
+  | 'postal_code'
+  | 'latitude'
+  | 'longitude'
+> & {
+  venue_address?: string | null
 }
 
 function formatTimezoneDisplay(timeZone: string | null | undefined, referenceDate: string): string {
@@ -232,15 +192,35 @@ async function copyToClipboard(text: string): Promise<{ success: boolean; error?
   }
 }
 
+function getEventDetailCacheScope(eventId: string): string {
+  return `portal-event-detail:${eventId}`
+}
+
+function toCalendarExportEvent(event: Event, venueAddress: string | null): CalendarExportEvent {
+  return {
+    id: event.id,
+    title: event.title,
+    startTime: event.start_time,
+    endTime: event.end_time,
+    location: venueAddress || event.location,
+    description: event.notes,
+    url: typeof window === 'undefined'
+      ? undefined
+      : `${window.location.origin}${getLink(RouteKeys.PORTAL_EVENT_DETAIL, { eventId: event.id })}`,
+  }
+}
+
 export default function EventDetail() {
   const { eventId } = useParams<{ eventId: string }>()
   const t = useT()
   const { profile } = useAuth()
   const { currentOrganization } = useOrganization()
+  const { isOnline } = useOnlineStatus()
 
   // Add lifecycle logging
   useDebugLifecycle('EventDetail', { eventId })
   const [event, setEvent] = useState<Event | null>(null)
+  const [eventSport, setEventSport] = useState<SportInfo | null>(null)
   const [children, setChildren] = useState<Child[]>([])
   const [attendance, setAttendance] = useState<Record<string, Attendance>>({})
   const [loading, setLoading] = useState(true)
@@ -271,6 +251,7 @@ export default function EventDetail() {
   } | null>(null)
   const [loadingWeather, setLoadingWeather] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [usingCachedEvent, setUsingCachedEvent] = useState(false)
 
   const { data: bookmarkedEventsData } = useQuery({
     queryKey: ['bookmarked-events'],
@@ -443,15 +424,23 @@ export default function EventDetail() {
 
   const fetchData = useCallback(async () => {
     if (!isReady || !eventId) return
+    if (!USE_FAKE_DATA && !isValidUUID(eventId)) {
+      navigate(getLink(RouteKeys.PORTAL_CALENDAR))
+      return
+    }
     
     setLoading(true)
+    setEventSport(null)
+    setUsingCachedEvent(false)
+    const cacheScope = getEventDetailCacheScope(eventId)
     
     try {
       // Fetch event details
       const { data: eventData, error: eventError } = await getEventDetails(context, eventId)
+      let resolvedEventLocation: EventLocationDetails | null = eventData?.event_location ?? null
 
       // If event_location is missing due to RLS, try to fetch it directly
-      if (eventData && !eventData.event_location) {
+      if (eventData && !resolvedEventLocation) {
         const { data: locationData, error: locationError } = await supabase
           .from('event_locations')
           .select('*')
@@ -459,13 +448,19 @@ export default function EventDetail() {
           .maybeSingle()
 
         if (!locationError && locationData && isMountedRef.current) {
-          ;(eventData as any).event_location = locationData
+          resolvedEventLocation = locationData as EventLocationDetails
         }
       }
 
       if (!isMountedRef.current) return
 
       if (eventError || !eventData) {
+        const cached = readCalendarCache<Event>(cacheScope)
+        if (cached) {
+          setEvent(cached.data)
+          setUsingCachedEvent(true)
+          return
+        }
         // Preserve query params when redirecting back to calendar
         const searchParams = new URLSearchParams(location.search)
         const calendarPath = getLink(RouteKeys.PORTAL_CALENDAR)
@@ -476,7 +471,7 @@ export default function EventDetail() {
         return
       }
 
-      setEvent({
+      const nextEvent: Event = {
         id: eventData.id,
         title: eventData.title,
         type: eventData.type,
@@ -484,18 +479,23 @@ export default function EventDetail() {
         end_time: eventData.end_time,
         timezone: eventData.timezone,
         arrival_time: eventData.arrival_time,
-        location: buildVenueAddress(eventData.event_location || null),
+        location: buildVenueAddress(resolvedEventLocation),
         notes: eventData.notes,
         team: {
           name: eventData.team?.name ?? 'Team',
           id: eventData.team?.id ?? ''
         },
-        event_location: eventData.event_location ? {
-          place_id: eventData.event_location.place_id,
-          venue_name: eventData.event_location.venue_name,
-          venue_address: buildVenueAddress(eventData.event_location),
-          latitude: eventData.event_location.latitude ?? null,
-          longitude: eventData.event_location.longitude ?? null,
+        event_location: resolvedEventLocation ? {
+          place_id: resolvedEventLocation.place_id,
+          venue_name: resolvedEventLocation.venue_name,
+          venue_address: buildVenueAddress(resolvedEventLocation),
+          address_line1: resolvedEventLocation.address_line1,
+          address_line2: resolvedEventLocation.address_line2,
+          city: resolvedEventLocation.city,
+          state: resolvedEventLocation.state,
+          postal_code: resolvedEventLocation.postal_code,
+          latitude: resolvedEventLocation.latitude ?? null,
+          longitude: resolvedEventLocation.longitude ?? null,
         } : null,
         ticketed_event: eventData.ticketed_event ? {
           id: eventData.ticketed_event.id,
@@ -503,7 +503,10 @@ export default function EventDetail() {
           ticket_types: eventData.ticketed_event.ticket_types || [],
           ticket_banner_url: eventData.ticketed_event.ticket_banner_url || null,
         } : null,
-      })
+      }
+
+      setEvent(nextEvent)
+      writeCalendarCache(cacheScope, nextEvent)
 
       console.log('[EventDetail] Set event state:', {
         hasTicketedEvent: !!eventData.ticketed_event,
@@ -538,10 +541,18 @@ export default function EventDetail() {
       }
 
       if (eventId) {
-        await getSportFromEvent(context, eventId)
+        const sport = await getSportFromEvent(context, eventId)
+        if (isMountedRef.current) {
+          setEventSport(sport)
+        }
       }
     } catch (err) {
       console.error('Error fetching event details:', err)
+      const cached = eventId ? readCalendarCache<Event>(getEventDetailCacheScope(eventId)) : null
+      if (cached) {
+        setEvent(cached.data)
+        setUsingCachedEvent(true)
+      }
     } finally {
       if (isMountedRef.current) {
         setLoading(false)
@@ -558,7 +569,7 @@ export default function EventDetail() {
     let cancelled = false
 
     const loadOrgSlug = async () => {
-      const { data, error } = await supabase.rpc('get_org_slug_by_id' as any, { p_org_id: context.orgId })
+      const { data, error } = await supabase.rpc('get_org_slug_by_id', { p_org_id: context.orgId })
 
       if (!cancelled && !error && data) {
         setOrgSlug(data as string)
@@ -665,10 +676,10 @@ export default function EventDetail() {
     going: 'bg-emerald-500 text-white',
     late: 'bg-amber-500 text-white',
     not_going: 'bg-red-500 text-white',
-    unknown: 'bg-slate-500 text-white',
+    unknown: 'bg-gray-500 text-white',
   }
 
-  const statusInactiveStyles = 'bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+  const statusInactiveStyles = 'bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
 
   if (loading) {
     return (
@@ -680,7 +691,7 @@ export default function EventDetail() {
         ]}
       >
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
         </div>
       </PortalLayout>
     )
@@ -694,7 +705,8 @@ export default function EventDetail() {
     ? `${calendarPath}?${searchParams.toString()}`
     : calendarPath
   const dashboardPath = getLink(RouteKeys.PORTAL_DASHBOARD)
-  const venueAddress = (event.event_location as any)?.venue_address || event.location
+  const eventLocation = event.event_location
+  const venueAddress = eventLocation?.venue_address || event.location
   
   // Check if event ended more than 24 hours ago
   const eventEndDate = new Date(event.end_time)
@@ -702,9 +714,14 @@ export default function EventDetail() {
   const hoursSinceEventEnded = (now.getTime() - eventEndDate.getTime()) / (1000 * 60 * 60)
   const isEventOver24HoursAgo = hoursSinceEventEnded > 24
 
-  // Check if we have a banner image
-  const bannerUrl = event.ticketed_event?.ticket_banner_url
+  // Custom ticket banner first, then sport travel fallback for ticketed events.
+  const customBannerUrl = event.ticketed_event?.ticket_banner_url?.trim() || null
+  const sportTravelBannerUrl = eventSport?.name
+    ? getSportImagePath(eventSport.name, 'travel', false)
+    : null
+  const bannerUrl = customBannerUrl || (event.ticketed_event ? sportTravelBannerUrl : null)
   const timezoneLabel = formatTimezoneDisplay(event.timezone, event.start_time)
+  const calendarExportEvent = toCalendarExportEvent(event, venueAddress)
   
   return (
     <PortalLayout
@@ -741,9 +758,9 @@ export default function EventDetail() {
             <h1 className="event-hero-title">{event.title}</h1>
             <p className="event-hero-meta">
               {formatDate(event.start_time, event.timezone)}
-              <span className="meta-separator"> • </span>
+              <span className="meta-separator"> - </span>
               <span className="meta-time">{formatTime(event.start_time, event.timezone)} - {formatTime(event.end_time, event.timezone)}</span>
-              {timezoneLabel && <><span className="meta-separator"> • </span><span className="meta-time">{timezoneLabel}</span></>}
+              {timezoneLabel && <><span className="meta-separator"> - </span><span className="meta-time">{timezoneLabel}</span></>}
             </p>
             <p className="event-hero-team">{event.team.name}</p>
             
@@ -772,8 +789,8 @@ export default function EventDetail() {
                     <p className="quick-info-value">{t('calendar.event.loading')}</p>
                   ) : weatherData ? (
                     <div>
-                      <p className="quick-info-value">{weatherData.temperature}°F • <span className="capitalize">{weatherData.description}</span></p>
-                      <p className="quick-info-subtext">{weatherData.precipitation}% precip • {weatherData.windSpeed} mph</p>
+                      <p className="quick-info-value">{weatherData.temperature} deg F - <span className="capitalize">{weatherData.description}</span></p>
+                      <p className="quick-info-subtext">{weatherData.precipitation}% precip - {weatherData.windSpeed} mph</p>
                     </div>
                   ) : (
                     <p className="quick-info-value opacity-50">{t('calendar.event.unavailable')}</p>
@@ -795,7 +812,7 @@ export default function EventDetail() {
                           }
                         }}
                         disabled={!orgSlug || !event.ticketed_event?.id}
-                        className="mt-1 whitespace-nowrap"
+                        className="mt-1"
                       >
                         {t('calendar.event.getTickets')}
                       </Button>
@@ -837,11 +854,11 @@ export default function EventDetail() {
           <div className="flex items-start justify-between mb-4">
             <div>
               <PageTitle>{event.title}</PageTitle>
-              <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
-                {formatDate(event.start_time, event.timezone)} • {formatTime(event.start_time, event.timezone)} - {formatTime(event.end_time, event.timezone)}
-                {timezoneLabel ? ` • ${timezoneLabel}` : ''}
+              <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide mt-2">
+                {formatDate(event.start_time, event.timezone)} - {formatTime(event.start_time, event.timezone)} - {formatTime(event.end_time, event.timezone)}
+                {timezoneLabel ? ` - ${timezoneLabel}` : ''}
               </p>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mt-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mt-2">
                 {event.team.name}
               </p>
             </div>
@@ -868,42 +885,60 @@ export default function EventDetail() {
         </div>
       )}
 
+      {(!isOnline || usingCachedEvent) && (
+        <Card className="mb-6 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+          <div className="p-4 flex items-start gap-3">
+            <Icon name="wifi_off" className="text-amber-600 dark:text-amber-300 mt-0.5" />
+            <div>
+              <p className="font-bold text-amber-900 dark:text-amber-100">
+                {t('calendar.errors.offlineTitle')}
+              </p>
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                {usingCachedEvent
+                  ? t('calendar.errors.cachedEventDescription')
+                  : t('calendar.errors.offlineDescription')}
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Quick Summary Banner - Mobile only when hero exists, always when no hero */}
       <div className={`mb-8 ${bannerUrl ? 'md:hidden' : ''}`}>
-        <Card className="bg-gradient-to-r from-[var(--org-btn-primary-bg, #137fec)]/5 to-slate-50 dark:to-slate-800/50 border-l-4 border-[var(--org-btn-primary-bg, #137fec)] p-6">
+        <Card className="bg-gradient-to-r from-[var(--org-btn-primary-bg, #137fec)]/5 to-gray-50 dark:to-gray-800/50 border-l-4 border-[var(--org-btn-primary-bg, #137fec)] p-6">
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.eventType')}</p>
-              <p className="text-lg font-black text-slate-900 dark:text-white capitalize">{event.type}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('calendar.event.eventType')}</p>
+              <p className="text-lg font-black text-gray-900 dark:text-white capitalize">{event.type}</p>
             </div>
             {event.arrival_time && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time, event.timezone) })}</p>
-                <p className="text-lg font-black text-slate-900 dark:text-white">{formatTime(event.arrival_time, event.timezone)}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time, event.timezone) })}</p>
+                <p className="text-lg font-black text-gray-900 dark:text-white">{formatTime(event.arrival_time, event.timezone)}</p>
               </div>
             )}
             {venueAddress && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.location')}</p>
-                <p className="text-lg font-black text-slate-900 dark:text-white truncate">{venueAddress.split(',')[0]}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('calendar.event.location')}</p>
+                <p className="text-lg font-black text-gray-900 dark:text-white truncate">{venueAddress.split(',')[0]}</p>
               </div>
             )}
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.weather')}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('calendar.event.weather')}</p>
               {loadingWeather ? (
-                <p className="text-lg font-black text-slate-900 dark:text-white">{t('calendar.event.loading')}</p>
+                <p className="text-lg font-black text-gray-900 dark:text-white">{t('calendar.event.loading')}</p>
               ) : weatherData ? (
                 <div>
-                  <p className="text-lg font-black text-slate-900 dark:text-white">{weatherData.temperature}°F • <span className="capitalize">{weatherData.description}</span></p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{weatherData.precipitation}% precip • {weatherData.windSpeed} mph wind</p>
+                  <p className="text-lg font-black text-gray-900 dark:text-white">{weatherData.temperature} deg F - <span className="capitalize">{weatherData.description}</span></p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{weatherData.precipitation}% precip - {weatherData.windSpeed} mph wind</p>
                 </div>
               ) : (
-                <p className="text-lg font-black text-slate-500 dark:text-slate-400">{t('calendar.event.unavailable')}</p>
+                <p className="text-lg font-black text-gray-500 dark:text-gray-400">{t('calendar.event.unavailable')}</p>
               )}
             </div>
             {!isEventOver24HoursAgo && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.entry')}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('calendar.event.entry')}</p>
                 {event.ticketed_event ? (
                   <Button
                     onClick={() => {
@@ -917,12 +952,12 @@ export default function EventDetail() {
                     }
                     }}
                     disabled={!orgSlug || !event.ticketed_event?.id}
-                    className="w-full whitespace-nowrap"
+                    className="w-full"
                   >
                     {t('calendar.event.getTickets')}
                   </Button>
                 ) : (
-                  <p className="text-lg font-black text-slate-900 dark:text-white">{t('calendar.event.freeEntry')}</p>
+                  <p className="text-lg font-black text-gray-900 dark:text-white">{t('calendar.event.freeEntry')}</p>
                 )}
               </div>
             )}
@@ -946,21 +981,21 @@ export default function EventDetail() {
                 {event.event_location?.venue_name && (
                   <CardTitle className="text-xl mb-4">{event.event_location.venue_name}</CardTitle>
                 )}
-                <div className="mb-4 text-slate-700 dark:text-slate-300">
-                  {(event.event_location as any)?.address_line1 && (
-                    <p className="text-base">{(event.event_location as any).address_line1}</p>
+                <div className="mb-4 text-gray-700 dark:text-gray-300">
+                  {eventLocation?.address_line1 && (
+                    <p className="text-base">{eventLocation.address_line1}</p>
                   )}
-                  {(event.event_location as any)?.address_line2 && (
-                    <p className="text-base">{(event.event_location as any).address_line2}</p>
+                  {eventLocation?.address_line2 && (
+                    <p className="text-base">{eventLocation.address_line2}</p>
                   )}
                   <p className="text-base">
-                    {[(event.event_location as any)?.city, (event.event_location as any)?.state, (event.event_location as any)?.postal_code].filter(Boolean).join(', ')}
+                    {[eventLocation?.city, eventLocation?.state, eventLocation?.postal_code].filter(Boolean).join(', ')}
                   </p>
                 </div>
 
                 {/* Smart Map Links */}
                 <div className="mb-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Open in Maps</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Open in Maps</p>
                   <div className="flex flex-wrap gap-2">
                     {googleMapsLink(venueAddress) ? (
                       <a href={googleMapsLink(venueAddress)!} target="_blank" rel="noreferrer">
@@ -1018,7 +1053,7 @@ export default function EventDetail() {
                 {/* Ride-Share Shortcuts */}
                 {!isEventOver24HoursAgo && (
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Need a Ride?</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Need a Ride?</p>
                     <div className="flex flex-wrap gap-2">
                       {uberLink(venueAddress) ? (
                         <a href={uberLink(venueAddress)!} target="_blank" rel="noreferrer">
@@ -1058,10 +1093,10 @@ export default function EventDetail() {
                 {t('calendar.event.noLocationInfo')}
               </div>
               <div className="pt-12">
-                <p className="text-slate-600 dark:text-slate-300">
+                <p className="text-gray-600 dark:text-gray-300">
                   This event doesn't have a venue location set yet.
                 </p>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                   {canManage ? (
                     <Button
                       variant="primary"
@@ -1092,7 +1127,7 @@ export default function EventDetail() {
                 {t('calendar.event.eventNotes')}
               </div>
               <div className="pt-12">
-                <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap bg-slate-50 dark:bg-slate-800/50 p-4 rounded">
+                <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap bg-gray-50 dark:bg-gray-800/50 p-4 rounded">
                   {event.notes}
                 </p>
               </div>
@@ -1109,7 +1144,7 @@ export default function EventDetail() {
               <div className="pt-12">
                 {children.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-slate-500 dark:text-slate-400 mb-4">{t('portal.events.noChildren')}</p>
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">{t('portal.events.noChildren')}</p>
                     <Button variant="primary" onClick={() => navigate(getLink(RouteKeys.PORTAL_ATHLETES))}>
                       {t('portal.events.add')}
                     </Button>
@@ -1119,11 +1154,11 @@ export default function EventDetail() {
                     {children.map((child) => {
                       const att = attendance[child.id]
                       return (
-                        <div key={child.id} className="border-b border-slate-200 dark:border-slate-700 pb-4 last:border-b-0 last:pb-0">
+                        <div key={child.id} className="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-b-0 last:pb-0">
                           <div className="flex items-center justify-between mb-3">
                             <CardTitle className="text-lg">{child.first_name} {child.last_name}</CardTitle>
                             {saving === child.id && (
-                              <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t('calendar.rsvp.saving')}</span>
+                              <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">{t('calendar.rsvp.saving')}</span>
                             )}
                           </div>
                           <div className="flex flex-col sm:flex-row gap-2">
@@ -1171,61 +1206,12 @@ export default function EventDetail() {
                 {t('calendar.event.addToCalendar')}
               </div>
               <div className="pt-12">
-                {googleCalendarLink({
-                  title: event.title,
-                  startTime: event.start_time,
-                  endTime: event.end_time,
-                  location: venueAddress || '',
-                }) ? (
-                  <a
-                    href={googleCalendarLink({
-                      title: event.title,
-                      startTime: event.start_time,
-                      endTime: event.end_time,
-                      location: venueAddress || '',
-                    })!}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block"
-                  >
-                    <Button variant="primary" className="w-full">
-                      <Icon name="event" size="text-sm" className="mr-2" />
-                      {t('calendar.event.googleCalendar')}
-                    </Button>
-                  </a>
-                ) : (
-                  <Button variant="primary" className="w-full" disabled>
-                    <Icon name="event" size="text-sm" className="mr-2" />
-                    {t('calendar.event.googleCalendar')}
-                  </Button>
-                )}
-                {appleCalendarLink({
-                  title: event.title,
-                  startTime: event.start_time,
-                  endTime: event.end_time,
-                  location: venueAddress || '',
-                }) ? (
-                  <a
-                    href={appleCalendarLink({
-                      title: event.title,
-                      startTime: event.start_time,
-                      endTime: event.end_time,
-                      location: venueAddress || '',
-                    })!}
-                    download={`${event.title}.ics`}
-                    className="block mt-4"
-                  >
-                    <Button variant="primary" className="w-full">
-                      <Icon name="event" size="text-sm" className="mr-2" />
-                      {t('calendar.event.appleCalendar')}
-                    </Button>
-                  </a>
-                ) : (
-                  <Button variant="primary" className="w-full mt-4" disabled>
-                    <Icon name="event" size="text-sm" className="mr-2" />
-                    {t('calendar.event.appleCalendar')}
-                  </Button>
-                )}
+                <AddToCalendarActions
+                  event={calendarExportEvent}
+                  googleVariant="primary"
+                  icsVariant="primary"
+                  buttonClassName="w-full justify-center"
+                />
               </div>
             </Card>
           )}
@@ -1244,8 +1230,8 @@ export default function EventDetail() {
                       <>
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Your Starting Point</p>
-                            <p className="text-sm font-bold text-slate-900 dark:text-white">{commuteStartLocation}</p>
+                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Your Starting Point</p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">{commuteStartLocation}</p>
                           </div>
                           <Button
                             variant="secondary"
@@ -1261,22 +1247,22 @@ export default function EventDetail() {
                         </div>
                         
                         {loadingCommute ? (
-                          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 flex items-center justify-center">
-                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-slate-900 dark:border-white mr-3"></div>
-                            <span className="text-sm text-slate-600 dark:text-slate-300">Calculating route...</span>
+                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-900 dark:border-white mr-3"></div>
+                            <span className="text-sm text-gray-600 dark:text-gray-300">Calculating route...</span>
                           </div>
                         ) : commuteSummary ? (
-                          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4">
+                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Distance</p>
-                                <p className="text-lg font-black text-slate-900 dark:text-white">{commuteSummary.distance}</p>
+                                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Distance</p>
+                                <p className="text-lg font-black text-gray-900 dark:text-white">{commuteSummary.distance}</p>
                               </div>
                               <div>
-                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
+                                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">
                                   {commuteSummary.durationInTraffic ? 'With Traffic' : 'Duration'}
                                 </p>
-                                <p className="text-lg font-black text-slate-900 dark:text-white">
+                                <p className="text-lg font-black text-gray-900 dark:text-white">
                                   {commuteSummary.durationInTraffic || commuteSummary.duration}
                                 </p>
                               </div>
@@ -1298,10 +1284,10 @@ export default function EventDetail() {
                                 const leaveByTime = leaveByDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
                                 
                                 return (
-                                  <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Need to Leave By</p>
+                                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Need to Leave By</p>
                                     <p className="text-xl font-black text-[var(--org-btn-primary-bg,#137fec)]">{leaveByTime}</p>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
                                       To arrive by {new Date(targetTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                                       {event.arrival_time ? ' (arrival time)' : ' (start time)'}
                                     </p>
@@ -1329,8 +1315,8 @@ export default function EventDetail() {
                       </>
                     ) : (
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Set Your Starting Location</p>
-                        <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Set Your Starting Location</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                           Save your home, work, or any starting point to quickly get directions with current traffic conditions.
                         </p>
                         <Button
@@ -1346,13 +1332,13 @@ export default function EventDetail() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Enter Your Starting Location</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Enter Your Starting Location</p>
                     <input
                       type="text"
                       value={commuteInputValue}
                       onChange={(e) => setCommuteInputValue(e.target.value)}
                       placeholder="e.g., 123 Main St, City, State"
-                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)]"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)]"
                       autoFocus
                     />
                     <div className="flex gap-2">
@@ -1415,3 +1401,4 @@ export default function EventDetail() {
     </PortalLayout>
   )
 }
+

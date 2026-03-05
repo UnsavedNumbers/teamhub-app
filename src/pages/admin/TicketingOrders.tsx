@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import AdminPageHeader from '@/components/admin/AdminPageHeader'
 import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import EmptyState from '@/components/platformAdmin/EmptyState'
 import { Badge, Button, DatePicker } from '@/components/platformAdmin'
+import { ROUTES } from '@/constants/routes'
 import { useOrganization } from '@/contexts/OrganizationContext'
 import {
   deleteTicketOrder,
@@ -118,7 +119,7 @@ function ActiveFilterChips({
             onClick={() => onRemove(chip.key, chip.value)}
             aria-label="Remove filter"
           >
-            ×
+            x
           </button>
         </span>
       ))}
@@ -191,7 +192,11 @@ function FilterDrawer({
   const toggleSet = (key: 'eventIds', id: string) => {
     setDraft((prev) => {
       const current = new Set(prev[key])
-      current.has(id) ? current.delete(id) : current.add(id)
+      if (current.has(id)) {
+        current.delete(id)
+      } else {
+        current.add(id)
+      }
       return { ...prev, [key]: Array.from(current) }
     })
   }
@@ -314,6 +319,47 @@ const statusVariant: Record<string, 'success' | 'warning' | 'danger' | 'info' | 
   cancelled: 'neutral',
 }
 
+function getOrderDetailPath(orderId: string) {
+  return ROUTES.ADMIN_TICKETING_ORDER_DETAIL(orderId)
+}
+
+function getOrderStatusLabel(status: TicketOrderWithRelations['status']) {
+  return ORDER_STATUS_OPTIONS.find((option) => option.value === status)?.label || status.replace(/_/g, ' ')
+}
+
+function formatOrderDateTime(value: string | null, includeTime = true) {
+  if (!value) return 'Not available'
+
+  return new Intl.DateTimeFormat(
+    'en-US',
+    includeTime
+      ? {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+        }
+      : {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        },
+  ).format(new Date(value))
+}
+
+function formatOrderDateParts(value: string | null) {
+  if (!value) {
+    return { month: 'N/A', day: '--' }
+  }
+
+  const date = new Date(value)
+  return {
+    month: new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date).toUpperCase(),
+    day: new Intl.DateTimeFormat('en-US', { day: '2-digit' }).format(date),
+  }
+}
+
 function ListView({
   orders,
   onView,
@@ -323,43 +369,90 @@ function ListView({
   onView: (id: string) => void
   onDelete: (id: string) => void
 }) {
+  return <SpaciousListView orders={orders} onView={onView} onDelete={onDelete} />
+}
+
+function SpaciousListView({
+  orders,
+  onView,
+  onDelete,
+}: {
+  orders: TicketOrderWithRelations[]
+  onView: (id: string) => void
+  onDelete: (id: string) => void
+}) {
   return (
-    <div className="oa-card oa-shadow-sm oa-ticket-list">
-      {orders.map((order) => (
-        <div key={order.id} className="oa-ticket-list__row">
-          <div className="oa-ticket-list__info">
-            <div className="oa-ticket-list__chips">
-              <Badge variant={statusVariant[order.status] || 'neutral'}>{order.status}</Badge>
+    <div className="oa-card oa-shadow-sm oa-ticket-list oa-ticket-list--material">
+      {orders.map((order) => {
+        const orderPath = getOrderDetailPath(order.id)
+        const purchaserLabel = order.purchaser_name || 'Guest checkout'
+        const ticketCount = order.ticket_count || 0
+        const orderDate = formatOrderDateParts(order.created_at)
+
+        return (
+          <article key={order.id} className="oa-ticket-list__row oa-ticket-list__row--ledger">
+            <div className="oa-ticket-list__stamp" aria-hidden="true">
+              <span className="oa-ticket-list__stamp-month">{orderDate.month}</span>
+              <span className="oa-ticket-list__stamp-day">{orderDate.day}</span>
             </div>
-            <div className="oa-ticket-list__titles">
-              <div className="oa-ticket-list__title">
-                {order.purchaser_name || order.purchaser_email}
+
+            <div className="oa-ticket-list__count" aria-label={`${ticketCount} tickets`}>
+              <span className="oa-ticket-list__count-value">{ticketCount}</span>
+              <span className="oa-ticket-list__count-label">TIX</span>
+            </div>
+
+            <div className="oa-ticket-list__content oa-ticket-list__content--ledger">
+              <Link to={orderPath} className="oa-ticket-list__title-link">
+                <span className="oa-ticket-list__event-name">{order.event?.title || 'No event assigned'}</span>
+              </Link>
+              <div className="oa-ticket-list__order-meta">
+                <span className="oa-ticket-list__order-number">Order #{order.id.slice(-8).toUpperCase()}</span>
+                <Badge variant={statusVariant[order.status] || 'neutral'}>{getOrderStatusLabel(order.status)}</Badge>
               </div>
-              <div className="oa-ticket-list__meta">
-                Order #{order.id.slice(-8).toUpperCase()}
-                {order.event?.title && ` · ${order.event.title}`}
+              <div className="oa-ticket-list__supporting">
+                <span>{purchaserLabel}</span>
+                <span className="oa-ticket-list__supporting-dot" aria-hidden="true">|</span>
+                <span>{formatOrderDateTime(order.created_at, false)}</span>
               </div>
-              <div className="oa-ticket-list__meta oa-ticket-list__meta--sub">
-                {order.created_at ? new Date(order.created_at).toLocaleString() : ''}
-                {order.ticket_count !== undefined && ` · ${order.ticket_count} ticket${order.ticket_count !== 1 ? 's' : ''}`}
+              <a href={`mailto:${order.purchaser_email}`} className="oa-ticket-list__email-link">
+                {order.purchaser_email}
+              </a>
+            </div>
+
+            <div className="oa-ticket-list__side oa-ticket-list__side--ledger">
+              <div className="oa-ticket-list__summary oa-ticket-list__summary--ledger">
+                <span className="oa-ticket-list__price">{formatCurrency(order.total_cents)}</span>
+              </div>
+
+              <div className="oa-ticket-list__actions oa-ticket-list__actions--ledger">
+                <Button
+                  variant="ghost"
+                  size="dense"
+                  className="oa-ticket-list__icon-btn oa-ticket-list__icon-btn--view"
+                  onClick={() => onView(order.id)}
+                  icon="visibility"
+                  aria-label={`View order ${order.id.slice(-8).toUpperCase()}`}
+                  title="View order"
+                />
+                {order.status !== 'paid' && (
+                  <Button
+                    variant="ghost"
+                    size="dense"
+                    className="oa-ticket-list__icon-btn oa-ticket-list__icon-btn--delete"
+                    onClick={() => onDelete(order.id)}
+                    icon="delete"
+                    aria-label={`Delete order ${order.id.slice(-8).toUpperCase()}`}
+                    title="Delete order"
+                  />
+                )}
               </div>
             </div>
-          </div>
-          <div className="oa-ticket-list__actions">
-            <div className="oa-ticket-list__price">{formatCurrency(order.total_cents)}</div>
-            <Button variant="secondary" size="dense" onClick={() => onView(order.id)} icon="visibility">
-              View
-            </Button>
-            {order.status !== 'paid' && (
-              <Button variant="danger" size="dense" onClick={() => onDelete(order.id)} icon="delete" />
-            )}
-          </div>
-        </div>
-      ))}
+          </article>
+        )
+      })}
     </div>
   )
 }
-
 function TableView({
   orders,
   onView,
@@ -389,23 +482,43 @@ function TableView({
             <tr key={order.id} onClick={() => onView(order.id)} style={{ cursor: 'pointer' }}>
               <td className="font-mono text-sm">{order.id.slice(-8).toUpperCase()}</td>
               <td>
-                <div>{order.purchaser_name || order.purchaser_email}</div>
+                <Link
+                  to={getOrderDetailPath(order.id)}
+                  className="oa-ticket-list__table-link"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  {order.purchaser_name || order.purchaser_email}
+                </Link>
                 {order.purchaser_name && (
                   <div className="oa-text-xs oa-text-muted">{order.purchaser_email}</div>
                 )}
               </td>
-              <td>{order.event?.title || '—'}</td>
+              <td>{order.event?.title || 'No event assigned'}</td>
               <td>{order.ticket_count || 0}</td>
               <td className="oa-font-semibold">{formatCurrency(order.total_cents)}</td>
               <td>
-                <Badge variant={statusVariant[order.status] || 'neutral'}>{order.status}</Badge>
+                <Badge variant={statusVariant[order.status] || 'neutral'}>{getOrderStatusLabel(order.status)}</Badge>
               </td>
-              <td>{order.created_at ? new Date(order.created_at).toLocaleDateString() : ''}</td>
+              <td>{formatOrderDateTime(order.created_at, false)}</td>
               <td onClick={(e) => e.stopPropagation()}>
                 <div className="oa-flex oa-gap-2">
-                  <Button variant="secondary" size="dense" onClick={() => onView(order.id)} icon="visibility" />
+                  <Button
+                    variant="secondary"
+                    size="dense"
+                    onClick={() => onView(order.id)}
+                    icon="visibility"
+                    aria-label={`View order ${order.id.slice(-8).toUpperCase()}`}
+                    title="View order"
+                  />
                   {order.status !== 'paid' && (
-                    <Button variant="danger" size="dense" onClick={() => onDelete(order.id)} icon="delete" />
+                    <Button
+                      variant="danger"
+                      size="dense"
+                      onClick={() => onDelete(order.id)}
+                      icon="delete"
+                      aria-label={`Delete order ${order.id.slice(-8).toUpperCase()}`}
+                      title="Delete order"
+                    />
                   )}
                 </div>
               </td>

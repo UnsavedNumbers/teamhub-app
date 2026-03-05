@@ -106,6 +106,42 @@ async function fetchWithTimeout(
     }
 }
 
+async function invokeApiManagerOperation<T>(
+    operation: string,
+    input: Record<string, unknown>
+): Promise<T> {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const internalToken = Deno.env.get('API_MANAGER_INTERNAL_TOKEN')
+
+    if (!supabaseUrl || !serviceRoleKey || !internalToken) {
+        throw new Error('API manager is not configured')
+    }
+
+    const functionsBaseUrl = supabaseUrl.replace('/rest/v1', '')
+    const response = await fetch(`${functionsBaseUrl}/functions/v1/api`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${serviceRoleKey}`,
+        },
+        body: JSON.stringify({
+            operation,
+            input: {
+                ...input,
+                internalToken,
+            },
+        }),
+    })
+
+    const payload = await response.json().catch(() => null)
+    if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error?.message || `API manager request failed (${response.status})`)
+    }
+
+    return payload.data as T
+}
+
 /**
  * Calculate Haversine distance between two points in meters
  * Formula: https://en.wikipedia.org/wiki/Haversine_formula
@@ -274,34 +310,17 @@ serve(async (req) => {
                 longitude = insightsData.place_details_json.geometry.location.lng
             } else {
                 // Make a Place Details API call for geometry only
-                const placesApiKey = Deno.env.get('GOOGLE_PLACES_API_KEY')
-                if (placesApiKey) {
-                    try {
-                        const detailsUrl = `https://places.googleapis.com/v1/places/${place_id}`
-                        const detailsResponse = await fetchWithTimeout(
-                            detailsUrl,
-                            {
-                                method: 'GET',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-Goog-Api-Key': placesApiKey,
-                                    'X-Goog-FieldMask': 'location',
-                                    'User-Agent': 'YouthSports.team/1.0',
-                                },
-                            },
-                            NEARBY_SEARCH_TIMEOUT_MS
-                        )
-
-                        if (detailsResponse.ok) {
-                            const detailsData = await detailsResponse.json()
-                            if (detailsData.location) {
-                                latitude = detailsData.location.latitude
-                                longitude = detailsData.location.longitude
-                            }
-                        }
-                    } catch (err) {
-                        console.error('Place Details API error:', err)
+                try {
+                    const detailsData = await invokeApiManagerOperation<{ providerResponse: any }>('places.getDetails', {
+                        placeId: place_id,
+                        fieldMask: 'location',
+                    })
+                    if (detailsData?.providerResponse?.location) {
+                        latitude = detailsData.providerResponse.location.latitude
+                        longitude = detailsData.providerResponse.location.longitude
                     }
+                } catch (err) {
+                    console.error('Place Details API error:', err)
                 }
             }
         }
@@ -401,8 +420,7 @@ serve(async (req) => {
                     }
                 } else if (canFetch || (refresh && true)) {
                     // Fetch from Places API
-                    const placesApiKey = Deno.env.get('GOOGLE_PLACES_API_KEY')
-                    if (!placesApiKey) {
+                    if (!Deno.env.get('GOOGLE_PLACES_API_KEY')) {
                         throw new Error('GOOGLE_PLACES_API_KEY not configured')
                     }
 
@@ -430,7 +448,6 @@ serve(async (req) => {
 
                     // Call Places API Nearby Search (mitigation #5 - single request)
                     // Using includedTypes for restaurant, cafe, convenience_store
-                    const nearbyUrl = 'https://places.googleapis.com/v1/places:searchNearby'
                     const nearbyBody = {
                         locationRestriction: {
                             circle: {
@@ -443,24 +460,16 @@ serve(async (req) => {
                         rankPreference: 'DISTANCE',
                     }
 
-                    const nearbyResponse = await fetchWithTimeout(
-                        nearbyUrl,
-                        {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-Goog-Api-Key': placesApiKey,
-                                'X-Goog-FieldMask': 'places.id,places.displayName,places.location,places.types,places.rating,places.userRatingCount',
-                                'User-Agent': 'YouthSports.team/1.0',
-                            },
-                            body: JSON.stringify(nearbyBody),
-                        },
-                        NEARBY_SEARCH_TIMEOUT_MS
-                    )
-
-                    if (!nearbyResponse.ok) {
-                        const errorText = await nearbyResponse.text()
-                        console.error('Nearby Search API error:', nearbyResponse.status, errorText)
+                    let nearbyData: any = null
+                    try {
+                        const nearbyResult = await invokeApiManagerOperation<{ providerResponse: any }>('places.searchNearby', {
+                            body: nearbyBody,
+                            fieldMask: 'places.id,places.displayName,places.location,places.types,places.rating,places.userRatingCount',
+                        })
+                        nearbyData = nearbyResult?.providerResponse ?? null
+                    } catch (error) {
+                        const errorText = error instanceof Error ? error.message : String(error)
+                        console.error('Nearby Search API error:', errorText)
 
                         // Log error
                         await supabaseClient.rpc('log_event', {
@@ -471,7 +480,7 @@ serve(async (req) => {
                             p_metadata: {
                                 venue_key: venueKey,
                                 error: errorText,
-                                status: nearbyResponse.status,
+                                status: 502,
                             },
                         } as any)
 
@@ -489,8 +498,6 @@ serve(async (req) => {
                             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
                         )
                     }
-
-                    const nearbyData = await nearbyResponse.json()
                     const places = nearbyData.places || []
 
                     // Normalize places (mitigation T1, T3, T8)
@@ -631,8 +638,7 @@ serve(async (req) => {
                     cached = true
                 } else {
                     // Call Gemini API
-                    const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
-                    if (!geminiApiKey) {
+                    if (!Deno.env.get('GEMINI_API_KEY')) {
                         // Fallback: group raw places by inferred category (no AI descriptions)
                         const byCategory = new Map<CanonicalCategory, AmenityItem[]>()
                         for (const cat of CANONICAL_CATEGORIES) byCategory.set(cat, [])
@@ -677,29 +683,15 @@ Respond ONLY with a valid JSON array. Each object: "name" (exact name from the l
 ]
 No other text or markdown.`
 
-                            const geminiResponse = await fetchWithTimeout(
-                                `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
-                                {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'User-Agent': 'YouthSports.team/1.0',
-                                    },
-                                    body: JSON.stringify({
-                                        contents: [{ parts: [{ text: prompt }] }],
-                                        generationConfig: {
-                                            maxOutputTokens: 800,
-                                            temperature: 0.5,
-                                        },
-                                    }),
-                                },
-                                GEMINI_TIMEOUT_MS
-                            )
-
                             let geminiParsed = false
-                            if (geminiResponse.ok) {
-                                const geminiData = await geminiResponse.json()
-                                const geminiText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text
+                            try {
+                                const geminiResult = await invokeApiManagerOperation<{ providerResponse: any }>('ai.gemini.generateContent', {
+                                    prompt,
+                                    maxOutputTokens: 800,
+                                    temperature: 0.5,
+                                    model: 'gemini-pro',
+                                })
+                                const geminiText = geminiResult?.providerResponse?.candidates?.[0]?.content?.parts?.[0]?.text
 
                                 if (geminiText) {
                                     try {
@@ -758,6 +750,8 @@ No other text or markdown.`
                                         console.error('Gemini response parse error:', parseErr)
                                     }
                                 }
+                            } catch (error) {
+                                console.error('Gemini API error:', error)
                             }
 
                             // Fallback if Gemini failed: group raw places by inferred category (accordion-friendly)

@@ -7,6 +7,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useOffline } from '../../hooks/useOffline'
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 import { USE_FAKE_DATA } from '../../data/config'
@@ -14,12 +15,13 @@ import { getLevels, deleteLevel } from '../../data/services/levelsService'
 import { getPrograms } from '../../data/services/sportsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Level, Program, Team } from '../../data/types/organization'
-import { AdminPageHeader, Card, Button, Select, ConfirmDialog, EmptyState, Badge, InlineNotice } from '../../components/admin'
+import { AdminPageHeader, Card, Button, Select, ConfirmDialog, Badge, InlineNotice } from '../../components/admin'
 import OrgDataTable from '../../components/admin/OrgDataTable'
 import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import { cn } from '../../utils/cn'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import '../../styles/orgAdmin.css'
 
 export default function LevelsManagement() {
@@ -27,9 +29,11 @@ export default function LevelsManagement() {
   useDebugLifecycle('LevelsManagement')
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const { isOffline } = useOffline()
   const location = useLocation()
   const navigate = useNavigate()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -277,26 +281,28 @@ export default function LevelsManagement() {
                     >
                         View
                     </Button>
-                    <Button
-                        variant="ghost"
-                        size="dense"
-                        onClick={(e: React.MouseEvent) => {
-                            e.stopPropagation()
-                            navigate(`${getLink('admin.levels.update', { id: row.id })}?returnUrl=${encodeURIComponent(getLink('admin.levels.list'))}`)
-                        }}
-                    >
-                        Edit
-                    </Button>
-                    <Button
-                        variant="danger"
-                        size="dense"
-                        icon="delete"
-                        onClick={(e: React.MouseEvent) => {
-                            handleDeleteLevel(row.id, row.name, e)
-                        }}
-                        disabled={
-                            !row.id ||
-                            deletingLevelId === row.id ||
+                    {isOrgAdmin && (
+                        <>
+                            <Button
+                                variant="ghost"
+                                size="dense"
+                                onClick={(e: React.MouseEvent) => {
+                                    e.stopPropagation()
+                                    navigate(`${getLink('admin.levels.update', { id: row.id })}?returnUrl=${encodeURIComponent(getLink('admin.levels.list'))}`)
+                                }}
+                            >
+                                Edit
+                            </Button>
+                            <Button
+                                variant="danger"
+                                size="dense"
+                                icon="delete"
+                                onClick={(e: React.MouseEvent) => {
+                                    handleDeleteLevel(row.id, row.name, e)
+                                }}
+                                disabled={
+                                    !row.id ||
+                                    deletingLevelId === row.id ||
                             isOffline ||
                             USE_FAKE_DATA ||
                             teamCount > 0 ||
@@ -323,6 +329,8 @@ export default function LevelsManagement() {
                     >
                         {deletingLevelId === row.id ? 'Removing...' : 'Remove'}
                     </Button>
+                        </>
+                    )}
                 </div>
             )
         }
@@ -388,22 +396,22 @@ export default function LevelsManagement() {
       )}
 
       {levels.length === 0 ? (
-        <Card>
-          <EmptyState
-            icon="grade"
-            title="No levels yet"
-            description="Create programs first, then add levels to define eligibility."
-            noCard
-          >
-            <Link
-              to={`${getLink('admin.organization.forms')}?type=program&returnUrl=${encodeURIComponent(getLink('admin.organization.levels'))}`}
-              className={loading || refreshing ? 'oa-pointer-events-none oa-opacity-50' : ''}
-            >
-              <Button disabled={loading || refreshing}>
-                Add a Program
-              </Button>
-            </Link>
-          </EmptyState>
+        <Card className="oa-border-2 oa-border-dashed">
+          <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+            <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>grade</span>
+            <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+              <h3 className="oa-h3 oa-mb-0">No levels yet</h3>
+              <p className="oa-body-m oa-text-muted oa-mb-4">Create programs first, then add levels to define eligibility.</p>
+              <Link
+                to={`${getLink('admin.organization.forms')}?type=program&returnUrl=${encodeURIComponent(getLink('admin.organization.levels'))}`}
+                className={loading || refreshing ? 'oa-pointer-events-none oa-opacity-50' : ''}
+              >
+                <Button disabled={loading || refreshing}>
+                  Add a Program
+                </Button>
+              </Link>
+            </div>
+          </div>
         </Card>
       ) : (
         <>

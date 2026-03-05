@@ -1,9 +1,10 @@
 
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_USER_IDS } from '../config'
 import type { UserContext } from '../fake/userContext'
 import { debug } from '../../lib/debug'
+import { collectTeamManagers } from './notificationHelpers'
 import type {
     AttendanceRecord,
     AttendanceSettings,
@@ -11,6 +12,9 @@ import type {
     AttendancePersonSummary,
     AttendanceStatus
 } from '../../types/attendance'
+import { fakeEvents } from '../fake/fakeEvents'
+import { getTeamMembersForSeason, SEASON_SPRING_CURRENT_ID } from '../fake/fakeTeams'
+import { fakeChildren } from '../fake/fakeUsers'
 
 // Fake data stores (internal to module for demo mode)
 let FAKE_SETTINGS: AttendanceSettings = {
@@ -146,12 +150,70 @@ export async function getEventAttendance(
     try {
         if (USE_FAKE_DATA) {
             await delay()
-            // Generate mock records based on event existing
-            // This is simplified; in a real fake implementation we'd store these
+            const coachId = DEMO_USER_IDS['coach-only@example.com']
+            const recordedAt = new Date().toISOString()
+
+            // Find the event to get its team_id
+            const event = fakeEvents.find((e) => e.id === eventId)
+            const teamId = event?.team_id ?? null
+
+            // Build attendance from team roster when we have a team
+            const ATTENDANCE_STATUSES: AttendanceStatus[] = [
+                'present', 'present', 'present', 'present', 'present',
+                'present', 'present', 'absent', 'absent', 'late',
+            ]
+            const ABSENCE_NOTES = ['Family conflict', 'Sick', null, 'Out of town', null]
+
+            let fakeRecords: AttendanceRecord[] = []
+
+            if (teamId) {
+                const members = getTeamMembersForSeason(teamId, SEASON_SPRING_CURRENT_ID)
+                fakeRecords = members.map((member, idx) => {
+                    const child = fakeChildren.find((c) => c.id === member.athlete_id)
+                    const status = ATTENDANCE_STATUSES[idx % ATTENDANCE_STATUSES.length]
+                    const isAbsent = status === 'absent' || status === 'late'
+                    return {
+                        id: `attendance-${eventId}-${member.athlete_id}`,
+                        event_id: eventId,
+                        athlete_id: member.athlete_id,
+                        status,
+                        notes: isAbsent ? ABSENCE_NOTES[idx % ABSENCE_NOTES.length] : null,
+                        recorded_by_user_id: idx < 8 ? coachId : null,
+                        created_at: recordedAt,
+                        updated_at: recordedAt,
+                        child: child
+                            ? { id: child.id, first_name: child.first_name, last_name: child.last_name }
+                            : { id: member.athlete_id, first_name: 'Athlete', last_name: `#${idx + 1}` },
+                    }
+                })
+            }
+
+            // Fallback: generic records when no team found
+            if (fakeRecords.length === 0) {
+                const fallbackAthletes = [
+                    { id: 'child-emma-johnson-001', first_name: 'Emma', last_name: 'Johnson' },
+                    { id: 'child-liam-johnson-002', first_name: 'Liam', last_name: 'Johnson' },
+                    { id: 'child-sophia-chen-007', first_name: 'Sophia', last_name: 'Chen' },
+                    { id: 'child-mason-rodriguez-008', first_name: 'Mason', last_name: 'Rodriguez' },
+                    { id: 'child-aiden-patel-010', first_name: 'Aiden', last_name: 'Patel' },
+                ]
+                fakeRecords = fallbackAthletes.map((athlete, idx) => ({
+                    id: `attendance-${eventId}-${athlete.id}`,
+                    event_id: eventId,
+                    athlete_id: athlete.id,
+                    status: ATTENDANCE_STATUSES[idx % ATTENDANCE_STATUSES.length],
+                    notes: idx === 1 ? 'Family conflict' : null,
+                    recorded_by_user_id: coachId,
+                    created_at: recordedAt,
+                    updated_at: recordedAt,
+                    child: athlete,
+                }))
+            }
+
             debug.perf.end('attendanceService.getEventAttendance')
-            debug.data('AttendanceService.getEventAttendance', 'Response (fake)', { eventId, recordCount: 0 })
+            debug.data('AttendanceService.getEventAttendance', 'Response (fake)', { eventId, recordCount: fakeRecords.length })
             console.groupEnd()
-            return { data: [], error: null }
+            return { data: fakeRecords, error: null }
         }
 
         // Fetch existing records joined with children
@@ -270,6 +332,30 @@ export async function updateAttendance(
                                     notes,
                                 },
                             }).catch(err => console.error('Failed to notify about attendance update:', err))
+
+                            // Also notify team managers
+                            if (eventData.team_id) {
+                                const teamManagerIds = await collectTeamManagers(eventData.team_id, context.userId)
+                                if (teamManagerIds.length > 0) {
+                                    await notifyUsers({
+                                        userIds: teamManagerIds,
+                                        orgId: eventData.org_id,
+                                        teamId: eventData.team_id,
+                                        action: 'event_attendance_updated',
+                                        roleContext: 'team_manager',
+                                        title: 'Attendance Updated',
+                                        body: `${athleteName} attendance marked as ${status} for ${eventData.title || 'event'}`,
+                                        linkUrl: `/portal/calendar/events/${eventId}`,
+                                        entityType: 'event',
+                                        entityId: eventId,
+                                        metadata: {
+                                            child_id: childId,
+                                            status,
+                                            notes,
+                                        },
+                                    }).catch(err => console.error('Failed to notify team managers about attendance update:', err))
+                                }
+                            }
                         }
                     }
                 }
@@ -305,13 +391,14 @@ export async function getAttendanceEvents(
     try {
         if (USE_FAKE_DATA) {
             await delay()
+            const now = new Date()
             const mockEvents: AttendanceEventSummary[] = [
             {
-                event_id: 'evt-1',
-                team_name: 'U12 Boys',
+                event_id: 'event-u10-soccer-practice-001',
+                team_name: 'U10 Lightning',
                 event_type: 'practice',
-                start_time: new Date().toISOString(),
-                location_name: 'Main Field',
+                start_time: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                location_name: 'Riverside Sports Complex - Field 4',
                 total_expected: 15,
                 present_count: 12,
                 absent_count: 2,
@@ -319,6 +406,62 @@ export async function getAttendanceEvents(
                 excused_count: 0,
                 unknown_count: 0,
                 status: 'complete'
+            },
+            {
+                event_id: 'event-u10-soccer-game-001',
+                team_name: 'U10 Lightning',
+                event_type: 'game',
+                start_time: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+                location_name: 'Eastside Park',
+                total_expected: 15,
+                present_count: 14,
+                absent_count: 1,
+                late_count: 0,
+                excused_count: 0,
+                unknown_count: 0,
+                status: 'complete'
+            },
+            {
+                event_id: 'event-u12-soccer-practice-001',
+                team_name: 'U12 Thunder',
+                event_type: 'practice',
+                start_time: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).toISOString(),
+                location_name: 'Riverside Sports Complex - Field 2',
+                total_expected: 18,
+                present_count: 0,
+                absent_count: 0,
+                late_count: 0,
+                excused_count: 0,
+                unknown_count: 18,
+                status: 'missing'
+            },
+            {
+                event_id: 'event-u10-bb-practice-001',
+                team_name: 'U10 Hoops',
+                event_type: 'practice',
+                start_time: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+                location_name: 'Riverside Sports Complex - Court 1',
+                total_expected: 12,
+                present_count: 0,
+                absent_count: 0,
+                late_count: 0,
+                excused_count: 0,
+                unknown_count: 12,
+                status: 'missing'
+            },
+            {
+                event_id: 'event-u12-soccer-tournament-001',
+                team_name: 'U12 Thunder',
+                event_type: 'tournament',
+                start_time: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+                location_name: 'Regional Tournament Complex',
+                total_expected: 18,
+                present_count: 0,
+                absent_count: 0,
+                late_count: 0,
+                excused_count: 0,
+                unknown_count: 18,
+                status: 'missing'
             }
         ]
         debug.perf.end('attendanceService.getAttendanceEvents')
@@ -413,7 +556,82 @@ export async function getAttendancePeople(
     // This is expensive without a dedicated stats table.
     // Strategy: Fetch all relevant attendance records and aggregate in JS.
 
-    if (USE_FAKE_DATA) return { data: [], error: null }
+    if (USE_FAKE_DATA) {
+        await delay()
+        const fakePeople: AttendancePersonSummary[] = [
+            {
+                athlete_id: 'demo-athlete-1',
+                first_name: 'Alex',
+                last_name: 'Johnson',
+                team_names: ['U10 Lightning'],
+                total_events: 12,
+                present_count: 10,
+                absent_count: 1,
+                late_count: 1,
+                excused_count: 0,
+                attendance_rate: 91.7,
+                last_attended_date: new Date().toISOString(),
+                risk_level: 'good',
+            },
+            {
+                athlete_id: 'demo-athlete-2',
+                first_name: 'Jordan',
+                last_name: 'Smith',
+                team_names: ['U10 Lightning'],
+                total_events: 12,
+                present_count: 8,
+                absent_count: 3,
+                late_count: 1,
+                excused_count: 0,
+                attendance_rate: 75.0,
+                last_attended_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+                risk_level: 'watch',
+            },
+            {
+                athlete_id: 'demo-athlete-3',
+                first_name: 'Sam',
+                last_name: 'Davis',
+                team_names: ['U12 Thunder'],
+                total_events: 15,
+                present_count: 14,
+                absent_count: 0,
+                late_count: 1,
+                excused_count: 0,
+                attendance_rate: 100.0,
+                last_attended_date: new Date().toISOString(),
+                risk_level: 'good',
+            },
+            {
+                athlete_id: 'demo-athlete-4',
+                first_name: 'Taylor',
+                last_name: 'Brown',
+                team_names: ['U12 Thunder'],
+                total_events: 15,
+                present_count: 9,
+                absent_count: 5,
+                late_count: 1,
+                excused_count: 0,
+                attendance_rate: 66.7,
+                last_attended_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+                risk_level: 'at_risk',
+            },
+            {
+                athlete_id: 'demo-athlete-5',
+                first_name: 'Casey',
+                last_name: 'Miller',
+                team_names: ['U10 Hoops'],
+                total_events: 10,
+                present_count: 9,
+                absent_count: 0,
+                late_count: 1,
+                excused_count: 0,
+                attendance_rate: 100.0,
+                last_attended_date: new Date().toISOString(),
+                risk_level: 'good',
+            },
+        ]
+        return { data: fakePeople, error: null }
+    }
 
     try {
         // 1. Get all children in org (or filtered team)

@@ -2,6 +2,8 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
 import Stripe from "https://esm.sh/stripe@12.18.0?dts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0"
+import { getFreeTrialDaysForOrgSignup } from "../shared/getFreeTrialDays.ts"
+import { checkTrialEligibility } from "../shared/checkTrialEligibility.ts"
 
 // ---- CORS helpers (robust preflight) ----
 // - Echo Access-Control-Request-Headers so OPTIONS never fails due to missing headers
@@ -32,25 +34,6 @@ function json(req: Request, body: unknown, status = 200) {
   })
 }
 
-// ---- Stripe + helpers ----
-function planToPrice(
-  plan: string,
-  priceStarter?: string | null,
-  priceStandard?: string | null,
-  pricePro?: string | null,
-) {
-  switch (plan) {
-    case "starter":
-      return priceStarter ?? null
-    case "standard":
-      return priceStandard ?? null
-    case "pro":
-      return pricePro ?? null
-    default:
-      return null
-  }
-}
-
 serve(async (req) => {
   // Preflight must always succeed with CORS headers
   if (req.method === "OPTIONS") {
@@ -78,10 +61,6 @@ serve(async (req) => {
     return json(req, { error: "Stripe not configured: missing STRIPE_SECRET_KEY" }, 500)
   }
 
-  const priceStarter = Deno.env.get("STRIPE_PRICE_STARTER_YEAR")
-  const priceStandard = Deno.env.get("STRIPE_PRICE_STANDARD_YEAR")
-  const pricePro = Deno.env.get("STRIPE_PRICE_PRO_YEAR")
-
   const stripe = new Stripe(stripeSecretKey, { apiVersion: "2024-06-20" })
 
   // Supabase client using service role key; pass through user Authorization header for getUser()
@@ -98,18 +77,31 @@ serve(async (req) => {
   }
 
   const organizationId = payload?.organization_id as string | undefined
-  const requestedPlan = payload?.requested_plan as string | undefined
+  const tierId = payload?.tier_id as string | undefined
   const successUrl = payload?.success_url as string | undefined
   const cancelUrl = payload?.cancel_url as string | undefined
 
-  if (!organizationId || !requestedPlan || !successUrl || !cancelUrl) {
+  if (!organizationId || !tierId || !successUrl || !cancelUrl) {
     return json(req, { error: "Missing required parameters" }, 400)
   }
 
-  const priceId = planToPrice(requestedPlan, priceStarter, priceStandard, pricePro)
-  if (!priceId) {
-    return json(req, { error: "Unsupported plan or missing Stripe price env var for this plan" }, 400)
+  // Fetch tier from database to get stripe_price_id
+  const { data: tier, error: tierError } = await supabase
+    .from("license_tiers")
+    .select("id, tier_key, tier_name, stripe_price_id, status")
+    .eq("id", tierId)
+    .eq("status", "active")
+    .maybeSingle()
+
+  if (tierError || !tier) {
+    return json(req, { error: tierError?.message || "Tier not found or inactive" }, 400)
   }
+
+  if (!tier.stripe_price_id) {
+    return json(req, { error: "Tier does not have a Stripe price ID configured" }, 400)
+  }
+
+  const priceId = tier.stripe_price_id
 
   // Auth (return 401 with CORS rather than throwing)
   const { data: userData, error: userErr } = await supabase.auth.getUser()
@@ -137,6 +129,29 @@ serve(async (req) => {
   if (!hasAdminRole) {
     return json(req, { error: "Forbidden" }, 403)
   }
+
+  // Check for existing in-progress checkout session (prevent duplicate trials)
+  const { data: existingCheckout, error: existingCheckoutError } = await supabase
+    .from("checkout_sessions")
+    .select("id, status")
+    .eq("org_id", organizationId)
+    .eq("status", "in_progress")
+    .maybeSingle()
+
+  if (existingCheckoutError && existingCheckoutError.code !== "PGRST116") {
+    // PGRST116 is "not found" which is fine, other errors are not
+    return json(req, { error: `Failed to check existing checkout sessions: ${existingCheckoutError.message}` }, 400)
+  }
+
+  if (existingCheckout) {
+    return json(req, { error: "A checkout session is already in progress for this organization" }, 400)
+  }
+
+  // Check trial eligibility and get trial days (after auth check)
+  const eligibility = await checkTrialEligibility(supabase, organizationId)
+  const trialDays = eligibility.eligible
+    ? await getFreeTrialDaysForOrgSignup(supabase, organizationId, user.id)
+    : 0
 
   // Load or create license record for customer id (org_licenses schema uses org_id)
   const { data: existingLicense, error: licError } = await supabase
@@ -210,14 +225,18 @@ serve(async (req) => {
   }
 
   // Create Stripe subscription Checkout Session
-  const session = await stripe.checkout.sessions.create({
+  // Include trial_period_days if eligible and trialDays > 0
+  // Always require payment method collection for automatic post-trial charging
+  const sessionConfig: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",
     customer: stripeCustomerId,
     line_items: [{ price: priceId, quantity: 1 }],
     client_reference_id: organizationId,
+    payment_method_collection: "always", // Required for automatic post-trial charging
     metadata: {
       org_id: organizationId,
-      requested_plan: requestedPlan,
+      tier_id: tierId,
+      tier_key: tier.tier_key,
       checkout_session_id: checkout.id,
       environment: Deno.env.get("DENO_ENV") ?? "unknown",
     },
@@ -225,12 +244,23 @@ serve(async (req) => {
       metadata: {
         org_id: organizationId,
         checkout_session_id: checkout.id,
-        requested_plan: requestedPlan,
+        tier_id: tierId,
+        tier_key: tier.tier_key,
       },
     },
     success_url: successUrl,
     cancel_url: cancelUrl,
-  })
+  }
+
+  // Add trial_period_days only if eligible and trialDays > 0
+  if (trialDays > 0) {
+    sessionConfig.subscription_data = {
+      ...sessionConfig.subscription_data,
+      trial_period_days: trialDays,
+    }
+  }
+
+  const session = await stripe.checkout.sessions.create(sessionConfig)
 
   // Store stripe session id on our checkout_sessions row (optional but useful)
   const { error: checkoutUpdateErr } = await supabase

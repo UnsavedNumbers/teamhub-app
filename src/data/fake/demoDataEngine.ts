@@ -1,5 +1,6 @@
 import type { DemoOrganization } from '@/types/demoManagement'
 import type { SportCode } from '@/types/sports'
+import { USE_FAKE_DATA, DEMO_ORG_A_ID } from '../config'
 import { buildDemoGeneratedData } from './demoDataGenerators'
 import { setGeneratedDemoData } from './demoDataStore'
 import { fakeOrganizations } from './fakeOrganizations'
@@ -16,6 +17,7 @@ import {
 import { fakeEvents, fakeEventLocations, fakeEventRSVPs } from './fakeEvents'
 import { fakeFees, fakeFeeAssignments, fakePayments } from './fakePayments'
 import { fakeFamilies, fakeChildren, fakeFamilyMembers, fakeOrganizationMembers, fakeUsers } from './fakeUsers'
+import { fakeAthleteSportProfiles, generateDemoAthleteSportProfiles } from './fakeAthleteSportProfiles'
 
 function removeWhere<T>(items: T[], predicate: (item: T) => boolean): void {
   for (let index = items.length - 1; index >= 0; index -= 1) {
@@ -59,6 +61,7 @@ function clearDemoOrgData(demoOrgId: string): void {
   removeWhere(fakeFamilyMembers, (item) => String(item.family_id).includes(demoOrgId) || startsWithDemoId(item.user_id))
   removeWhere(fakeOrganizationMembers, (item) => item.org_id === demoOrgId && startsWithDemoId(item.user_id))
   removeWhere(fakeUsers, (item) => startsWithDemoId(item.id))
+  removeWhere(fakeAthleteSportProfiles, (item) => item.org_id === demoOrgId || startsWithDemoId(item.athlete_id))
 }
 
 function appendDemoOrgData(demoOrg: DemoOrganization, demoCode: string): void {
@@ -161,6 +164,16 @@ function appendDemoOrgData(demoOrg: DemoOrganization, demoCode: string): void {
   fakeFeeAssignments.push(...(feeAssignments as unknown as typeof fakeFeeAssignments))
   fakePayments.push(...(data.payments as unknown as typeof fakePayments))
 
+  // Generate sport profiles for demo athletes
+  const generatedSportProfiles = generateDemoAthleteSportProfiles(
+    data.athletes as Array<{ id: string; team_id: string }>,
+    data.teams as Array<{ id: string; sport_id: string }>,
+    data.sportsData as Array<{ id: string; slug: string }>,
+    demoOrg.id,
+    demoCode
+  )
+  fakeAthleteSportProfiles.push(...generatedSportProfiles)
+
   const familyById = new Map<string, { familyId: string; athlete: (typeof data.athletes)[number] }>()
   data.athletes.forEach((athlete) => {
     if (!familyById.has(String(athlete.family_id))) {
@@ -237,8 +250,10 @@ function appendDemoOrgData(demoOrg: DemoOrganization, demoCode: string): void {
 }
 
 export async function generateDemoData(demoOrg: DemoOrganization, sports: SportCode[], demoCode: string): Promise<void> {
+  // When USE_FAKE_DATA is true, use DEMO_ORG_A_ID so generated data matches static fake data
   const sourceOrg: DemoOrganization = {
     ...demoOrg,
+    id: USE_FAKE_DATA ? DEMO_ORG_A_ID : demoOrg.id,
     sports_sponsored: sports,
   }
 

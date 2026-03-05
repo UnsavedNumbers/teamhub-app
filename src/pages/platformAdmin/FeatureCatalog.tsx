@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../hooks/useAuth'
+import { getLink, RouteKeys } from '../../utils/routes'
 import { 
   PageHeader, 
   PlatformDataTable, 
@@ -21,7 +24,10 @@ import {
   UpdateCategoryModal,
   SetAsSystemFeatureModal,
   SetPlatformOnlyModal,
+  ExcludeFromDiscoveryModal,
+  ImportFeaturesModal,
   OfflineBanner,
+  ErrorState,
 } from '../../components/platformAdmin'
 import type { FeatureEntitlementWithCounts } from '../../types/licenseTiers.types'
 import { FEATURE_CATEGORIES, FEATURE_TYPES } from '../../utils/licenseTierConstants'
@@ -33,12 +39,15 @@ import {
   bulkApplyToTiers, 
   bulkUpdateRoleVisibility,
   bulkSetSystemFeature,
-  bulkSetPlatformOnly
+  bulkSetPlatformOnly,
+  bulkExcludeFromDiscovery
 } from '../../data/services/featureBulkOperations'
 import { showSuccess, showError, showInfo } from '../../utils/toast'
 import type { FeatureCategory } from '../../types/licenseTiers.types'
 import { useI18n } from '../../i18n/useI18n'
 import { formatToastMessage, formatPlural } from '../../utils/toastMessages'
+import { exportToCSV, exportToXLSX } from '../../utils/reporting/exportFormatters'
+import { importFeaturesFromJSON } from '../../data/services/featureImportService'
 
 const CATEGORY_OPTIONS = [
   { value: '', label: 'All Categories' },
@@ -70,17 +79,140 @@ import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycl
 export default function FeatureCatalog() {
   useDebugLifecycle('FeatureCatalog')
   const navigate = useNavigate()
+  const { profile } = useAuth()
   const { t } = useI18n()
-  
-  // Data State
-  const [features, setFeatures] = useState<FeatureEntitlementWithCounts[]>([])
-  const [discoveredFeatures, setDiscoveredFeatures] = useState<DiscoveredFeature[]>([])
-  const [availableTiers, setAvailableTiers] = useState<Array<{ id: string; tier_key: string; tier_name: string }>>([])
-  const [loading, setLoading] = useState(true)
-  const [discoveryLoading, setDiscoveryLoading] = useState(false)
-  const [lastDiscoveredAt, setLastDiscoveredAt] = useState<string | null>(null)
-  const [syncStatus, setSyncStatus] = useState<'pending' | 'synced' | 'failed' | null>(null)
-  
+  const queryClient = useQueryClient()
+
+  // Silent refresh: invalidate query cache (declared early for use in useEffects)
+  const silentRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['feature-catalog'] })
+  }, [queryClient])
+
+  // Platform admin check
+  if (!profile?.isPlatformAdmin) {
+    return <Navigate to={getLink(RouteKeys.PORTAL_DASHBOARD)} replace />
+  }
+  const [exporting, setExporting] = useState(false)
+  const [exportMenuOpen, setExportMenuOpen] = useState(false)
+  const exportMenuRef = useRef<HTMLDivElement>(null)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importing, setImporting] = useState(false)
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setExportMenuOpen(false)
+      }
+    }
+
+    if (exportMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [exportMenuOpen])
+
+  // Fetch all features for export (not paginated)
+  const fetchAllFeaturesForExport = useCallback(async () => {
+    try {
+      let query = supabase
+        .from('admin_feature_entitlements_list')
+        .select('feature_key, display_name, category, feature_type, description')
+        .is('archived_at', null)
+        .order('category', { ascending: true })
+        .order('display_name', { ascending: true })
+
+      const { data, error } = await query
+
+      if (error) {
+        throw error
+      }
+
+      return data || []
+    } catch (err: any) {
+      console.error('Error fetching features for export:', err)
+      throw err
+    }
+  }, [])
+
+  // Import handler
+  const handleImport = useCallback(async (file: File) => {
+    setImporting(true)
+    try {
+      const text = await file.text()
+      const jsonData = JSON.parse(text)
+
+      if (!jsonData.features || !Array.isArray(jsonData.features)) {
+        throw new Error('Invalid JSON format: features array is required')
+      }
+
+      const result = await importFeaturesFromJSON(jsonData, (processed, total) => {
+        // Progress callback could update UI
+        console.log(`Importing: ${processed}/${total}`)
+      })
+
+      if (result.success) {
+        showSuccess(
+          `Import completed: ${result.updated} feature${result.updated === 1 ? '' : 's'} updated, ` +
+          `${result.skipped} skipped${result.errors.length > 0 ? `, ${result.errors.length} error${result.errors.length === 1 ? '' : 's'}` : ''}`
+        )
+        setShowImportModal(false)
+        await queryClient.invalidateQueries({ queryKey: ['feature-catalog'] })
+      } else {
+        const errorMessages = result.errors.map(e => `${e.feature_key}: ${e.error}`).join('; ')
+        showError(`Import completed with errors: ${errorMessages}`)
+      }
+    } catch (err: any) {
+      console.error('Import failed:', err)
+      showError(err.message || 'Failed to import features')
+      throw err
+    } finally {
+      setImporting(false)
+    }
+  }, [queryClient])
+
+  // Export handler
+  const handleExport = useCallback(async (format: 'csv' | 'xlsx') => {
+    setExporting(true)
+    setExportMenuOpen(false)
+
+    try {
+      const allFeatures = await fetchAllFeaturesForExport()
+
+      if (!allFeatures || allFeatures.length === 0) {
+        showError('No features to export')
+        return
+      }
+
+      // Format data with requested fields: feature_key, name, category, type, description
+      const exportData = allFeatures.map((feature: any) => ({
+        'Feature Key': feature.feature_key || '',
+        Name: feature.display_name || '',
+        Category: feature.category || '',
+        Type: feature.feature_type || '',
+        Description: feature.description || '',
+      }))
+
+      const timestamp = new Date().toISOString().split('T')[0]
+      const filename = `features-export-${timestamp}`
+
+      if (format === 'csv') {
+        exportToCSV(exportData, filename)
+        showSuccess(`Exported ${allFeatures.length} features to CSV`)
+      } else {
+        exportToXLSX(exportData, filename, 'Features')
+        showSuccess(`Exported ${allFeatures.length} features to Excel`)
+      }
+    } catch (err: any) {
+      console.error('Export failed:', err)
+      showError(err.message || 'Failed to export features')
+    } finally {
+      setExporting(false)
+    }
+  }, [fetchAllFeaturesForExport])
   // Sync Progress State
   const [syncProgress, setSyncProgress] = useState({
     isActive: false,
@@ -105,16 +237,16 @@ export default function FeatureCatalog() {
   const [systemFeatureFilter, setSystemFeatureFilter] = useState<'all' | 'yes' | 'no'>('all')
   const [platformAdminOnlyFilter, setPlatformAdminOnlyFilter] = useState<'all' | 'yes' | 'no'>('all')
   const [hierarchyFilter, setHierarchyFilter] = useState<'all' | 'parents' | 'children'>('all')
+  const [addonFilter, setAddonFilter] = useState<'all' | 'yes' | 'no'>('all')
 
   // Pagination
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(50)
-  const [totalCount, setTotalCount] = useState(0)
 
   // Selection State
   const [selectedFeatureIds, setSelectedFeatureIds] = useState<Set<string>>(new Set())
   const [selectAllMode, setSelectAllMode] = useState<'none' | 'page' | 'all'>('none')
-  const prevFiltersRef = useRef<{ statusFilter: string[]; tierFilter: string[]; roleFilter: string[]; integrationFilter: string[]; quantifiableFilter: string | null; sourceFilter: string | null; systemFeatureFilter: 'all' | 'yes' | 'no'; platformAdminOnlyFilter: 'all' | 'yes' | 'no'; hierarchyFilter: 'all' | 'parents' | 'children' }>({ 
+  const prevFiltersRef = useRef<{ statusFilter: string[]; tierFilter: string[]; roleFilter: string[]; integrationFilter: string[]; quantifiableFilter: string | null; sourceFilter: string | null; systemFeatureFilter: 'all' | 'yes' | 'no'; platformAdminOnlyFilter: 'all' | 'yes' | 'no'; hierarchyFilter: 'all' | 'parents' | 'children'; addonFilter: 'all' | 'yes' | 'no' }>({ 
     statusFilter: [], 
     tierFilter: [], 
     roleFilter: [], 
@@ -123,7 +255,8 @@ export default function FeatureCatalog() {
     sourceFilter: null,
     systemFeatureFilter: 'all',
     platformAdminOnlyFilter: 'all',
-    hierarchyFilter: 'all'
+    hierarchyFilter: 'all',
+    addonFilter: 'all'
   })
 
   // Modal States
@@ -133,45 +266,37 @@ export default function FeatureCatalog() {
   const [showUpdateCategoryModal, setShowUpdateCategoryModal] = useState(false)
   const [showSetSystemFeatureModal, setShowSetSystemFeatureModal] = useState(false)
   const [showSetPlatformOnlyModal, setShowSetPlatformOnlyModal] = useState(false)
+  const [showExcludeFromDiscoveryModal, setShowExcludeFromDiscoveryModal] = useState(false)
   const [bulkOperationLoading, setBulkOperationLoading] = useState(false)
-
-  // Abort Controller for Race Conditions
-  const abortControllerRef = useRef<AbortController | null>(null)
-  const silentRefreshRef = useRef(false)
-  const fetchRequestIdRef = useRef(0)
+  const [syncLoading, setSyncLoading] = useState(false)
+  const [excludedFeatureIds, setExcludedFeatureIds] = useState<Set<string>>(new Set())
+  const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set<string>())
 
   // Fetch license tiers for filter
-  const fetchTiers = useCallback(async () => {
-    try {
+  const { data: availableTiers = [] } = useQuery({
+    queryKey: ['feature-catalog-tiers'],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('license_tiers')
         .select('id, tier_key, tier_name')
         .eq('status', 'active')
         .order('tier_key', { ascending: true })
-
-      if (error) {
-        console.error('Error fetching tiers:', error)
-      } else {
-        setAvailableTiers(data || [])
-      }
-    } catch (err) {
-      console.error('Error fetching tiers:', err)
-    }
-  }, [])
+      if (error) throw error
+      return data || []
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  })
 
   // Fetch features with enhanced filters
-  const fetchFeatures = useCallback(async () => {
-    fetchRequestIdRef.current += 1
-    const currentRequestId = fetchRequestIdRef.current
-
-    if (!silentRefreshRef.current) {
-      setLoading(true)
-    }
-    try {
+  const { data: featuresData, isLoading: loading, error: fetchError } = useQuery({
+    queryKey: ['feature-catalog', page, rowsPerPage, debouncedSearch, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, hierarchyFilter, addonFilter, tierExclusiveMode, roleExclusiveMode],
+    queryFn: async () => {
       let query = supabase
         .from('admin_feature_entitlements_list')
         .select('*', { count: 'exact' })
         .is('archived_at', null)
+        // Filter out excluded features at database level (handle both false and null)
+        .or('excluded_from_discovery.is.null,excluded_from_discovery.eq.false')
 
       // Search (use debounced value, require at least 2 characters for search)
       if (debouncedSearch && debouncedSearch.length >= 2) {
@@ -208,17 +333,13 @@ export default function FeatureCatalog() {
         if (tierFilter.includes('unassigned')) {
           query = query.or('tier_assignments_count.is.null,tier_assignments_count.eq.0')
         } else if (tierExclusiveMode && tierFilter.length === 1) {
-          // Exclusive mode: only features assigned to ONLY this one tier
-          // Use cd (contained by) + cs (contains) to match exactly [tier]
           query = query
             .contains('assigned_tier_keys', [tierFilter[0]])
             .containedBy('assigned_tier_keys', [tierFilter[0]])
         } else {
-          // Filter by tier keys - try overlaps operator
           try {
             query = query.overlaps('assigned_tier_keys', tierFilter)
           } catch (err) {
-            // Fallback: if overlaps doesn't work, we'll need an RPC
             console.warn('Overlaps operator not supported, using alternative filter')
           }
         }
@@ -226,7 +347,6 @@ export default function FeatureCatalog() {
 
       // Role visibility filter
       if (roleExclusiveMode && roleFilter.length === 1) {
-        // Exclusive mode: only features visible to ONLY this role
         const role = roleFilter[0]
         if (role === 'orgAdmin') {
           query = query.eq('visible_to_admin', true).eq('visible_to_coach', false).eq('visible_to_parent', false)
@@ -236,7 +356,6 @@ export default function FeatureCatalog() {
           query = query.eq('visible_to_admin', false).eq('visible_to_coach', false).eq('visible_to_parent', true)
         }
       } else {
-        // Inclusive mode: features visible to any of the selected roles
         if (roleFilter.includes('orgAdmin')) {
           query = query.eq('visible_to_admin', true)
         }
@@ -289,17 +408,16 @@ export default function FeatureCatalog() {
 
       // Hierarchy filter
       if (hierarchyFilter === 'parents') {
-        // Show only features that are parents (i.e., features that OTHER features point to as parent)
-        // This means we need features whose feature_key appears in other features' parent_feature_key
-        // For now, we can do a simple approach: exclude features that have no children
-        // We'll need to check if there exists any feature with parent_feature_key = this feature_key
-        // Since we can't easily do this in a single query, we'll just show non-null parent_feature_key is NOT the way
-        // Actually for "parents" we want to show features that DO NOT have a parent (are root level) but might have children
-        // Let's make this simpler: Parents = features with parent_feature_key IS NULL (root features)
         query = query.is('parent_feature_key', null)
       } else if (hierarchyFilter === 'children') {
-        // Show only features that are children (have a parent)
         query = query.not('parent_feature_key', 'is', null)
+      }
+
+      // Add-on filter
+      if (addonFilter === 'yes') {
+        query = query.eq('available_as_addon', true)
+      } else if (addonFilter === 'no') {
+        query = query.eq('available_as_addon', false)
       }
 
       query = query.order('category', { ascending: true }).order('display_name', { ascending: true })
@@ -310,48 +428,82 @@ export default function FeatureCatalog() {
 
       const { data, error, count } = await query
 
-      if (fetchRequestIdRef.current !== currentRequestId) {
-        return
-      }
+      if (error) throw error
 
-      if (error) {
-        console.error('Error fetching features:', error)
-        setFeatures([])
-        setTotalCount(0)
-      } else {
-        // Normalize array fields and set features
-        const normalized = (data || []).map(row => ({
-          ...row,
-          assigned_tier_keys: normalizeArrayField(row.assigned_tier_keys) || [],
-          integrations: normalizeArrayField(row.integrations) || [],
-        })) as FeatureEntitlementWithCounts[]
-        setFeatures(normalized)
-        setTotalCount(count || 0)
+      const normalized = (data || []).map(row => ({
+        ...row,
+        assigned_tier_keys: normalizeArrayField(row.assigned_tier_keys) || [],
+        integrations: normalizeArrayField(row.integrations) || [],
+      })) as FeatureEntitlementWithCounts[]
+
+      // Filter out excluded features (backup filter in case view doesn't have the column)
+      const filtered = normalized.filter(f => {
+        const excluded = (f as any).excluded_from_discovery
+        return excluded !== true && excluded !== 'true'
+      })
+      const filteredCount = count ? count - (normalized.length - filtered.length) : filtered.length
+
+      return { features: filtered, totalCount: filteredCount }
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  })
+
+  // Memoize features to prevent unnecessary re-renders
+  // Use a stable reference by checking if featuresData exists
+  const features = useMemo(() => {
+    if (!featuresData?.features) return []
+    return featuresData.features
+  }, [featuresData])
+  const totalCount = featuresData?.totalCount || 0
+
+  // Track if we've initialized expanded parents to prevent infinite loops
+  const hasInitializedExpandedParents = useRef(false)
+  const prevFeatureKeysRef = useRef<string>('')
+
+  // Auto-expand all parents by default when features load (only once per data load)
+  useEffect(() => {
+    if (features.length === 0) {
+      // Reset flag if features are cleared
+      if (hasInitializedExpandedParents.current) {
+        hasInitializedExpandedParents.current = false
+        prevFeatureKeysRef.current = ''
       }
-    } catch (err: any) {
-      if (fetchRequestIdRef.current !== currentRequestId) {
-        return
-      }
-      // Ignore timeout/cancellation errors from rapid typing
-      if (err?.code === '57014' || err?.message?.includes('cancel')) {
-        console.log('Query cancelled or timed out, likely due to new search')
-        return
-      }
-      console.error('Error:', err)
-      setFeatures([])
-    } finally {
-      if (fetchRequestIdRef.current === currentRequestId) {
-        setLoading(false)
-        silentRefreshRef.current = false
-      }
+      return
     }
-  }, [page, rowsPerPage, debouncedSearch, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, tierExclusiveMode, roleExclusiveMode])
 
-  // Silent refresh: re-fetches data without showing loading skeleton (preserves scroll/position)
-  const silentRefresh = useCallback(async () => {
-    silentRefreshRef.current = true
-    await fetchFeatures()
-  }, [fetchFeatures])
+    // Create a stable key from feature keys to detect actual data changes
+    const currentFeatureKeys = features.map(f => f.feature_key).sort().join(',')
+    
+    // Only run if feature keys actually changed (new data loaded)
+    if (currentFeatureKeys !== prevFeatureKeysRef.current) {
+      const parentKeys = new Set<string>()
+      features.forEach(f => {
+        if (!(f as any).parent_feature_key) {
+          // Check if this parent has children
+          const hasChildren = features.some(child => (child as any).parent_feature_key === f.feature_key)
+          if (hasChildren) {
+            parentKeys.add(f.feature_key)
+          }
+        }
+      })
+      
+      // Only update state if there are actually changes
+      setExpandedParents(prev => {
+        const prevKeysArray = Array.from(prev).sort()
+        const newKeysArray = Array.from(parentKeys).sort()
+        const keysChanged = prevKeysArray.length !== newKeysArray.length || 
+                           prevKeysArray.some((key, i) => key !== newKeysArray[i])
+        
+        if (!keysChanged) {
+          return prev // No change needed, return same reference
+        }
+        return parentKeys // Expand all parents by default
+      })
+      
+      prevFeatureKeysRef.current = currentFeatureKeys
+      hasInitializedExpandedParents.current = true
+    }
+  }, [features])
 
   // Debounce search input (400ms delay)
   useEffect(() => {
@@ -363,21 +515,31 @@ export default function FeatureCatalog() {
 
   // Auto-filter selections when results change
   const prevSelectionCountRef = useRef(0)
+  const prevFeatureIdsRef = useRef<Set<string>>(new Set())
+  
   useEffect(() => {
     const currentIds = new Set(features.map(f => f.id))
-    setSelectedFeatureIds(prev => {
-      const filtered = new Set([...prev].filter(id => currentIds.has(id)))
-      const afterCount = filtered.size
+    const currentIdsString = Array.from(currentIds).sort().join(',')
+    const prevIdsString = Array.from(prevFeatureIdsRef.current).sort().join(',')
+    
+    // Only update if the feature IDs actually changed
+    if (currentIdsString !== prevIdsString) {
+      prevFeatureIdsRef.current = currentIds
       
-      // Track count change for filter notification
-      prevSelectionCountRef.current = afterCount
-      
-      // Clear select-all mode if selections no longer match
-      if (selectAllMode === 'page' && filtered.size !== features.length) {
-        setSelectAllMode('none')
-      }
-      return filtered
-    })
+      setSelectedFeatureIds(prev => {
+        const filtered = new Set([...prev].filter(id => currentIds.has(id)))
+        const afterCount = filtered.size
+        
+        // Track count change for filter notification
+        prevSelectionCountRef.current = afterCount
+        
+        // Clear select-all mode if selections no longer match
+        if (selectAllMode === 'page' && filtered.size !== features.length) {
+          setSelectAllMode('none')
+        }
+        return filtered
+      })
+    }
   }, [features, selectAllMode])
 
   // Track filter changes and notify user when selections are removed
@@ -418,30 +580,42 @@ export default function FeatureCatalog() {
       systemFeatureFilter,
       platformAdminOnlyFilter,
       hierarchyFilter,
+      addonFilter,
     }
-  }, [statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, hierarchyFilter, selectedFeatureIds.size])
+  }, [statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, hierarchyFilter, addonFilter, selectedFeatureIds.size])
 
   // Discovery Logic
-  const runDiscovery = useCallback(async (force = false) => {
-    if (abortControllerRef.current) abortControllerRef.current.abort()
-    abortControllerRef.current = new AbortController()
+  const { data: discoveryData, isLoading: discoveryLoading } = useQuery({
+    queryKey: ['feature-catalog-discovery'],
+    queryFn: async () => {
+      const results = await discoverAndReconcile(false)
+      const { data: cache } = await supabase.from('feature_discovery_cache').select('*').order('created_at', { ascending: false }).limit(1).single()
+      return {
+        features: results,
+        lastDiscoveredAt: cache?.last_discovered_at || null,
+        syncStatus: cache?.sync_status || null,
+      }
+    },
+    staleTime: 60 * 60 * 1000, // 1 hour
+  })
 
-    setDiscoveryLoading(true)
-    try {
-        const results = await discoverAndReconcile(force)
-        setDiscoveredFeatures(results)
-        
-        const { data: cache } = await supabase.from('feature_discovery_cache').select('*').order('created_at', { ascending: false }).limit(1).single()
-        if (cache) {
-            setLastDiscoveredAt(cache.last_discovered_at)
-            setSyncStatus(cache.sync_status as any)
-        }
-    } catch (err) {
-        console.error('Discovery failed', err)
-    } finally {
-        setDiscoveryLoading(false)
+  const discoveredFeatures = discoveryData?.features || []
+  const lastDiscoveredAt = discoveryData?.lastDiscoveredAt || null
+  const syncStatus = discoveryData?.syncStatus || null
+
+  const runDiscovery = useCallback(async (force = false) => {
+    if (force) {
+      const results = await discoverAndReconcile(true)
+      const { data: cache } = await supabase.from('feature_discovery_cache').select('*').order('created_at', { ascending: false }).limit(1).single()
+      queryClient.setQueryData(['feature-catalog-discovery'], {
+        features: results,
+        lastDiscoveredAt: cache?.last_discovered_at || null,
+        syncStatus: cache?.sync_status || null,
+      })
+    } else {
+      await queryClient.invalidateQueries({ queryKey: ['feature-catalog-discovery'] })
     }
-  }, [])
+  }, [queryClient])
 
   const handleSync = async () => {
     const syncSteps = [
@@ -459,7 +633,7 @@ export default function FeatureCatalog() {
       steps: syncSteps,
       error: null,
     })
-    setDiscoveryLoading(true)
+    setSyncLoading(true)
     
     const updateProgress = (step: number, status?: string) => {
       setSyncProgress(prev => ({
@@ -531,10 +705,14 @@ export default function FeatureCatalog() {
       const syncedCount = result?.synced || 0
       const failedCount = result?.failed || 0
       updateProgress(5, `Sync completed: ${syncedCount} synced, ${failedCount} failed`)
-      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Clear feature gate cache after sync
+      const { clearFeatureGateCache } = await import('../../lib/featureGate/api')
+      clearFeatureGateCache()
       
       await new Promise(resolve => setTimeout(resolve, 500))
-      await runDiscovery(false)
+      await queryClient.invalidateQueries({ queryKey: ['feature-catalog-discovery'] })
+      await queryClient.invalidateQueries({ queryKey: ['feature-catalog'] })
       
       setTimeout(() => {
         setSyncProgress({
@@ -563,7 +741,7 @@ export default function FeatureCatalog() {
         })
       }, 3000)
     } finally {
-      setDiscoveryLoading(false)
+      setSyncLoading(false)
     }
   }
 
@@ -849,6 +1027,65 @@ export default function FeatureCatalog() {
     }
   }
 
+  const handleBulkExcludeFromDiscovery = async () => {
+    setBulkOperationLoading(true)
+    try {
+      const result = await bulkExcludeFromDiscovery(Array.from(selectedFeatureIds))
+
+      if (result.success) {
+        showSuccess(`${result.updated || 0} feature${result.updated === 1 ? '' : 's'} marked as "not a feature" and excluded from discovery`)
+        setShowExcludeFromDiscoveryModal(false)
+        await silentRefresh()
+        setSelectedFeatureIds(new Set())
+      } else {
+        showError(result.error || 'Operation failed')
+      }
+    } catch (err: any) {
+      showError(err.message || 'Operation failed')
+    } finally {
+      setBulkOperationLoading(false)
+    }
+  }
+
+  const handleExcludeFromDiscovery = useCallback(async (featureId: string) => {
+    // Start fade-out animation immediately
+    setExcludedFeatureIds(prev => new Set(prev).add(featureId))
+    
+    try {
+      const result = await bulkExcludeFromDiscovery([featureId])
+      if (result.success) {
+        showSuccess('Feature marked as "not a feature" and excluded from discovery')
+        // Invalidate query to refresh data (excluded feature will be filtered out by backend)
+        await queryClient.invalidateQueries({ queryKey: ['feature-catalog'] })
+        // Remove from excludedFeatureIds after fade animation completes (300ms)
+        // This ensures smooth fade-out even if query refetches quickly
+        setTimeout(() => {
+          setExcludedFeatureIds(prev => {
+            const next = new Set(prev)
+            next.delete(featureId)
+            return next
+          })
+        }, 300)
+      } else {
+        // Revert optimistic update on error
+        setExcludedFeatureIds(prev => {
+          const next = new Set(prev)
+          next.delete(featureId)
+          return next
+        })
+        showError(result.error || 'Operation failed')
+      }
+    } catch (err: any) {
+      // Revert optimistic update on error
+      setExcludedFeatureIds(prev => {
+        const next = new Set(prev)
+        next.delete(featureId)
+        return next
+      })
+      showError(err.message || 'Operation failed')
+    }
+  }, [queryClient])
+
   const handleEnableAll = () => {
     // Enable all is safe - locked features are already enabled
     handleBulkChangeStatus('Live')
@@ -872,107 +1109,199 @@ export default function FeatureCatalog() {
     setSystemFeatureFilter('all')
     setPlatformAdminOnlyFilter('all')
     setHierarchyFilter('all')
+    setAddonFilter('all')
   }
 
   // Reset to first page when any filter changes so results make sense
   useEffect(() => {
     setPage(0)
-  }, [debouncedSearch, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, hierarchyFilter])
+  }, [debouncedSearch, categoryFilter, typeFilter, statusFilter, tierFilter, roleFilter, integrationFilter, quantifiableFilter, sourceFilter, systemFeatureFilter, platformAdminOnlyFilter, hierarchyFilter, addonFilter])
 
-  // Initial data fetch on mount
-  // Initial mount: fetch tiers and run discovery once
-  useEffect(() => {
-    fetchTiers()
-    runDiscovery(false)
+
+  // Group features by parent-child relationships and sort
+  const organizedRows = useMemo(() => {
+    // Separate parents and children
+    const parents: (FeatureEntitlementWithCounts & { discovered?: DiscoveredFeature })[] = []
+    const childrenByParent = new Map<string, (FeatureEntitlementWithCounts & { discovered?: DiscoveredFeature })[]>()
     
-    return () => {
-        abortControllerRef.current?.abort()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Only run on mount
+    // First pass: categorize all features
+    features.forEach(f => {
+      const discovered = discoveredFeatures.find(df => df.featureKey === f.feature_key)
+      const row = { ...f, discovered }
+      
+      if (!(f as any).parent_feature_key) {
+        parents.push(row)
+      } else {
+        const parentKey = (f as any).parent_feature_key
+        if (!childrenByParent.has(parentKey)) {
+          childrenByParent.set(parentKey, [])
+        }
+        childrenByParent.get(parentKey)!.push(row)
+      }
+    })
+    
+    // Sort parents by category, then display_name
+    parents.sort((a, b) => {
+      const categoryCompare = (a.category || '').localeCompare(b.category || '')
+      if (categoryCompare !== 0) return categoryCompare
+      return (a.display_name || '').localeCompare(b.display_name || '')
+    })
+    
+    // Sort children within each parent group
+    childrenByParent.forEach((children) => {
+      children.sort((a, b) => (a.display_name || '').localeCompare(b.display_name || ''))
+    })
+    
+    // Build final ordered list: parent, then its children (if expanded), then next parent...
+    const result: (FeatureEntitlementWithCounts & { discovered?: DiscoveredFeature })[] = []
+    
+    parents.forEach(parent => {
+      result.push(parent)
+      
+      // Add children if parent is expanded
+      if (expandedParents.has(parent.feature_key)) {
+        const children = childrenByParent.get(parent.feature_key) || []
+        children.forEach(child => {
+          result.push(child)
+        })
+      }
+    })
+    
+    return result
+  }, [features, discoveredFeatures, expandedParents])
 
-  // Fetch features when filters change
-  useEffect(() => {
-    fetchFeatures()
-  }, [fetchFeatures])
+  const rows = organizedRows
 
-  // Cleanup AbortController on unmount
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-        abortControllerRef.current = null
+  // Row style function for fade-out animation
+  const getRowStyle = useCallback((row: FeatureEntitlementWithCounts & { discovered?: DiscoveredFeature }) => {
+    if (excludedFeatureIds.has(row.id)) {
+      return {
+        opacity: 0,
+        transition: 'opacity 0.3s ease-out',
+        pointerEvents: 'none' as const,
       }
     }
-  }, [])
+    return undefined
+  }, [excludedFeatureIds])
 
-  const rows = features.map(f => {
-      const discovered = discoveredFeatures.find(df => df.featureKey === f.feature_key);
-      return { ...f, discovered };
-  });
-
-  const columns: ColumnConfig<FeatureEntitlementWithCounts & { discovered?: DiscoveredFeature }>[] = [
+  const columns: ColumnConfig<FeatureEntitlementWithCounts & { discovered?: DiscoveredFeature }>[] = useMemo(() => [
     {
       id: 'display_name',
       label: 'Feature',
       sortable: true,
-      render: (row) => (
-        <div>
-          <div className="pa-body-m" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {(row as any).parent_feature_key && (
-              <span
-                className="material-symbols-outlined"
-                style={{
-                  fontSize: '16px',
-                  color: 'var(--pa-n500)',
-                  cursor: 'help',
-                }}
-                title={`Child of ${(row as any).parent_feature_key}`}
-              >
-                subdirectory_arrow_right
-              </span>
-            )}
-            {row.display_name}
-            {(row.is_toggleable === false || row.is_removable === false) && (
-              <span
-                className="material-symbols-outlined"
-                style={{
-                  fontSize: '18px',
-                  color: 'var(--pa-warning, #f59e0b)',
-                  cursor: 'help',
-                }}
-                title={row.lock_reason || 'This feature is locked and cannot be modified'}
-              >
-                lock
-              </span>
-            )}
-            {row.is_system_feature && (
-              <Badge variant="info" size="small" title="Always available for all license tiers, including new tiers">
-                System
-              </Badge>
-            )}
-            {row.platform_admin_only && (
-              <Badge variant="neutral" size="small" title="Not available to org users; platform admin only">
-                Platform Admin
-              </Badge>
-            )}
-            {row.discovered?.confidenceScore && row.discovered.confidenceScore < 70 && (
-                <Badge variant="warning" size="small">Review</Badge>
-            )}
-            {row.integrations?.length ? (
-                row.integrations.map((i: string) => <Badge key={i} variant="neutral" size="small">{i}</Badge>)
-            ) : null}
-          </div>
-          <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px', fontFamily: 'var(--pa-font-mono)' }}>
-            {row.feature_key}
-          </div>
+      render: (row) => {
+        const isParent = !(row as any).parent_feature_key
+        const hasChildren = features.some(f => (f as any).parent_feature_key === row.feature_key)
+        const isExpanded = expandedParents.has(row.feature_key)
+        const isChild = !!(row as any).parent_feature_key
+        
+        return (
+          <div>
+            <div className="pa-body-m" style={{ fontWeight: 600, display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              {/* Collapse/expand button for parents */}
+              {isParent && hasChildren ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setExpandedParents(prev => {
+                      const next = new Set(prev)
+                      if (next.has(row.feature_key)) {
+                        next.delete(row.feature_key)
+                      } else {
+                        next.add(row.feature_key)
+                      }
+                      return next
+                    })
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '2px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: 'var(--pa-n600)',
+                    flexShrink: 0,
+                    marginTop: '2px',
+                  }}
+                  title={isExpanded ? 'Collapse children' : 'Expand children'}
+                >
+                  <span
+                    className="material-symbols-outlined"
+                    style={{
+                      fontSize: '20px',
+                      transition: 'transform 0.2s ease',
+                      transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                    }}
+                  >
+                    chevron_right
+                  </span>
+                </button>
+              ) : (
+                <span style={{ width: '24px', flexShrink: 0 }} />
+              )}
+              {/* Child indicator */}
+              {isChild && (
+                <span
+                  className="material-symbols-outlined"
+                  style={{
+                    fontSize: '16px',
+                    color: 'var(--pa-n500)',
+                    cursor: 'help',
+                    flexShrink: 0,
+                    marginTop: '2px',
+                  }}
+                  title={`Child of ${(row as any).parent_feature_key}`}
+                >
+                  subdirectory_arrow_right
+                </span>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div>{row.display_name}</div>
+                <div className="pa-body-s" style={{ color: 'var(--pa-n500)', marginTop: '4px', fontFamily: 'var(--pa-font-mono)' }}>
+                  {row.feature_key}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, marginTop: '2px' }}>
+                {(row.is_toggleable === false || row.is_removable === false) && (
+                  <span
+                    className="material-symbols-outlined"
+                    style={{
+                      fontSize: '18px',
+                      color: 'var(--pa-warning, #f59e0b)',
+                      cursor: 'help',
+                    }}
+                    title={row.lock_reason || 'This feature is locked and cannot be modified'}
+                  >
+                    lock
+                  </span>
+                )}
+                {row.is_system_feature && (
+                  <Badge variant="info" size="small" title="Always available for all license tiers, including new tiers">
+                    System
+                  </Badge>
+                )}
+                {row.platform_admin_only && (
+                  <Badge variant="neutral" size="small" title="Not available to org users; platform admin only">
+                    Platform Admin
+                  </Badge>
+                )}
+                {row.discovered?.confidenceScore && row.discovered.confidenceScore < 70 && (
+                  <Badge variant="warning" size="small">Review</Badge>
+                )}
+                {row.integrations?.length ? (
+                  row.integrations.map((i: string) => <Badge key={i} variant="neutral" size="small">{i}</Badge>)
+                ) : null}
+              </div>
+            </div>
           <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
              {row.discovered?.discoveredFrom.includes('routes') && <span title="Discovered in Routes">🛣️</span>}
              {row.discovered?.discoveredFrom.includes('schema') && <span title="Discovered in DB Schema">💾</span>}
              {row.discovered?.discoveredFrom.includes('services') && <span title="Discovered in Services">⚙️</span>}
           </div>
         </div>
-      ),
+      )
+      },
     },
     {
       id: 'category',
@@ -1010,6 +1339,38 @@ export default function FeatureCatalog() {
       },
     },
     {
+      id: 'available_as_addon',
+      label: 'Add-On',
+      render: (row) => {
+        const isAddOn = (row as any).available_as_addon === true
+        const isPublic = (row as any).addon_is_public === true
+        const hasPriceId = !!(row as any).addon_stripe_price_id
+        const externalName = (row as any).addon_external_name
+        
+        if (!isAddOn) {
+          return <span className="pa-body-s" style={{ color: 'var(--pa-n400)' }}>-</span>
+        }
+        
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <Badge variant={isPublic ? 'success' : 'neutral'} size="small">
+              {isPublic ? 'Public' : 'Private'}
+            </Badge>
+            {hasPriceId && (
+              <div className="pa-body-xs" style={{ color: 'var(--pa-n500)', fontFamily: 'var(--pa-font-mono)' }}>
+                {(row as any).addon_stripe_price_id?.slice(0, 12)}...
+              </div>
+            )}
+            {externalName && (
+              <div className="pa-body-xs" style={{ color: 'var(--pa-n600)' }}>
+                {externalName}
+              </div>
+            )}
+          </div>
+        )
+      },
+    },
+    {
       id: 'tier_assignments_count',
       label: 'Assignments',
       align: 'center',
@@ -1031,14 +1392,24 @@ export default function FeatureCatalog() {
           <Button
             variant="ghost"
             size="dense"
-            onClick={() => navigate(`/platform-admin/licenses/features/${row.id}`)}
+            onClick={() => navigate(getLink(RouteKeys.PLATFORM_LICENSE_FEATURE_DETAIL, { id: row.id }))}
+            disabled={excludedFeatureIds.has(row.id)}
           >
             Edit
+          </Button>
+          <Button
+            variant="ghost"
+            size="dense"
+            onClick={() => handleExcludeFromDiscovery(row.id)}
+            style={{ color: 'var(--pa-warning)' }}
+            disabled={excludedFeatureIds.has(row.id)}
+          >
+            Not a Feature
           </Button>
         </div>
       ),
     },
-  ]
+  ], [handleExcludeFromDiscovery, navigate, discoveredFeatures, features, expandedParents])
 
   return (
     <DiscoveryErrorBoundary>
@@ -1051,14 +1422,117 @@ export default function FeatureCatalog() {
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                 <DiscoveryStatusBadge 
                     lastDiscoveredAt={lastDiscoveredAt}
-                    syncStatus={syncStatus}
-                    loading={discoveryLoading}
+                    syncStatus={syncStatus as 'pending' | 'synced' | 'failed' | null}
+                    loading={discoveryLoading || syncLoading}
                     onRefresh={() => runDiscovery(true)}
                     onSync={handleSync}
                 />
+                <div ref={exportMenuRef} style={{ position: 'relative' }}>
+                  <Button
+                      variant="secondary"
+                      onClick={() => setExportMenuOpen(!exportMenuOpen)}
+                      disabled={exporting}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                      <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                        {exporting ? 'sync' : 'download'}
+                      </span>
+                      {exporting ? 'Exporting...' : 'Export'}
+                      <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                        {exportMenuOpen ? 'expand_less' : 'expand_more'}
+                      </span>
+                  </Button>
+                  {exportMenuOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        right: 0,
+                        marginTop: '8px',
+                        backgroundColor: 'var(--pa-surface)',
+                        border: '1px solid var(--pa-border)',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                        zIndex: 1000,
+                        minWidth: '160px',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <button
+                        onClick={() => handleExport('csv')}
+                        disabled={exporting}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: exporting ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          opacity: exporting ? 0.5 : 1,
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!exporting) {
+                            e.currentTarget.style.backgroundColor = 'var(--pa-neutral-50)'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent'
+                        }}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                          description
+                        </span>
+                        <span>Export CSV</span>
+                      </button>
+                      <button
+                        onClick={() => handleExport('xlsx')}
+                        disabled={exporting}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: exporting ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          opacity: exporting ? 0.5 : 1,
+                          borderTop: '1px solid var(--pa-border)',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!exporting) {
+                            e.currentTarget.style.backgroundColor = 'var(--pa-neutral-50)'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent'
+                        }}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                          table_chart
+                        </span>
+                        <span>Export Excel</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <Button
+                    variant="secondary"
+                    onClick={() => setShowImportModal(true)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                        upload
+                    </span>
+                    Import
+                </Button>
                 <Button
                     variant="primary"
-                    onClick={() => navigate('/platform-admin/licenses/features/new')}
+                    onClick={() => navigate(getLink(RouteKeys.PLATFORM_LICENSE_FEATURE_DETAIL, { id: 'new' }))}
                 >
                     Manual Create
                 </Button>
@@ -1094,6 +1568,8 @@ export default function FeatureCatalog() {
           onPlatformAdminOnlyFilterChange={setPlatformAdminOnlyFilter}
           hierarchyFilter={hierarchyFilter}
           onHierarchyFilterChange={setHierarchyFilter}
+          addonFilter={addonFilter}
+          onAddonFilterChange={setAddonFilter}
           onClearAll={handleClearFilters}
         />
 
@@ -1130,6 +1606,7 @@ export default function FeatureCatalog() {
           onUpdateCategory={() => setShowUpdateCategoryModal(true)}
           onSetSystemFeature={() => setShowSetSystemFeatureModal(true)}
           onSetPlatformOnly={() => setShowSetPlatformOnlyModal(true)}
+          onExcludeFromDiscovery={() => setShowExcludeFromDiscoveryModal(true)}
           onEnableAll={handleEnableAll}
           onDisableAll={handleDisableAll}
           onClearSelection={() => {
@@ -1191,6 +1668,19 @@ export default function FeatureCatalog() {
             </div>
         )}
 
+        {fetchError && (
+          <div style={{ marginBottom: '24px' }}>
+            <ErrorState
+              title="Failed to Load Features"
+              message={fetchError instanceof Error ? fetchError.message : 'Failed to load features'}
+              onRetry={() => {
+                queryClient.invalidateQueries({ queryKey: ['feature-catalog'] })
+              }}
+              retryLabel="Retry"
+            />
+          </div>
+        )}
+
         <PlatformDataTable
             columns={columns}
             rows={rows}
@@ -1206,6 +1696,7 @@ export default function FeatureCatalog() {
             onSelectionChange={handleSelectionChange}
             selectAllMode={selectAllMode}
             onSelectAllChange={handleSelectAllChange}
+            getRowStyle={getRowStyle}
         />
 
         {/* Bulk Action Modals */}
@@ -1259,6 +1750,21 @@ export default function FeatureCatalog() {
           onConfirm={handleBulkSetPlatformOnly}
           onCancel={() => setShowSetPlatformOnlyModal(false)}
           loading={bulkOperationLoading}
+        />
+
+        <ExcludeFromDiscoveryModal
+          open={showExcludeFromDiscoveryModal}
+          selectedFeatures={selectedFeatures}
+          onConfirm={handleBulkExcludeFromDiscovery}
+          onCancel={() => setShowExcludeFromDiscoveryModal(false)}
+          loading={bulkOperationLoading}
+        />
+
+        <ImportFeaturesModal
+          open={showImportModal}
+          onConfirm={handleImport}
+          onCancel={() => setShowImportModal(false)}
+          loading={importing}
         />
         </div>
     </DiscoveryErrorBoundary>

@@ -1,21 +1,22 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useOrganizationSports } from '../../hooks/useOrganizationSports'
 import { useT } from '../../i18n/useI18n'
 import { getAllUniformSubmissions, type UniformSubmission } from '../../data/services/uniformsService'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
-import { 
-  AdminPageHeader, 
-  Card, 
+import {
+  AdminPageHeader,
+  Card,
   Badge,
   Button,
-  EmptyState,
   OrgDataTable,
-  type ColumnConfig
+  type ColumnConfig,
 } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import '../../styles/orgAdmin.css'
 
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
@@ -29,9 +30,11 @@ export default function UniformOrders() {
   const [rowsPerPage, setRowsPerPage] = useState(25)
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const { sports, loading: sportsLoading, error: sportsError, refetch: refetchSports } = useOrganizationSports()
   const navigate = useNavigate()
   const t = useT()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
 
   const fetchSubmissions = useCallback(async () => {
     if (!isReady) return
@@ -55,7 +58,15 @@ export default function UniformOrders() {
       label: 'Player',
       render: (row) => {
         const athleteId = row.athlete_id ?? (row as { child_id?: string }).child_id
-        return athleteId ? `Child ${athleteId.slice(0, 8)}` : 'Child'
+        const kitId = row.kit_id
+        return (
+          <span 
+            style={{ cursor: 'pointer', color: 'var(--pa-link-color, #3b82f6)', textDecoration: 'underline' }}
+            onClick={() => navigate(`/admin/uniforms/${kitId}`)}
+          >
+            {athleteId ? `Child ${athleteId.slice(0, 8)}` : 'Child'}
+          </span>
+        )
       }
     },
     { 
@@ -131,17 +142,17 @@ export default function UniformOrders() {
     return (
       <div className="oa-root">
         <AdminPageHeader title="Uniforms" actions={null} />
-        <Card>
-          <EmptyState
-            icon="checkroom"
-            title={t('admin.uniforms.prerequisite.noSportsTitle')}
-            description={t('admin.uniforms.prerequisite.noSportsDescription')}
-            noCard
-          >
-            <Link to={`${getLink('admin.organization.forms')}?type=sport&returnUrl=${returnUrl}`}>
-              <Button variant="primary">{t('admin.uniforms.prerequisite.addSport')}</Button>
-            </Link>
-          </EmptyState>
+        <Card className="oa-border-2 oa-border-dashed">
+          <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+            <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>checkroom</span>
+            <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+              <h3 className="oa-h3 oa-mb-0">{t('admin.uniforms.prerequisite.noSportsTitle')}</h3>
+              <p className="oa-body-m oa-text-muted oa-mb-4">{t('admin.uniforms.prerequisite.noSportsDescription')}</p>
+              <Link to={`${getLink('admin.organization.forms')}?type=sport&returnUrl=${returnUrl}`}>
+                <Button variant="primary">{t('admin.uniforms.prerequisite.addSport')}</Button>
+              </Link>
+            </div>
+          </div>
         </Card>
       </div>
     )
@@ -153,7 +164,7 @@ export default function UniformOrders() {
         title={t('admin.uniforms.title')}
         subtitle={t('admin.uniforms.subtitle')} 
         actions={
-          (sports?.length ?? 0) > 0 ? (
+          isOrgAdmin && (sports?.length ?? 0) > 0 ? (
             <OrgAdminButton onClick={() => navigate('/admin/uniforms/new')} variant="primary" icon="add" className="w-full sm:w-auto">
               Create Uniform
             </OrgAdminButton>
@@ -162,13 +173,14 @@ export default function UniformOrders() {
       />
 
       {submissions.length === 0 && !loading ? (
-        <Card>
-          <EmptyState 
-            icon="checkroom" 
-            title={t('uniforms.orders.noOrders')}
-            noCard 
-            description={t('uniforms.orders.noOrdersDesc')} 
-          />
+        <Card className="oa-border-2 oa-border-dashed">
+          <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+            <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>checkroom</span>
+            <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0">
+              <h3 className="oa-h3 oa-mb-0">{t('uniforms.orders.noOrders')}</h3>
+              <p className="oa-body-m oa-text-muted oa-mb-0">{t('uniforms.orders.noOrdersDesc')}</p>
+            </div>
+          </div>
         </Card>
       ) : (
         <OrgDataTable

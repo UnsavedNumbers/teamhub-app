@@ -3,6 +3,7 @@ import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../config'
 import type { NotificationAction } from '../../types/notifications'
 import { notifyUsers } from './notificationServiceCore'
+import { collectTeamManagers, collectStaffMembers } from './notificationHelpers'
 
 const supabaseAny = supabase as any
 
@@ -30,6 +31,8 @@ export async function distributeTravelCreatedNotifications(input: TravelNotifica
 
         const guardianUserIds: string[] = []
         const coachUserIds: string[] = []
+        const teamManagerUserIds: string[] = []
+        const staffUserIds: string[] = []
 
         const { data: members, error: memberError } = await supabase
             .from('team_memberships')
@@ -73,6 +76,14 @@ export async function distributeTravelCreatedNotifications(input: TravelNotifica
                 }
             })
         }
+
+        // Get team managers for team
+        const teamManagerIds = await collectTeamManagers(input.team_id, input.created_by_user_id)
+        teamManagerUserIds.push(...teamManagerIds)
+
+        // Get staff members for organization
+        const staffIds = await collectStaffMembers(input.org_id, input.team_id, input.created_by_user_id)
+        staffUserIds.push(...staffIds)
 
         const action: NotificationAction = 'travel_created'
         let totalInAppCount = 0
@@ -121,6 +132,50 @@ export async function distributeTravelCreatedNotifications(input: TravelNotifica
             }
         }
 
+        // Notify team managers
+        if (teamManagerUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: teamManagerUserIds,
+                orgId: input.org_id,
+                teamId: input.team_id,
+                action,
+                roleContext: 'team_manager',
+                title: `New Travel Plan: ${input.title}`,
+                body: `Travel scheduled for ${new Date(input.start_date).toLocaleDateString()}`,
+                linkUrl: `/portal/travel/${input.travel_id}`,
+                entityType: 'travel',
+                entityId: input.travel_id,
+                metadata: {
+                    start_date: input.start_date
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
+
+        // Notify staff
+        if (staffUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: staffUserIds,
+                orgId: input.org_id,
+                teamId: input.team_id,
+                action,
+                roleContext: 'staff',
+                title: `New Travel Plan: ${input.title}`,
+                body: `Travel scheduled for ${new Date(input.start_date).toLocaleDateString()}`,
+                linkUrl: `/portal/travel/${input.travel_id}`,
+                entityType: 'travel',
+                entityId: input.travel_id,
+                metadata: {
+                    start_date: input.start_date
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
+
         debug.perf.end('travelNotificationsService.distributeTravelCreatedNotifications')
         debug.flow('TravelNotificationsService.distributeTravelCreatedNotifications', 'Notifications distributed successfully', { travelId: input.travel_id, recipientCount: totalInAppCount })
         console.groupEnd()
@@ -149,6 +204,8 @@ export async function distributeTravelCanceledNotifications(input: TravelNotific
 
         const guardianUserIds: string[] = []
         const coachUserIds: string[] = []
+        const teamManagerUserIds: string[] = []
+        const staffUserIds: string[] = []
 
         const { data: members, error: memberError } = await supabase
             .from('team_memberships')
@@ -193,6 +250,14 @@ export async function distributeTravelCanceledNotifications(input: TravelNotific
             })
         }
 
+        // Get team managers for team
+        const teamManagerIds = await collectTeamManagers(input.team_id, input.created_by_user_id)
+        teamManagerUserIds.push(...teamManagerIds)
+
+        // Get staff members for organization
+        const staffIds = await collectStaffMembers(input.org_id, input.team_id, input.created_by_user_id)
+        staffUserIds.push(...staffIds)
+
         const action: NotificationAction = 'travel_canceled'
         let totalInAppCount = 0
 
@@ -227,6 +292,52 @@ export async function distributeTravelCanceledNotifications(input: TravelNotific
                 teamId: input.team_id,
                 action,
                 roleContext: 'coach',
+                title: `Travel Canceled: ${input.title}`,
+                body: `This travel plan has been canceled`,
+                linkUrl: `/portal/travel/${input.travel_id}`,
+                entityType: 'travel',
+                entityId: input.travel_id,
+                presentation: 'warning',
+                metadata: {
+                    start_date: input.start_date
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
+
+        // Notify team managers
+        if (teamManagerUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: teamManagerUserIds,
+                orgId: input.org_id,
+                teamId: input.team_id,
+                action,
+                roleContext: 'team_manager',
+                title: `Travel Canceled: ${input.title}`,
+                body: `This travel plan has been canceled`,
+                linkUrl: `/portal/travel/${input.travel_id}`,
+                entityType: 'travel',
+                entityId: input.travel_id,
+                presentation: 'warning',
+                metadata: {
+                    start_date: input.start_date
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
+
+        // Notify staff
+        if (staffUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: staffUserIds,
+                orgId: input.org_id,
+                teamId: input.team_id,
+                action,
+                roleContext: 'staff',
                 title: `Travel Canceled: ${input.title}`,
                 body: `This travel plan has been canceled`,
                 linkUrl: `/portal/travel/${input.travel_id}`,

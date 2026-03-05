@@ -156,8 +156,8 @@ export function Table<T extends { id: string | number }>({
 
   return (
     <div className="pa-table-card">
-      <div className="pa-table-wrapper">
-        <table className={`pa-table ${compact ? 'pa-table--compact' : ''} ${zebra ? 'pa-table--zebra' : ''}`}>
+      <div className="pa-table-wrapper overflow-safe-scroll">
+        <table className={`pa-table min-w-full ${compact ? 'pa-table--compact' : ''} ${zebra ? 'pa-table--zebra' : ''}`}>
           <thead>
             <tr>
               {selectable && (

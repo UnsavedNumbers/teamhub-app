@@ -1,20 +1,16 @@
 /**
- * WordPress REST API Service
- * 
- * Handles all WordPress REST API interactions with authentication,
- * rate limiting, and error handling.
+ * WordPress API Service
+ *
+ * Routes all WordPress API interactions through the Supabase API Manager gateway.
  */
 
+import { invokeApiOperation } from '../../services/apiManagerService'
 import { debug } from '../../lib/debug'
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export interface WordPressConfig {
   apiUrl: string
   authMethod: 'application_password' | 'oauth_token' | 'public'
-  credentials?: string // Encrypted credentials
+  credentials?: string
 }
 
 export interface WordPressCategory {
@@ -85,409 +81,123 @@ export interface ServiceResponse<T> {
   error: Error | null
 }
 
-// ============================================================================
-// Rate Limiting
-// ============================================================================
+let currentConfig: WordPressConfig | null = null
 
-class RateLimiter {
-  private requests: number[] = []
-  private readonly maxRequests: number = 100
-  private readonly windowMs: number = 60000 // 1 minute
+interface GatewayEnvelope {
+  providerResponse?: unknown
+}
 
-  async waitIfNeeded(): Promise<void> {
-    const now = Date.now()
-    
-    // Remove requests outside the window
-    this.requests = this.requests.filter(time => now - time < this.windowMs)
-    
-    // If at limit, wait until oldest request expires
-    if (this.requests.length >= this.maxRequests) {
-      const oldestRequest = this.requests[0]
-      const waitTime = this.windowMs - (now - oldestRequest) + 100 // Add 100ms buffer
-      if (waitTime > 0) {
-        debug.data('WordPressApiService', 'Rate limit reached, waiting', { waitTime })
-        await new Promise(resolve => setTimeout(resolve, waitTime))
-        // Clean up again after waiting
-        this.requests = this.requests.filter(time => Date.now() - time < this.windowMs)
-      }
-    }
-    
-    // Record this request
-    this.requests.push(Date.now())
+function toError(message: string): ServiceResponse<never> {
+  return {
+    data: null,
+    error: new Error(message),
   }
 }
 
-const rateLimiter = new RateLimiter()
+function resolveConfig(config?: WordPressConfig): WordPressConfig | null {
+  if (config) {
+    return config
+  }
+  return currentConfig
+}
 
-// ============================================================================
-// WordPress API Client
-// ============================================================================
+async function callWordPressGateway<T>(
+  operation: string,
+  config: WordPressConfig,
+  input: Record<string, unknown> = {},
+): Promise<ServiceResponse<T>> {
+  const response = await invokeApiOperation<GatewayEnvelope>({
+    operation,
+    input: {
+      ...input,
+      config,
+    },
+  })
 
-class WordPressApiClient {
-  private config: WordPressConfig | null = null
-
-  setConfig(config: WordPressConfig): void {
-    this.config = config
+  if (!response.ok) {
+    return toError(response.error.message)
   }
 
-  private getAuthHeaders(): HeadersInit {
-    if (!this.config) {
-      return {}
-    }
-
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    }
-
-    if (this.config.authMethod === 'application_password' && this.config.credentials) {
-      // Application password format: username:password
-      const credentials = btoa(this.config.credentials)
-      headers['Authorization'] = `Basic ${credentials}`
-    } else if (this.config.authMethod === 'oauth_token' && this.config.credentials) {
-      headers['Authorization'] = `Bearer ${this.config.credentials}`
-    }
-
-    return headers
-  }
-
-  private async makeRequest<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<ServiceResponse<T>> {
-    if (!this.config) {
-      return {
-        data: null,
-        error: new Error('WordPress configuration not set'),
-      }
-    }
-
-    // Rate limiting
-    await rateLimiter.waitIfNeeded()
-
-    const url = `${this.config.apiUrl.replace(/\/$/, '')}${endpoint}`
-    const headers = {
-      ...this.getAuthHeaders(),
-      ...options.headers,
-    }
-
-    debug.perf.start(`wordpressApi.${endpoint}`)
-    debug.data('WordPressApiService', `Request: ${options.method || 'GET'} ${url}`)
-
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers,
-      })
-
-      debug.perf.end(`wordpressApi.${endpoint}`)
-
-      // Handle errors
-      if (!response.ok) {
-        const errorText = await response.text()
-        let errorMessage = `WordPress API error: ${response.status} ${response.statusText}`
-        
-        try {
-          const errorJson = JSON.parse(errorText)
-          if (errorJson.message) {
-            errorMessage = errorJson.message
-          } else if (errorJson.code) {
-            errorMessage = `${errorJson.code}: ${errorJson.message || errorText}`
-          }
-        } catch {
-          // Use default error message
-        }
-
-        // Specific error handling
-        if (response.status === 401) {
-          return {
-            data: null,
-            error: new Error('Authentication failed. Please check your credentials.'),
-          }
-        }
-
-        if (response.status === 404) {
-          return {
-            data: null,
-            error: new Error('Resource not found'),
-          }
-        }
-
-        if (response.status === 429) {
-          return {
-            data: null,
-            error: new Error('Rate limit exceeded. Please try again later.'),
-          }
-        }
-
-        return {
-          data: null,
-          error: new Error(errorMessage),
-        }
-      }
-
-      // Parse response
-      const text = await response.text()
-      if (!text || text.trim() === '') {
-        return { data: null, error: null }
-      }
-
-      const data = JSON.parse(text) as T
-      debug.data('WordPressApiService', `Response: ${endpoint}`, { success: true })
-      
-      return { data, error: null }
-    } catch (err) {
-      debug.perf.end(`wordpressApi.${endpoint}`)
-      debug.error('WordPressApiService', `Request failed: ${endpoint}`, { error: err })
-      
-      const error = err instanceof Error ? err : new Error(String(err))
-      
-      // Network error handling
-      if (error.message.includes('fetch') || error.message.includes('network')) {
-        return {
-          data: null,
-          error: new Error('Network error. Please check your connection and WordPress API URL.'),
-        }
-      }
-
-      return {
-        data: null,
-        error,
-      }
-    }
-  }
-
-  // ============================================================================
-  // Public API Methods
-  // ============================================================================
-
-  /**
-   * Test WordPress API connection
-   */
-  async testConnection(): Promise<ServiceResponse<{ success: boolean }>> {
-    const result = await this.makeRequest<{ name: string }>('/')
-    if (result.error) {
-      return { data: null, error: result.error }
-    }
-    return { data: { success: true }, error: null }
-  }
-
-  /**
-   * Get categories
-   * WordPress categories may include image data via plugins (Category Images) or ACF fields
-   */
-  async getCategories(parentId?: number): Promise<ServiceResponse<WordPressCategory[]>> {
-    const buildEndpoint = (includeEditContext: boolean): string => {
-      const params = new URLSearchParams()
-      if (parentId !== undefined) {
-        params.append('parent', parentId.toString())
-      }
-      params.append('per_page', '100')
-      // Some plugins (for example taxonomy image plugins) only expose term image
-      // fields in edit context for authenticated requests.
-      if (includeEditContext) {
-        params.append('context', 'edit')
-      }
-      return `/categories${params.toString() ? `?${params.toString()}` : ''}`
-    }
-
-    const canUseEditContext =
-      this.config?.authMethod !== 'public' &&
-      Boolean(this.config?.credentials)
-
-    const firstAttempt = await this.makeRequest<WordPressCategory[]>(
-      buildEndpoint(canUseEditContext)
-    )
-
-    if (!firstAttempt.error || !canUseEditContext) {
-      return firstAttempt
-    }
-
-    // Fallback to view context if edit context is blocked for this credential set.
-    debug.data('WordPressApiService', 'Retrying categories without edit context', {
-      parentId,
-      error: firstAttempt.error.message,
-    })
-    return this.makeRequest<WordPressCategory[]>(buildEndpoint(false))
-  }
-
-  /**
-   * Get a single category by ID
-   */
-  async getCategory(id: number): Promise<ServiceResponse<WordPressCategory>> {
-    return this.makeRequest<WordPressCategory>(`/categories/${id}`)
-  }
-
-  /**
-   * Get tags
-   */
-  async getTags(): Promise<ServiceResponse<WordPressTag[]>> {
-    return this.makeRequest<WordPressTag[]>(`/tags?per_page=100`)
-  }
-
-  /**
-   * Get posts with filters
-   */
-  async getPosts(options: {
-    categories?: number[]
-    tags?: number[]
-    search?: string
-    perPage?: number
-    page?: number
-  } = {}): Promise<ServiceResponse<WordPressPost[]>> {
-    const params = new URLSearchParams()
-    
-    if (options.categories && options.categories.length > 0) {
-      options.categories.forEach(catId => params.append('categories[]', catId.toString()))
-    }
-    
-    if (options.tags && options.tags.length > 0) {
-      options.tags.forEach(tagId => params.append('tags[]', tagId.toString()))
-    }
-    
-    if (options.search) {
-      params.append('search', options.search)
-    }
-    
-    params.append('per_page', (options.perPage || 100).toString())
-    params.append('page', (options.page || 1).toString())
-    params.append('status', 'publish') // Only published posts
-    params.append('_embed', '1')
-    
-    return this.makeRequest<WordPressPost[]>(`/posts?${params.toString()}`)
-  }
-
-  /**
-   * Get a single post by slug
-   */
-  async getPostBySlug(slug: string): Promise<ServiceResponse<WordPressPost>> {
-    const params = new URLSearchParams()
-    params.append('slug', slug)
-    params.append('status', 'publish')
-    
-    const result = await this.makeRequest<WordPressPost[]>(`/posts?${params.toString()}`)
-    
-    if (result.error) {
-      return { data: null, error: result.error }
-    }
-    
-    if (!result.data || result.data.length === 0) {
-      return {
-        data: null,
-        error: new Error(`Post with slug "${slug}" not found`),
-      }
-    }
-    
-    return {
-      data: result.data[0],
-      error: null,
-    }
-  }
-
-  /**
-   * Get pages
-   */
-  async getPages(): Promise<ServiceResponse<WordPressPage[]>> {
-    return this.makeRequest<WordPressPage[]>(`/pages?per_page=100&status=publish`)
-  }
-
-  /**
-   * Get a single page by slug
-   */
-  async getPageBySlug(slug: string): Promise<ServiceResponse<WordPressPage>> {
-    const params = new URLSearchParams()
-    params.append('slug', slug)
-    params.append('status', 'publish')
-    
-    const result = await this.makeRequest<WordPressPage[]>(`/pages?${params.toString()}`)
-    
-    if (result.error) {
-      return { data: null, error: result.error }
-    }
-    
-    if (!result.data || result.data.length === 0) {
-      return {
-        data: null,
-        error: new Error(`Page with slug "${slug}" not found`),
-      }
-    }
-    
-    return {
-      data: result.data[0],
-      error: null,
-    }
-  }
-
-  /**
-   * Get featured image URL for a media ID
-   */
-  async getFeaturedImageUrl(mediaId: number): Promise<ServiceResponse<string>> {
-    const result = await this.makeRequest<{ source_url: string }>(`/media/${mediaId}`)
-    
-    if (result.error || !result.data) {
-      return {
-        data: null,
-        error: result.error || new Error('Featured image not found'),
-      }
-    }
-    
-    return {
-      data: result.data.source_url,
-      error: null,
-    }
+  const providerResponse = response.data?.providerResponse
+  return {
+    data: (providerResponse as T) ?? null,
+    error: null,
   }
 }
 
-// ============================================================================
-// Singleton Instance
-// ============================================================================
-
-const wordPressApiClient = new WordPressApiClient()
-
-// ============================================================================
-// Exported Functions
-// ============================================================================
-
-/**
- * Initialize WordPress API client with configuration
- */
 export function initializeWordPressApi(config: WordPressConfig): void {
-  wordPressApiClient.setConfig(config)
+  currentConfig = config
 }
 
-/**
- * Test WordPress API connection
- */
 export async function testWordPressConnection(
-  config: WordPressConfig
+  config: WordPressConfig,
 ): Promise<ServiceResponse<{ success: boolean }>> {
-  initializeWordPressApi(config)
-  return wordPressApiClient.testConnection()
+  const activeConfig = resolveConfig(config)
+  if (!activeConfig) {
+    return toError('WordPress configuration not set')
+  }
+
+  const result = await callWordPressGateway<unknown>('content.wordpress.testConnection', activeConfig)
+  if (result.error) {
+    return { data: null, error: result.error }
+  }
+
+  return {
+    data: { success: true },
+    error: null,
+  }
 }
 
-/**
- * Get WordPress categories
- */
 export async function getWordPressCategories(
   config: WordPressConfig,
-  parentId?: number
+  parentId?: number,
 ): Promise<ServiceResponse<WordPressCategory[]>> {
-  initializeWordPressApi(config)
-  return wordPressApiClient.getCategories(parentId)
+  const activeConfig = resolveConfig(config)
+  if (!activeConfig) {
+    return toError('WordPress configuration not set')
+  }
+
+  const canUseEditContext = activeConfig.authMethod !== 'public' && Boolean(activeConfig.credentials)
+
+  const firstAttempt = await callWordPressGateway<WordPressCategory[]>(
+    'content.wordpress.getCategories',
+    activeConfig,
+    {
+      ...(typeof parentId === 'number' ? { parentId } : {}),
+      includeEditContext: canUseEditContext,
+    },
+  )
+
+  if (!firstAttempt.error || !canUseEditContext) {
+    return firstAttempt
+  }
+
+  debug.data('WordPressApiService', 'Retrying categories without edit context', {
+    parentId,
+    error: firstAttempt.error.message,
+  })
+
+  return callWordPressGateway<WordPressCategory[]>(
+    'content.wordpress.getCategories',
+    activeConfig,
+    {
+      ...(typeof parentId === 'number' ? { parentId } : {}),
+      includeEditContext: false,
+    },
+  )
 }
 
-/**
- * Get WordPress tags
- */
 export async function getWordPressTags(
-  config: WordPressConfig
+  config: WordPressConfig,
 ): Promise<ServiceResponse<WordPressTag[]>> {
-  initializeWordPressApi(config)
-  return wordPressApiClient.getTags()
+  const activeConfig = resolveConfig(config)
+  if (!activeConfig) {
+    return toError('WordPress configuration not set')
+  }
+
+  return callWordPressGateway<WordPressTag[]>('content.wordpress.getTags', activeConfig)
 }
 
-/**
- * Get WordPress posts
- */
 export async function getWordPressPosts(
   config: WordPressConfig,
   options: {
@@ -496,51 +206,107 @@ export async function getWordPressPosts(
     search?: string
     perPage?: number
     page?: number
-  } = {}
+  } = {},
 ): Promise<ServiceResponse<WordPressPost[]>> {
-  initializeWordPressApi(config)
-  return wordPressApiClient.getPosts(options)
+  const activeConfig = resolveConfig(config)
+  if (!activeConfig) {
+    return toError('WordPress configuration not set')
+  }
+
+  return callWordPressGateway<WordPressPost[]>('content.wordpress.getPosts', activeConfig, {
+    options,
+  })
 }
 
-/**
- * Get WordPress post by slug
- */
 export async function getWordPressPostBySlug(
   config: WordPressConfig,
-  slug: string
+  slug: string,
 ): Promise<ServiceResponse<WordPressPost>> {
-  initializeWordPressApi(config)
-  return wordPressApiClient.getPostBySlug(slug)
+  const activeConfig = resolveConfig(config)
+  if (!activeConfig) {
+    return toError('WordPress configuration not set')
+  }
+
+  const result = await callWordPressGateway<WordPressPost[]>('content.wordpress.getPostBySlug', activeConfig, {
+    slug,
+  })
+
+  if (result.error) {
+    return { data: null, error: result.error }
+  }
+
+  if (!result.data || result.data.length === 0) {
+    return toError(`Post with slug "${slug}" not found`)
+  }
+
+  return {
+    data: result.data[0],
+    error: null,
+  }
 }
 
-/**
- * Get WordPress pages
- */
 export async function getWordPressPages(
-  config: WordPressConfig
+  config: WordPressConfig,
 ): Promise<ServiceResponse<WordPressPage[]>> {
-  initializeWordPressApi(config)
-  return wordPressApiClient.getPages()
+  const activeConfig = resolveConfig(config)
+  if (!activeConfig) {
+    return toError('WordPress configuration not set')
+  }
+
+  return callWordPressGateway<WordPressPage[]>('content.wordpress.getPages', activeConfig)
 }
 
-/**
- * Get WordPress page by slug
- */
 export async function getWordPressPageBySlug(
   config: WordPressConfig,
-  slug: string
+  slug: string,
 ): Promise<ServiceResponse<WordPressPage>> {
-  initializeWordPressApi(config)
-  return wordPressApiClient.getPageBySlug(slug)
+  const activeConfig = resolveConfig(config)
+  if (!activeConfig) {
+    return toError('WordPress configuration not set')
+  }
+
+  const result = await callWordPressGateway<WordPressPage[]>('content.wordpress.getPageBySlug', activeConfig, {
+    slug,
+  })
+
+  if (result.error) {
+    return { data: null, error: result.error }
+  }
+
+  if (!result.data || result.data.length === 0) {
+    return toError(`Page with slug "${slug}" not found`)
+  }
+
+  return {
+    data: result.data[0],
+    error: null,
+  }
 }
 
-/**
- * Get featured image URL
- */
 export async function getWordPressFeaturedImageUrl(
   config: WordPressConfig,
-  mediaId: number
+  mediaId: number,
 ): Promise<ServiceResponse<string>> {
-  initializeWordPressApi(config)
-  return wordPressApiClient.getFeaturedImageUrl(mediaId)
+  const activeConfig = resolveConfig(config)
+  if (!activeConfig) {
+    return toError('WordPress configuration not set')
+  }
+
+  const result = await callWordPressGateway<{ source_url?: string }>(
+    'content.wordpress.getFeaturedImageUrl',
+    activeConfig,
+    { mediaId },
+  )
+
+  if (result.error || !result.data || !result.data.source_url) {
+    return {
+      data: null,
+      error: result.error || new Error('Featured image not found'),
+    }
+  }
+
+  return {
+    data: result.data.source_url,
+    error: null,
+  }
 }

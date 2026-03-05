@@ -31,6 +31,11 @@ const portal = {
         icon: 'calendar_month',
         description: 'View all events',
     },
+    calendarCreate: {
+        path: '/portal/calendar/new',
+        label: 'New Event',
+        icon: 'add',
+    },
     eventDetail: {
         path: '/portal/calendar/events/:eventId',
         params: ['eventId'] as const,
@@ -58,15 +63,29 @@ const portal = {
         icon: 'flight',
     },
 
-    // Huddles
-    messages: {
-        path: '/portal/messages',
+    // Huddles (Chat)
+    huddles: {
+        path: '/portal/huddles',
         label: 'Huddles',
         icon: 'forum',
-        description: 'Team chat and announcements',
+        description: 'Team and organization chat channels',
+    },
+    // Announcements
+    announcements: {
+        path: '/portal/announcements',
+        label: 'Announcements',
+        icon: 'campaign',
+        description: 'Important announcements',
+    },
+    // Direct messages
+    messages: {
+        path: '/portal/messages',
+        label: 'Messages',
+        icon: 'mail',
+        description: 'Direct user-to-user messages',
     },
     announcementDetail: {
-        path: '/portal/messages/:announcementId',
+        path: '/portal/announcements/:announcementId',
         params: ['announcementId'] as const,
         label: 'Announcement',
         icon: 'mail',
@@ -165,6 +184,12 @@ const portal = {
         icon: 'group_add',
         description: 'Enter an invite code',
     },
+    registrationHub: {
+        path: '/portal/registration-hub',
+        label: 'Registration Hub',
+        icon: 'app_registration',
+        description: 'Role-based registration actions',
+    },
 
     // Tryouts
     tryouts: {
@@ -178,6 +203,11 @@ const portal = {
         params: ['tryoutId'] as const,
         label: 'Tryout Details',
         icon: 'emoji_events',
+    },
+    tryoutRegistrations: {
+        path: '/portal/tryouts/registrations',
+        label: 'My Tryout Registrations',
+        icon: 'assignment',
     },
 
     // Uniforms
@@ -253,6 +283,12 @@ const portal = {
         icon: 'mail',
         description: 'Contact support',
     },
+    contactOrg: {
+        path: '/portal/contact-org',
+        label: 'Contact Org Admin',
+        icon: 'support_agent',
+        description: 'Send a request to your organization admin',
+    },
 
     // Photos
     photos: {
@@ -286,6 +322,14 @@ const portal = {
         params: ['id'] as const,
         label: 'Video Details',
         icon: 'smart_display',
+    },
+
+    // Notifications
+    notifications: {
+        path: '/portal/notifications',
+        label: 'Notifications',
+        icon: 'notifications',
+        description: 'View and manage notifications',
     },
 
     // Role Selection
@@ -331,6 +375,12 @@ const portal = {
         params: ['orgSlug', 'token'] as const,
         label: 'Ticket Access',
         icon: 'qr_code_scanner',
+    },
+    subOrgRegistration: {
+        path: '/o/:orgSlug/register-sub-org',
+        params: ['orgSlug'] as const,
+        label: 'Register Sub-Organization',
+        icon: 'add_business',
     },
 } as const satisfies Record<string, RouteDefinition>
 
@@ -494,6 +544,20 @@ const admin = {
             description: 'Access and roles',
             requiresOrg: true,
         },
+        bulkInvite: {
+            path: '/admin/organization/bulk-invite',
+            label: 'Bulk Invites',
+            icon: 'upload',
+            description: 'Onboard multiple users',
+            requiresOrg: true,
+        },
+        subOrgs: {
+            path: '/admin/organization/sub-orgs',
+            label: 'Sub-Organizations',
+            icon: 'apartment',
+            description: 'Manage sub-organizations',
+            requiresOrg: false,
+        },
         billing: {
             path: '/admin/organization/billing',
             label: 'Billing',
@@ -521,10 +585,32 @@ const admin = {
                 },
             },
         },
+        addOns: {
+            path: '/admin/organization/add-ons',
+            label: 'Add-ons',
+            icon: 'add_circle',
+            description: 'Purchase additional features',
+            requiresOrg: true,
+            routes: {
+                detail: {
+                    path: '/admin/organization/add-ons/:featureKey',
+                    params: ['featureKey'] as const,
+                    label: 'Add-on Details',
+                    icon: 'info',
+                    requiresOrg: true,
+                },
+            },
+        },
         trialExpired: {
             path: '/admin/organization/trial-expired',
             label: 'Trial Expired',
             icon: 'lock',
+            requiresOrg: false,
+        },
+        featureUpgrade: {
+            path: '/admin/organization/feature-upgrade',
+            label: 'Feature Upgrade',
+            icon: 'workspace_premium',
             requiresOrg: false,
         },
     },
@@ -817,6 +903,62 @@ const admin = {
         },
     },
 
+    // Facilities
+    facilities: {
+        list: {
+            path: '/admin/facilities',
+            label: 'Facilities',
+            icon: 'location_city',
+            description: 'Manage fields, courts, gyms, and availability',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/facilities/:id',
+            params: ['id'] as const,
+            label: 'Facility Details',
+            icon: 'location_city',
+            requiresOrg: true,
+        },
+        schedule: {
+            path: '/admin/facilities/schedule',
+            label: 'Schedule',
+            icon: 'calendar_month',
+            description: 'Facility scheduling calendar',
+            requiresOrg: true,
+        },
+    },
+
+    // Customers
+    customers: {
+        list: {
+            path: '/admin/customers',
+            label: 'Customers',
+            icon: 'people',
+            description: 'Manage facility rental customers',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/customers/:id',
+            params: ['id'] as const,
+            label: 'Customer Details',
+            icon: 'people',
+            requiresOrg: true,
+        },
+        create: {
+            path: '/admin/customers/create',
+            label: 'Create Customer',
+            icon: 'add',
+            requiresOrg: true,
+        },
+        edit: {
+            path: '/admin/customers/:id/edit',
+            params: ['id'] as const,
+            label: 'Edit Customer',
+            icon: 'edit',
+            requiresOrg: true,
+        },
+    },
+
     // Announcements
     announcements: {
         list: {
@@ -846,6 +988,24 @@ const admin = {
         requiresOrg: true,
     },
 
+    // Contact Requests (guardian/athlete messages to org admin)
+    contactRequests: {
+        list: {
+            path: '/admin/contact-requests',
+            label: 'Contact Requests',
+            icon: 'inbox',
+            description: 'Messages and requests from guardians and athletes',
+            requiresOrg: true,
+        },
+        detail: {
+            path: '/admin/contact-requests/:id',
+            params: ['id'] as const,
+            label: 'Request Detail',
+            icon: 'inbox',
+            requiresOrg: true,
+        },
+    },
+
     // Payments
     payments: {
         list: {
@@ -866,6 +1026,132 @@ const admin = {
             path: '/admin/payments/new',
             label: 'Create Fee',
             icon: 'add',
+            requiresOrg: true,
+        },
+    },
+
+    // Reporting
+    reports: {
+        overview: {
+            path: '/admin/reports',
+            label: 'Reports Overview',
+            icon: 'analytics',
+            description: 'Organization analytics and reporting',
+            requiresOrg: true,
+        },
+        builder: {
+            path: '/admin/reports/builder',
+            label: 'Report Builder',
+            icon: 'build',
+            description: 'Build custom reports',
+            requiresOrg: true,
+        },
+        saved: {
+            path: '/admin/reports/saved',
+            label: 'Saved Reports',
+            icon: 'bookmark',
+            description: 'View and manage saved reports',
+            requiresOrg: true,
+        },
+        exports: {
+            path: '/admin/reports/exports',
+            label: 'Export History',
+            icon: 'download',
+            description: 'View export history',
+            requiresOrg: true,
+        },
+        schedules: {
+            path: '/admin/reports/schedules',
+            label: 'Scheduled Reports',
+            icon: 'schedule',
+            description: 'Manage scheduled reports',
+            requiresOrg: true,
+        },
+        viewer: {
+            path: '/admin/reports/:reportId',
+            params: ['reportId'] as const,
+            label: 'Report Viewer',
+            icon: 'visibility',
+            description: 'View report',
+            requiresOrg: true,
+        },
+        domain: {
+            participation: {
+                path: '/admin/reports/domain/participation',
+                label: 'Participation Report',
+                icon: 'groups',
+                description: 'Athlete participation analytics',
+                requiresOrg: true,
+            },
+            payments: {
+                path: '/admin/reports/domain/payments',
+                label: 'Revenue & Payments Report',
+                icon: 'payments',
+                description: 'Revenue and payment analytics',
+                requiresOrg: true,
+            },
+            scheduling: {
+                path: '/admin/reports/domain/scheduling',
+                label: 'Scheduling Report',
+                icon: 'event',
+                description: 'Scheduling analytics',
+                requiresOrg: true,
+            },
+            travel: {
+                path: '/admin/reports/domain/travel',
+                label: 'Travel Report',
+                icon: 'flight',
+                description: 'Travel analytics',
+                requiresOrg: true,
+            },
+            uniforms: {
+                path: '/admin/reports/domain/uniforms',
+                label: 'Uniforms Report',
+                icon: 'checkroom',
+                description: 'Uniform analytics',
+                requiresOrg: true,
+            },
+            communications: {
+                path: '/admin/reports/domain/communications',
+                label: 'Communications Report',
+                icon: 'chat',
+                description: 'Communication analytics',
+                requiresOrg: true,
+            },
+            operations: {
+                path: '/admin/reports/domain/operations',
+                label: 'Operations Report',
+                icon: 'settings',
+                description: 'Operations analytics',
+                requiresOrg: true,
+            },
+        },
+        ticketing: {
+            path: '/admin/reports/ticketing',
+            label: 'Ticketing & Gate Report',
+            icon: 'confirmation_number',
+            description: 'Ticketing and gate analytics',
+            requiresOrg: true,
+        },
+        registration: {
+            path: '/admin/reports/registration',
+            label: 'Registration Report',
+            icon: 'how_to_reg',
+            description: 'Registration analytics',
+            requiresOrg: true,
+        },
+        video: {
+            path: '/admin/reports/video',
+            label: 'Video Report',
+            icon: 'videocam',
+            description: 'Video analytics',
+            requiresOrg: true,
+        },
+        events: {
+            path: '/admin/reports/events',
+            label: 'Events & Attendance Report',
+            icon: 'event_available',
+            description: 'Events and attendance analytics',
             requiresOrg: true,
         },
     },
@@ -1001,6 +1287,13 @@ const admin = {
             description: 'Registration and evaluation',
             requiresOrg: true,
         },
+        assigned: {
+            path: '/admin/tryouts/assigned',
+            label: 'My Tryouts',
+            icon: 'assignment_ind',
+            description: 'Assigned evaluator tryouts',
+            requiresOrg: true,
+        },
         create: {
             path: '/admin/tryouts/new',
             label: 'Create Tryout',
@@ -1012,6 +1305,27 @@ const admin = {
             params: ['tryoutId'] as const,
             label: 'Tryout Details',
             icon: 'emoji_events',
+            requiresOrg: true,
+        },
+        registrations: {
+            path: '/admin/tryouts/:tryoutId/registrations',
+            params: ['tryoutId'] as const,
+            label: 'Tryout Registrations',
+            icon: 'groups',
+            requiresOrg: true,
+        },
+        evaluators: {
+            path: '/admin/tryouts/:tryoutId/evaluators',
+            params: ['tryoutId'] as const,
+            label: 'Tryout Evaluators',
+            icon: 'badge',
+            requiresOrg: true,
+        },
+        evaluation: {
+            path: '/admin/tryouts/:tryoutId/evaluation',
+            params: ['tryoutId'] as const,
+            label: 'Tryout Evaluation',
+            icon: 'fact_check',
             requiresOrg: true,
         },
     },
@@ -1193,6 +1507,12 @@ const platformAdmin = {
             icon: 'bolt',
         },
     },
+    demoInsights: {
+        path: '/platform-admin/demo-insights',
+        label: 'Demo Insights',
+        icon: 'analytics',
+        description: 'Demo session analytics and engagement',
+    },
 
     // Users
     users: {
@@ -1294,12 +1614,12 @@ const platformAdmin = {
         },
     },
 
-    // Email Preview
-    emailPreview: {
-        path: '/platform-admin/email-preview',
-        label: 'Email Preview',
-        icon: 'email',
-        description: 'Email template testing',
+    // Email Settings
+    emailSettings: {
+        path: '/platform-admin/email-settings',
+        label: 'Email Settings',
+        icon: 'settings',
+        description: 'Configure email branding and settings',
     },
 
     // Email Templates
@@ -1618,6 +1938,21 @@ const root = {
         path: '/',
         label: 'Home',
         icon: 'home',
+    },
+    demoRequest: {
+        path: '/demo-request',
+        label: 'Request a Demo',
+        icon: 'request_quote',
+    },
+    demoEntry: {
+        path: '/demo',
+        label: 'Demo Access',
+        icon: 'login',
+    },
+    demoWelcome: {
+        path: '/demo/welcome',
+        label: 'Demo Welcome',
+        icon: 'welcome',
     },
 } as const satisfies Record<string, RouteDefinition>
 

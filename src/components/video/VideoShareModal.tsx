@@ -13,6 +13,7 @@ import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import { cn } from '@/utils/cn'
 import { showSuccess, showError } from '@/utils/toast'
 import { t } from '@/i18n'
+import { USE_FAKE_DATA } from '@/data/config'
 
 interface VideoShareModalProps {
   isOpen: boolean
@@ -60,6 +61,18 @@ export default function VideoShareModal({
   const handleCreateShare = useCallback(async () => {
     setIsCreating(true)
     try {
+      if (USE_FAKE_DATA) {
+        // Demo mode: show fake success
+        await new Promise(resolve => setTimeout(resolve, 500)) // Simulate delay
+        const fakeShareUrl = `${window.location.origin}/share/video/demo-token-${Date.now()}`
+        await navigator.clipboard.writeText(fakeShareUrl)
+        showSuccess(t('videoLibrary.shareLink.linkCopied'))
+        setEmailRecipients('')
+        setActiveTab('manage')
+        setIsCreating(false)
+        return
+      }
+
       const emails = emailRecipients
         .split(',')
         .map(e => e.trim())

@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
 import { getAllTravelPlansAdmin, publishTravelPlan, cancelTravelPlan } from '../../data/services/travelService'
 import { getLink } from '../../utils/routes'
@@ -14,6 +15,7 @@ import TravelList from '../../components/admin/TravelList'
 import TravelCalendar from '../../components/admin/TravelCalendar'
 import TravelAgenda from '../../components/admin/TravelAgenda'
 import TravelDetailSlideOver from '../../components/admin/TravelDetailSlideOver'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import type { TravelTimeContext, TravelViewMode, TravelFilters as TravelFiltersType } from '../../types/travelManagement'
 import type { TravelPlanWithTeam } from '../../components/admin/TravelList'
 
@@ -31,6 +33,7 @@ const DEFAULT_FILTERS: TravelFiltersType = {
 }
 
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+import '../../styles/orgAdmin.css'
 
 export default function TravelPlans() {
   useDebugLifecycle('TravelPlans')
@@ -59,13 +62,24 @@ export default function TravelPlans() {
     const [teams, setTeams] = useState<Team[]>([])
 
     const { context, isReady } = useUserContext()
+    const { currentOrganization } = useOrganization()
     const navigate = useNavigate()
     const t = useT()
+    const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
 
     useEffect(() => {
         if (!isReady) return
         const loadTeams = async () => {
             try {
+                // In demo mode, use fake data
+                const USE_FAKE_DATA = import.meta.env.VITE_USE_FAKE_DATA === 'true' || import.meta.env.VITE_USE_FAKE_DATA === '1'
+                if (USE_FAKE_DATA) {
+                    const { getTeamsForOrg } = await import('../../data/fake/fakeTeams')
+                    const fakeTeams = getTeamsForOrg(context.orgId).map((team) => ({ id: team.id, name: team.name }))
+                    setTeams(fakeTeams)
+                    return
+                }
+
                 const { data } = await supabase
                     .from('teams')
                     .select('id, name')
@@ -221,50 +235,73 @@ export default function TravelPlans() {
     if (!isReady) {
         return (
             <div>
-                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 text-center">
-                    <div className="animate-pulse rounded bg-slate-200 dark:bg-slate-700" style={{ width: '100%', height: '400px' }} />
+                <div 
+                    className="rounded-xl border p-8 text-center"
+                    style={{ 
+                        background: 'var(--pa-surface)',
+                        borderColor: 'var(--pa-border-default)'
+                    }}
+                >
+                    <div 
+                        className="animate-pulse rounded" 
+                        style={{ 
+                            width: '100%', 
+                            height: '400px',
+                            background: 'var(--pa-surface-panel)'
+                        }} 
+                    />
                 </div>
             </div>
         )
     }
 
     return (
-        <div>
+        <div className="w-full">
             <AdminPageHeader title={t('admin.travel.title')} subtitle={t('admin.travel.subtitle')} />
 
-            <TravelHeader
-                timeContext={timeContext}
-                viewMode={viewMode}
-                onTimeContextChange={(ctx) => { setTimeContext(ctx); setPage(0) }}
-                onViewModeChange={(mode) => { setViewMode(mode); setPage(0) }}
-                onCreateClick={() => navigate('/admin/travel/new')}
-                upcomingCount={upcomingCount}
-            />
+            {/* Main content container - full width for backgrounds, inner content constrained */}
+            <div className="w-full">
+                <div className="max-w-7xl">
+                    <TravelHeader
+                        timeContext={timeContext}
+                        viewMode={viewMode}
+                        onTimeContextChange={(ctx) => { setTimeContext(ctx); setPage(0) }}
+                        onViewModeChange={(mode) => { setViewMode(mode); setPage(0) }}
+                        onCreateClick={isOrgAdmin ? () => navigate('/admin/travel/new') : undefined}
+                        upcomingCount={upcomingCount}
+                    />
 
-            <TravelFilters
-                filters={filters}
-                onFiltersChange={(newFilters) => { setFilters(newFilters); setPage(0) }}
-                teams={teams}
-                onClearAll={handleClearFilters}
-            />
+                    <TravelFilters
+                        filters={filters}
+                        onFiltersChange={(newFilters) => { setFilters(newFilters); setPage(0) }}
+                        teams={teams}
+                        onClearAll={handleClearFilters}
+                    />
+                </div>
 
-            {filteredPlans.length === 0 && !loading ? (
-                <Card className="oa-border-2 oa-border-dashed">
-                    <div className="oa-flex oa-flex-col oa-gap-4">
-                        <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
-                            <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>flight_takeoff</span>
-                            <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0">
-                                <h3 className="oa-h3 oa-mb-0">{t('travelPlans.noPlans')}</h3>
-                                <p className="oa-body-m oa-text-muted oa-mb-0">{t('travelPlans.noPlansDesc')}</p>
+                {filteredPlans.length === 0 && !loading ? (
+                    <div className="max-w-lg">
+                        <Card className="oa-border-2 oa-border-dashed">
+                            <div className="oa-flex oa-flex-col oa-gap-4">
+                                <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+                                    <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>flight_takeoff</span>
+                                    <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0">
+                                        <h3 className="oa-h3 oa-mb-0">{t('travelPlans.noPlans')}</h3>
+                                        <p className="oa-body-m oa-text-muted oa-mb-0">{t('travelPlans.noPlansDesc')}</p>
+                                    </div>
+                                </div>
+                                {isOrgAdmin && (
+                                    <div className="flex justify-start">
+                                        <button className="oa-btn oa-btn--primary" onClick={() => navigate('/admin/travel/new')}>
+                                            {t('travelPlans.createPlan')}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                        <button className="oa-btn oa-btn--primary" onClick={() => navigate('/admin/travel/new')}>
-                            {t('travelPlans.createPlan')}
-                        </button>
+                        </Card>
                     </div>
-                </Card>
-            ) : (
-                <>
+                ) : (
+                    <>
                     {viewMode === 'list' && (
                         <TravelList
                             plans={paginatedPlans}
@@ -306,6 +343,7 @@ export default function TravelPlans() {
                     )}
                 </>
             )}
+            </div>
 
             <TravelDetailSlideOver
                 planId={detailPlanId}

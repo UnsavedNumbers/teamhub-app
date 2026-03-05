@@ -1,10 +1,10 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useDemoSession } from './DemoSessionContext'
 import { readDemoManagementStore } from '@/data/services/demoOrgService'
 import { getOrganizationById } from '@/data/fake/fakeOrganizations'
+import { getCurrentDemoSessionSnapshot } from '@/data/services/demoSessionService'
 
-export type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff' | 'athlete'
+export type OrgMemberRole = 'parent' | 'guardian' | 'coach' | 'org_admin' | 'staff' | 'athlete' | 'fan'
 
 export interface Organization {
   id: string
@@ -12,6 +12,7 @@ export interface Organization {
   roles: OrgMemberRole[] // NEW: Array of roles user has in this org
   slug?: string
   org_type?: 'school' | 'club' | 'league' | 'academy' | 'aau' | null
+  parent_org_id?: string | null
   
   // Contact information
   website?: string | null
@@ -44,34 +45,83 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [currentOrganization, setCurrentOrganizationState] = useState<Organization | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
-  const { session: demoSession } = useDemoSession()
+  const demoSession = getCurrentDemoSessionSnapshot()
 
   const isDemoSessionActive = demoSession.is_demo_session && Boolean(demoSession.demo_org_id)
 
-  const buildDemoOrganization = useCallback((orgId: string): Organization => {
-    const store = readDemoManagementStore()
-    const demoOrg = store.organizations.find((org) => org.id === orgId)
-    const fallback = getOrganizationById(orgId)
+  const buildDemoOrganization = useCallback(async (userId: string, orgId: string): Promise<Organization | null> => {
+    // Use get_user_organizations RPC which already handles demo users
+    const { data, error } = await supabase.rpc('get_user_organizations', { check_user_id: userId } as any) as { 
+      data: Array<{ org_id: string; org_name: string; roles: OrgMemberRole[] }> | null
+      error: unknown 
+    }
+    
+    if (error || !data) {
+      // Fallback to fake data if RPC fails
+      const store = readDemoManagementStore()
+      const demoOrg = store.organizations.find((org) => org.id === orgId)
+      const fallback = getOrganizationById(orgId)
+      const name = demoOrg?.name ?? fallback?.name ?? 'Demo Organization'
+      // Use organization_id from demo session if available, otherwise use demo_org_id
+      const targetOrgId = demoSession.organization_id || orgId
+      return {
+        id: targetOrgId,
+        name,
+        roles: ['org_admin'],
+        get role(): OrgMemberRole {
+          return this.roles[0] ?? 'parent'
+        },
+      } as Organization
+    }
 
-    const name = demoOrg?.name ?? fallback?.name ?? 'Demo Organization'
+    // Find the demo org in the results - prefer organization_id match, then demo_org_id match
+    const targetOrgId = demoSession.organization_id || orgId
+    const demoOrgData = data.find((org) => org.org_id === targetOrgId) || data.find((org) => org.org_id === orgId)
+    if (!demoOrgData) {
+      return null
+    }
+
     return {
-      id: orgId,
-      name,
-      roles: ['org_admin'],
+      id: demoOrgData.org_id,
+      name: demoOrgData.org_name,
+      roles: demoOrgData.roles || [],
       get role(): OrgMemberRole {
         return this.roles[0] ?? 'parent'
       },
-    }
-  }, [])
+    } as Organization
+  }, [demoSession])
 
-  // Auto-select current org when organizations change
+  // Load organizations for demo sessions
   useEffect(() => {
-    if (isDemoSessionActive && demoSession.demo_org_id) {
-      const demoOrganization = buildDemoOrganization(demoSession.demo_org_id)
-      setOrganizationsState([demoOrganization])
-      setCurrentOrganizationState(demoOrganization)
-      sessionStorage.setItem(STORAGE_KEY, demoOrganization.id)
-      setIsLoading(false)
+    if (isDemoSessionActive && demoSession.demo_org_id && userId) {
+      setIsLoading(true)
+      // For demo sessions, fetch org from get_user_organizations which handles demo users
+      // Use organization_id from demo session if available, otherwise fall back to demo_org_id lookup
+      const targetOrgId = demoSession.organization_id || demoSession.demo_org_id
+      ;(supabase.rpc('get_user_organizations', { check_user_id: userId } as any).then(({ data, error }) => {
+        if (error || !data) {
+          setIsLoading(false)
+          return
+        }
+        const orgs: Organization[] = data.map((org: { org_id: string; org_name: string; roles: OrgMemberRole[] }) => ({
+          id: org.org_id,
+          name: org.org_name,
+          roles: org.roles || [],
+          get role(): OrgMemberRole {
+            return this.roles[0] ?? 'parent'
+          },
+        }))
+        setOrganizationsState(orgs)
+        if (orgs.length > 0) {
+          // Prefer organization_id match, then demo_org_id match, then first org
+          const selectedOrg = orgs.find((o) => o.id === targetOrgId) || orgs.find((o) => o.id === demoSession.demo_org_id) || orgs[0]
+          setCurrentOrganizationState(selectedOrg)
+          sessionStorage.setItem(STORAGE_KEY, selectedOrg.id)
+        }
+        setIsLoading(false)
+      }) as Promise<void>).catch(() => {
+        setIsLoading(false)
+      })
       return
     }
 
@@ -93,13 +143,15 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     
     setCurrentOrganizationState(selectedOrg)
     sessionStorage.setItem(STORAGE_KEY, selectedOrg.id)
-  }, [organizations, currentOrganization, isDemoSessionActive, demoSession.demo_org_id, buildDemoOrganization])
+  }, [organizations, currentOrganization, isDemoSessionActive, demoSession.demo_org_id, userId])
 
-  const setOrganizations = useCallback((orgs: Organization[]) => {
-    if (isDemoSessionActive && demoSession.demo_org_id) {
-      const demoOrganization = buildDemoOrganization(demoSession.demo_org_id)
-      setOrganizationsState([demoOrganization])
-      setCurrentOrganizationState(demoOrganization)
+  const setOrganizations = useCallback(async (orgs: Organization[]) => {
+    if (isDemoSessionActive && demoSession.demo_org_id && userId) {
+      const demoOrganization = await buildDemoOrganization(userId, demoSession.demo_org_id)
+      if (demoOrganization) {
+        setOrganizationsState([demoOrganization])
+        setCurrentOrganizationState(demoOrganization)
+      }
       setIsLoading(false)
       return
     }
@@ -107,7 +159,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     setOrganizationsState(orgs)
     // Mark as loaded once organizations are set (even if empty array)
     setIsLoading(false)
-  }, [isDemoSessionActive, demoSession.demo_org_id, buildDemoOrganization])
+  }, [isDemoSessionActive, demoSession.demo_org_id, userId, buildDemoOrganization])
 
   const setCurrentOrganization = useCallback((org: Organization | null) => {
     setCurrentOrganizationState(org)
@@ -176,13 +228,8 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     }
   }, [userId, isDemoSessionActive])
 
-  // Get user ID from auth session
+  // Get user ID from auth session (including demo sessions)
   useEffect(() => {
-    if (isDemoSessionActive) {
-      setUserId(null)
-      return
-    }
-
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUserId(session?.user?.id ?? null)
     })
@@ -192,7 +239,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [isDemoSessionActive])
+  }, [])
 
   const value: OrganizationContextType = {
     currentOrganization,

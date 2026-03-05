@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useLicense } from '../../hooks/useLicense'
 import { useAuth } from '../../hooks/useAuth'
@@ -6,63 +6,14 @@ import { useLoadingState } from '../../contexts/LoadingStateContext'
 import { useCheckoutSession } from '../../hooks/useCheckoutSession'
 import { useTheme } from '../../hooks/useTheme'
 import { hasAnyRole } from '../../utils/roleHelpers'
-import { LicensePlan } from '../../utils/licenseUtils'
 import { t } from '../../i18n'
 import { getLink, RouteKeys } from '../../utils/routes'
-
-interface PlanCard {
-  id: LicensePlan
-  name: string
-  price: string
-  description: string
-  features: string[]
-}
-
-const planCards: PlanCard[] = [
-  { 
-    id: 'starter', 
-    name: t('plans.starter.name'), 
-    price: t('plans.starter.price'), 
-    description: t('plans.starter.description'), 
-    features: [
-      t('plans.features.scheduling'), 
-      t('plans.features.rosters'), 
-      t('plans.features.messaging')
-    ] 
-  },
-  { 
-    id: 'standard', 
-    name: t('plans.standard.name'), 
-    price: t('plans.standard.price'), 
-    description: t('plans.standard.description'), 
-    features: [
-      t('plans.features.scheduling'), 
-      t('plans.features.rosters'), 
-      t('plans.features.messaging'), 
-      t('plans.features.payments'), 
-      t('plans.features.uniforms')
-    ] 
-  },
-  { 
-    id: 'pro', 
-    name: t('plans.pro.name'), 
-    price: t('plans.pro.price'), 
-    description: t('plans.pro.description'), 
-    features: [
-      t('plans.features.scheduling'), 
-      t('plans.features.rosters'), 
-      t('plans.features.messaging'), 
-      t('plans.features.payments'), 
-      t('plans.features.uniforms'), 
-      t('plans.features.travel'), 
-      t('plans.features.tryouts'), 
-      t('plans.features.reporting'), 
-      t('plans.features.support')
-    ] 
-  },
-]
-
+import { resolveFeatureFlag } from '../../utils/featureFlags'
+import { supabase } from '../../lib/supabase'
+import { getActiveTiers } from '../../data/services/licenseTiersService'
+import type { LicenseTier } from '../../types/licenseTiers.types'
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+import '../../styles/orgAdmin.css'
 
 export default function TrialExpired() {
   useDebugLifecycle('TrialExpired')
@@ -74,6 +25,10 @@ export default function TrialExpired() {
   const { loading: licenseLoading, error: licenseError } = useLicense(orgId)
   const [logoError, setLogoError] = useState(false)
   const [logoVersion, setLogoVersion] = useState(0)
+  const [tiers, setTiers] = useState<LicenseTier[]>([])
+  const [tiersLoading, setTiersLoading] = useState(true)
+  const [trialDays, setTrialDays] = useState<number | null>(null)
+  const [trialEligible, setTrialEligible] = useState<boolean>(false)
 
   const isAdmin = currentOrganization ? hasAnyRole(currentOrganization, ['org_admin']) : false
   const isPlatformAdmin = profile?.isPlatformAdmin ?? false
@@ -93,16 +48,90 @@ export default function TrialExpired() {
   const successUrl = `${window.location.origin}${getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_SUCCESS)}`
   const cancelUrl = `${window.location.origin}${getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_CHECKOUT_CANCEL)}`
 
-  const { loadingPlan, error: checkoutError, handleSelect } = useCheckoutSession({
+  const { loadingTierId, error: checkoutError, handleSelect: handleCheckoutSelect } = useCheckoutSession({
     organizationId: orgId || '',
     successUrl,
     cancelUrl,
   })
 
+  const handleSelect = (tierId: string) => {
+    handleCheckoutSelect(tierId)
+  }
+
   const canUpgrade = (isAdmin || isPlatformAdmin) && orgId
 
   const handleSignOut = async () => {
     await signOut()
+  }
+
+  // Fetch active tiers
+  useEffect(() => {
+    async function fetchTiers() {
+      try {
+        setTiersLoading(true)
+        const activeTiers = await getActiveTiers()
+        setTiers(activeTiers)
+      } catch (err) {
+        console.error('[TrialExpired] Error fetching tiers:', err)
+      } finally {
+        setTiersLoading(false)
+      }
+    }
+    fetchTiers()
+  }, [])
+
+  // Fetch trial info (eligibility and days)
+  useEffect(() => {
+    async function fetchTrialInfo() {
+      if (!orgId) {
+        setTrialDays(null)
+        setTrialEligible(false)
+        return
+      }
+
+      try {
+        // Read feature flag client-side for display
+        const flag = await resolveFeatureFlag('free_trial_days', undefined, orgId)
+        const days = flag?.value_type === 'integer' ? (flag.value as number) : 0
+        setTrialDays(days > 0 ? days : 0)
+
+        // Check eligibility via RPC (single source of truth)
+        const { data: eligibility, error: eligibilityError } = await (supabase as any).rpc('check_trial_eligibility', {
+          p_org_id: orgId,
+        })
+
+        if (eligibilityError) {
+          console.error('[TrialExpired] Error checking trial eligibility:', eligibilityError)
+          setTrialEligible(false)
+        } else {
+          setTrialEligible((eligibility as { eligible?: boolean } | null)?.eligible ?? false)
+        }
+      } catch (err) {
+        console.error('[TrialExpired] Error fetching trial info:', err)
+        setTrialDays(0)
+        setTrialEligible(false)
+      }
+    }
+
+    fetchTrialInfo()
+  }, [orgId])
+
+  // Calculate trial end date
+  const getTrialEndDate = (): Date | null => {
+    if (!trialDays || trialDays === 0) return null
+    const endDate = new Date()
+    endDate.setDate(endDate.getDate() + trialDays)
+    return endDate
+  }
+
+  const trialEndDate = getTrialEndDate()
+
+  // Format price for display
+  const formatPrice = (tier: LicenseTier): string => {
+    if (!tier.stripe_amount_cents) return 'Contact us'
+    const amount = tier.stripe_amount_cents / 100
+    const interval = tier.stripe_interval === 'year' ? '/year' : tier.stripe_interval === 'month' ? '/month' : ''
+    return `$${amount.toFixed(0)}${interval}`
   }
 
   // Track whether we've set loading to true using a ref (survives through cleanup)
@@ -213,7 +242,13 @@ export default function TrialExpired() {
 
         {/* Status Header Card */}
         <div className="max-w-[960px] w-full mb-16">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 border border-[#e7edf3] dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-8 shadow-sm">
+          <div 
+            className="rounded-2xl p-8 border flex flex-col md:flex-row items-center justify-between gap-8 shadow-sm"
+            style={{
+              background: 'var(--pa-surface)',
+              borderColor: 'var(--pa-border-default)'
+            }}
+          >
             <div className="flex-1 text-center md:text-left">
               <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
                 <span className="size-3 bg-red-500 rounded-full animate-pulse"></span>
@@ -255,7 +290,13 @@ export default function TrialExpired() {
         <div className="max-w-[960px] w-full mb-20">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0 border border-[#cfdbe7] dark:border-slate-700 rounded-2xl overflow-hidden">
             {/* Restricted Column */}
-            <div className="bg-[#f8f9fb] dark:bg-slate-950 p-10 flex flex-col gap-8 border-r border-[#cfdbe7] dark:border-slate-700">
+            <div 
+              className="p-10 flex flex-col gap-8 border-r"
+              style={{
+                background: 'var(--pa-surface-panel)',
+                borderColor: 'var(--pa-border-default)'
+              }}
+            >
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-[#4c739a] text-3xl">lock</span>
                 <h3 className="text-2xl font-black uppercase tracking-tight text-[#4c739a]">{t('trialExpired.restricted')}</h3>
@@ -276,7 +317,12 @@ export default function TrialExpired() {
               </ul>
             </div>
             {/* Restored Column */}
-            <div className="bg-white dark:bg-slate-900 p-10 flex flex-col gap-8">
+            <div 
+              className="p-10 flex flex-col gap-8"
+              style={{
+                background: 'var(--pa-surface)'
+              }}
+            >
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-primary text-3xl">check_circle</span>
                 <h3 className="text-2xl font-black uppercase tracking-tight text-primary">{t('trialExpired.restored')}</h3>
@@ -300,36 +346,53 @@ export default function TrialExpired() {
         </div>
 
         {/* Plan Selection (Admin Only) */}
-        {canUpgrade && (
+        {canUpgrade && !tiersLoading && (
           <div id="plan-selection" className="max-w-[960px] w-full mb-20 scroll-mt-8">
             <h3 className="text-2xl font-black uppercase tracking-tight text-center mb-8 text-[#0d141b] dark:text-white">
               {t('trialExpired.planSelectionTitle')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {planCards.map(plan => (
+              {tiers.filter(tier => tier.tier_key !== 'tier1').map(tier => (
                 <div
-                  key={plan.id}
-                  className="bg-white dark:bg-slate-900 border border-[#e7edf3] dark:border-slate-800 rounded-2xl p-6 flex flex-col"
+                  key={tier.id}
+                  className="rounded-2xl p-6 flex flex-col border"
+                  style={{
+                    background: 'var(--pa-surface)',
+                    borderColor: 'var(--pa-border-default)'
+                  }}
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-xl font-black uppercase tracking-tight">{plan.name}</h4>
+                    <h4 className="text-xl font-black uppercase tracking-tight">{tier.tier_name}</h4>
                   </div>
-                  <div className="text-3xl font-black mb-4">{plan.price}</div>
-                  <p className="text-[#4c739a] text-sm mb-6">{plan.description}</p>
-                  <div className="flex flex-col gap-2 mb-6 flex-1">
-                    {plan.features.map(feature => (
-                      <div key={feature} className="flex items-center gap-2 text-sm">
-                        <span className="material-symbols-outlined text-primary text-lg">check_circle</span>
-                        <span className="text-[#0d141b] dark:text-slate-300">{feature}</span>
+                  <div className="text-3xl font-black mb-4">{formatPrice(tier)}</div>
+                  
+                  {/* Trial Badge - Only show for paid tiers (tier2, tier3) when eligible */}
+                  {trialDays !== null && trialDays > 0 && trialEligible && tier.tier_key !== 'tier1' && (
+                    <div className="mb-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-full text-xs font-bold uppercase">
+                      {t('billing.trialBadge', { days: trialDays })}
+                    </div>
+                  )}
+                  
+                  <p className="text-[#4c739a] text-sm mb-6">{tier.description || ''}</p>
+                  
+                  {/* Trial Messaging - Only show for paid tiers when eligible */}
+                  {trialDays !== null && trialDays > 0 && trialEligible && tier.tier_key !== 'tier1' && trialEndDate && (
+                    <div className="mb-6">
+                      <div className="text-sm text-[#4c739a] mb-2">
+                        {t('billing.trialNoChargeToday')}
                       </div>
-                    ))}
-                  </div>
+                      <div className="text-xs text-[#4c739a]">
+                        {t('billing.trialAutoChargeDate', { date: trialEndDate.toLocaleDateString() })}
+                      </div>
+                    </div>
+                  )}
+                  
                   <button
-                    onClick={() => handleSelect(plan.id)}
-                    disabled={!!loadingPlan}
+                    onClick={() => handleSelect(tier.id)}
+                    disabled={!!loadingTierId}
                     className="bg-primary text-white font-black px-6 py-3 rounded-lg uppercase tracking-tight disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
                   >
-                    {loadingPlan === plan.id ? t('common.loading') : t('billing.continueToCheckout')}
+                    {loadingTierId === tier.id ? t('common.loading') : t('billing.continueToCheckout')}
                   </button>
                 </div>
               ))}
@@ -358,7 +421,13 @@ export default function TrialExpired() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto py-10 px-10 border-t border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-slate-950">
+      <footer 
+        className="mt-auto py-10 px-10 border-t"
+        style={{
+          background: 'var(--pa-surface-subtle)',
+          borderColor: 'var(--pa-border-default)'
+        }}
+      >
         <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#4c739a]">
             {t('trialExpired.footer.copyright')}

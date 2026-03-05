@@ -16,7 +16,14 @@
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../config'
+import { isInDemoSession } from '../../utils/demoMode'
+import { resolveDemoUserId } from '../fake/userContext'
 import { t } from '../../i18n'
+import { getFakeTicketingEvents } from '../fake/fakeTicketingEvents'
+import { getMockGalleriesForOrg } from '../fake/mockGalleries'
+import { getOrganizationById } from '../fake/fakeOrganizations'
+import { getAthleteProfileV2Fan } from './unifiedAthleteProfileV2Service'
+import { readCalendarCache, writeCalendarCache } from '../../features/calendar/cache'
 import type {
   FanOrgFollow,
   FanEventBookmark,
@@ -31,7 +38,56 @@ import type {
 } from '../../types/staffAndFan'
 import * as fakeService from '../fake/fanFakeService'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const supabaseAny = supabase as any
+
+interface FollowedOrgRow {
+  id: string
+  user_id: string
+  org_id: string
+  source: string
+  created_at: string
+  org: {
+    id: string
+    name: string
+    slug: string
+    logo_url: string | null
+    city: string | null
+    state: string | null
+  } | null
+}
+
+function getFanCalendarCacheScope(userId: string, request: GetCalendarRequest): string {
+  const normalized = {
+    start_date: request.start_date ?? null,
+    end_date: request.end_date ?? null,
+    org_ids: [...(request.org_ids ?? [])].sort(),
+    sources: [...(request.sources ?? [])].sort(),
+  }
+  return `fan-calendar:${userId}:${JSON.stringify(normalized)}`
+}
+
+function shouldUseFakeData(): boolean {
+  return USE_FAKE_DATA || isInDemoSession()
+}
+
+async function shouldUseFakeDataAsync(): Promise<boolean> {
+  if (shouldUseFakeData()) return true
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    const email = session?.user?.email ?? null
+    const metadata = (session?.user?.user_metadata ?? {}) as Record<string, unknown>
+
+    if (resolveDemoUserId(email)) return true
+    if (metadata.is_demo_session === true) return true
+    if (typeof metadata.demo_code === 'string' && metadata.demo_code.trim().length > 0) return true
+  } catch {
+    // Fall through to false.
+  }
+
+  return false
+}
 
 // ============================================
 // FAN FOLLOWS
@@ -49,7 +105,7 @@ export async function followOrg(
   debug.perf.start('fanService.followOrg')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.followOrg(orgId, source)
       debug.perf.end('fanService.followOrg')
       debug.flow('FanService.followOrg', 'Organization followed (fake)', { orgId, source })
@@ -87,7 +143,7 @@ export async function unfollowOrg(orgId: string): Promise<{ data: boolean; error
   debug.perf.start('fanService.unfollowOrg')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.unfollowOrg(orgId)
       debug.perf.end('fanService.unfollowOrg')
       debug.flow('FanService.unfollowOrg', 'Organization unfollowed (fake)', { orgId })
@@ -123,7 +179,7 @@ export async function getFollowedOrgs(): Promise<{ data: FanOrgFollow[]; error: 
   debug.perf.start('fanService.getFollowedOrgs')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.getFollowedOrgs()
       debug.perf.end('fanService.getFollowedOrgs')
       debug.data('FanService.getFollowedOrgs', 'Response (fake)', { orgCount: result.data.length })
@@ -137,16 +193,30 @@ export async function getFollowedOrgs(): Promise<{ data: FanOrgFollow[]; error: 
         org_id,
         source,
         created_at,
-        org:organizations(id, name, slug)
+        org:organizations(id, name, slug, logo_url, city, state)
       `)
       .order('created_at', { ascending: false })
 
     if (error) throw error
 
+    const normalized = ((data || []) as FollowedOrgRow[]).map((follow) => ({
+      ...follow,
+      org: follow.org
+        ? {
+          id: follow.org.id,
+          name: follow.org.name,
+          slug: follow.org.slug,
+          logo_url: follow.org.logo_url ?? null,
+          location_city: follow.org.city ?? null,
+          location_state: follow.org.state ?? null,
+        }
+        : undefined,
+    }))
+
     debug.perf.end('fanService.getFollowedOrgs')
-    debug.data('FanService.getFollowedOrgs', 'Response', { orgCount: data?.length || 0 })
+    debug.data('FanService.getFollowedOrgs', 'Response', { orgCount: normalized.length })
     return {
-      data: (data || []) as FanOrgFollow[],
+      data: normalized as FanOrgFollow[],
       error: null,
     }
   } catch (err) {
@@ -172,7 +242,7 @@ export async function bookmarkEvent(eventId: string): Promise<{ data: boolean; e
   debug.perf.start('fanService.bookmarkEvent')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.bookmarkEvent(eventId)
       debug.perf.end('fanService.bookmarkEvent')
       debug.flow('FanService.bookmarkEvent', 'Event bookmarked (fake)', { eventId })
@@ -209,7 +279,7 @@ export async function removeBookmark(eventId: string): Promise<{ data: boolean; 
   debug.perf.start('fanService.removeBookmark')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.removeBookmark(eventId)
       debug.perf.end('fanService.removeBookmark')
       debug.flow('FanService.removeBookmark', 'Bookmark removed (fake)', { eventId })
@@ -245,7 +315,7 @@ export async function getBookmarkedEvents(): Promise<{ data: FanEventBookmark[];
   debug.perf.start('fanService.getBookmarkedEvents')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.getBookmarkedEvents()
       debug.perf.end('fanService.getBookmarkedEvents')
       debug.data('FanService.getBookmarkedEvents', 'Response (fake)', { bookmarkCount: result.data.length })
@@ -293,7 +363,7 @@ export async function getFanCalendar(
   debug.perf.start('fanService.getFanCalendar')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.getFanCalendar(request)
       debug.perf.end('fanService.getFanCalendar')
       debug.data('FanService.getFanCalendar', 'Response (fake)', { eventCount: result.data?.events?.length || 0 })
@@ -308,6 +378,22 @@ export async function getFanCalendar(
         error: new Error(t('portal.fan.errors.authenticationRequired')),
       }
     }
+    const cacheScope = getFanCalendarCacheScope(userId, request)
+    const clientCache = readCalendarCache<GetCalendarResponse>(cacheScope)
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine && clientCache) {
+      debug.perf.end('fanService.getFanCalendar')
+      debug.data('FanService.getFanCalendar', 'Response (offline client cache)', {
+        eventCount: clientCache.data.events.length,
+      })
+      return {
+        data: {
+          ...clientCache.data,
+          from_cache: true,
+        },
+        error: null,
+      }
+    }
 
     // Check cache first (use maybeSingle to avoid error when no rows found)
     const { data: cacheData } = await supabaseAny.from('fan_calendar_cache')
@@ -317,14 +403,16 @@ export async function getFanCalendar(
       .maybeSingle()
 
     if (cacheData) {
+      const cachedResponse: GetCalendarResponse = {
+        events: cacheData.calendar_data.events as CalendarEvent[],
+        generated_at: cacheData.generated_at,
+        from_cache: true,
+      }
+      writeCalendarCache(cacheScope, cachedResponse)
       debug.perf.end('fanService.getFanCalendar')
       debug.data('FanService.getFanCalendar', 'Response (cached)', { eventCount: cacheData.calendar_data.events?.length || 0 })
       return {
-        data: {
-          events: cacheData.calendar_data.events as CalendarEvent[],
-          generated_at: cacheData.generated_at,
-          from_cache: true,
-        },
+        data: cachedResponse,
         error: null,
       }
     }
@@ -342,18 +430,43 @@ export async function getFanCalendar(
     // RPC returns { events: [...], generated_at: ... }
     const rpcResult = data as { events?: unknown[]; generated_at?: string } | null
     const events = Array.isArray(rpcResult?.events) ? rpcResult.events : []
+    const response: GetCalendarResponse = {
+      events: events as CalendarEvent[],
+      generated_at: rpcResult?.generated_at || new Date().toISOString(),
+      from_cache: false,
+    }
+    writeCalendarCache(cacheScope, response)
 
     debug.perf.end('fanService.getFanCalendar')
     debug.data('FanService.getFanCalendar', 'Response', { eventCount: events.length })
     return {
-      data: {
-        events: events as CalendarEvent[],
-        generated_at: rpcResult?.generated_at || new Date().toISOString(),
-        from_cache: false,
-      },
+      data: response,
       error: null,
     }
   } catch (err) {
+    try {
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData.user?.id
+      if (userId) {
+        const fallback = readCalendarCache<GetCalendarResponse>(getFanCalendarCacheScope(userId, request))
+        if (fallback) {
+          debug.perf.end('fanService.getFanCalendar')
+          debug.data('FanService.getFanCalendar', 'Response (stale client cache)', {
+            eventCount: fallback.data.events.length,
+          })
+          return {
+            data: {
+              ...fallback.data,
+              from_cache: true,
+            },
+            error: null,
+          }
+        }
+      }
+    } catch {
+      // Ignore fallback read failures and return the original error below.
+    }
+
     debug.perf.end('fanService.getFanCalendar')
     debug.error('FanService.getFanCalendar', 'Failed to get fan calendar', { error: err, request })
     return {
@@ -378,7 +491,7 @@ export async function transferTicket(
   debug.perf.start('fanService.transferTicket')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.transferTicket(request)
       debug.perf.end('fanService.transferTicket')
       debug.flow('FanService.transferTicket', 'Ticket transferred (fake)', { ticketId: request.ticket_id })
@@ -423,7 +536,7 @@ export async function transferTicket(
 export async function reserveTickets(
   request: ReserveTicketsRequest
 ): Promise<{ data: ReserveTicketsResponse | null; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.reserveTickets(request)
+  if (await shouldUseFakeDataAsync()) return fakeService.reserveTickets(request)
 
   try {
     const expiresAt = new Date()
@@ -472,7 +585,7 @@ export async function getUserPurchases(): Promise<{ data: Purchase[]; error: Err
   debug.perf.start('fanService.getUserPurchases')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.getUserPurchases()
       debug.perf.end('fanService.getUserPurchases')
       debug.data('FanService.getUserPurchases', 'Response (fake)', { purchaseCount: result.data.length })
@@ -524,6 +637,7 @@ export interface FanFeedItem {
   source_entity_type: 'org' | 'team' | 'athlete'
   source_entity_id: string
   source_entity_name: string
+  source_entity_logo_url?: string | null
   created_at: string
   read: boolean
 }
@@ -536,10 +650,79 @@ export async function getFanFeed(): Promise<{ data: FanFeedItem[]; error: Error 
   debug.perf.start('fanService.getFanFeed')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
+      const now = new Date()
+      const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOString()
+      const normalizePastIso = (iso: string | null | undefined, fallbackDaysAgo: number): string => {
+        if (!iso) return daysAgo(fallbackDaysAgo)
+        const parsed = new Date(iso)
+        if (Number.isNaN(parsed.getTime())) return daysAgo(fallbackDaysAgo)
+        if (parsed.getTime() > now.getTime()) return now.toISOString()
+        return parsed.toISOString()
+      }
+      const followsResult = await fakeService.getFollowedOrgs()
+      const followedOrgs = followsResult.data || []
+      const fakeFeed: FanFeedItem[] = []
+
+      followedOrgs.forEach((follow, followIndex) => {
+        const orgId = follow.org_id
+        const org = getOrganizationById(orgId)
+        const orgName = org?.name || follow.org?.name || 'Organization'
+
+        const ticketedEvents = getFakeTicketingEvents(orgId, {
+          page: 1,
+          perPage: 4,
+          fanVisibleOnly: true,
+          sortBy: 'created_at',
+        }).data
+
+        ticketedEvents.slice(0, 2).forEach((event, eventIndex) => {
+          fakeFeed.push({
+            id: `feed-${orgId}-event-${event.id}`,
+            content_type: 'event',
+            content_id: event.id,
+            source_entity_type: 'org',
+            source_entity_id: orgId,
+            source_entity_name: orgName,
+            source_entity_logo_url: org?.logo_url ?? null,
+            created_at: normalizePastIso(event.updated_at || event.created_at, 1 + followIndex + eventIndex),
+            read: eventIndex > 0,
+          })
+        })
+
+        const galleries = getMockGalleriesForOrg(orgId).filter((gallery) => gallery.fans_can_see && (gallery.photo_count || 0) > 0)
+        if (galleries.length > 0) {
+          const gallery = galleries[0]
+          fakeFeed.push({
+            id: `feed-${orgId}-photo-${gallery.id}`,
+            content_type: 'photo',
+            content_id: gallery.id,
+            source_entity_type: 'org',
+            source_entity_id: orgId,
+            source_entity_name: orgName,
+            source_entity_logo_url: org?.logo_url ?? null,
+            created_at: normalizePastIso(gallery.updated_at, 2 + followIndex),
+            read: false,
+          })
+        }
+
+        fakeFeed.push({
+          id: `feed-${orgId}-announcement`,
+          content_type: 'announcement',
+          content_id: `announcement-${orgId}`,
+          source_entity_type: 'org',
+          source_entity_id: orgId,
+          source_entity_name: orgName,
+          source_entity_logo_url: org?.logo_url ?? null,
+          created_at: daysAgo(3 + followIndex),
+          read: followIndex > 0,
+        })
+      })
+
+      fakeFeed.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       debug.perf.end('fanService.getFanFeed')
-      debug.data('FanService.getFanFeed', 'Response (fake)', { itemCount: 0 })
-      return { data: [], error: null }
+      debug.data('FanService.getFanFeed', 'Response (fake)', { itemCount: fakeFeed.length })
+      return { data: fakeFeed, error: null }
     }
     const { data, error } = await supabaseAny.from('fan_feed')
       .select(`
@@ -557,8 +740,32 @@ export async function getFanFeed(): Promise<{ data: FanFeedItem[]; error: Error 
 
     if (error) throw error
 
+    const feedItems = (data || []) as FanFeedItem[]
+    const orgIds = Array.from(
+      new Set(
+        feedItems
+          .filter((item) => item.source_entity_type === 'org')
+          .map((item) => item.source_entity_id),
+      ),
+    )
+
+    let orgLogoById = new Map<string, string | null>()
+    if (orgIds.length > 0) {
+      const followsResult = await getFollowedOrgs()
+      orgLogoById = new Map(
+        (followsResult.data || [])
+          .map((follow) => [follow.org_id, follow.org?.logo_url ?? null]),
+      )
+    }
+
     return {
-      data: (data || []) as FanFeedItem[],
+      data: feedItems.map((item) => ({
+        ...item,
+        source_entity_logo_url:
+          item.source_entity_type === 'org'
+            ? (orgLogoById.get(item.source_entity_id) ?? null)
+            : item.source_entity_logo_url ?? null,
+      })),
       error: null,
     }
   } catch (err) {
@@ -573,7 +780,7 @@ export async function getFanFeed(): Promise<{ data: FanFeedItem[]; error: Error 
  * Mark feed item as read
  */
 export async function markFeedItemRead(feedItemId: string): Promise<{ data: boolean; error: Error | null }> {
-  if (USE_FAKE_DATA) return { data: true, error: null }
+  if (await shouldUseFakeDataAsync()) return { data: true, error: null }
 
   try {
     const { error } = await supabaseAny.from('fan_feed')
@@ -604,6 +811,7 @@ export interface SearchEntityResult {
   id: string
   name: string
   slug?: string
+  parent_org_id?: string
   location_city?: string
   location_state?: string
   parent_org_name?: string
@@ -626,11 +834,12 @@ export async function searchEntities(
   debug.perf.start('fanService.searchEntities')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
+      const result = await fakeService.searchEntities(query, entityTypes, limit)
       debug.perf.end('fanService.searchEntities')
-      debug.data('FanService.searchEntities', 'Response (fake)', { query, resultCount: 0 })
+      debug.data('FanService.searchEntities', 'Response (fake)', { query, resultCount: result.data.length })
       console.groupEnd()
-      return { data: [], error: null }
+      return result
     }
     const { data, error } = await supabaseAny.rpc('search_entities', {
       p_query: query,
@@ -690,6 +899,9 @@ export interface EntityProfile {
   jersey_number?: string
   position?: string
   current_teams?: string[]
+  sports?: string[]
+  org_id?: string
+  org_name?: string
 }
 
 /**
@@ -700,7 +912,7 @@ export async function getOrgProfile(orgId: string): Promise<{ data: EntityProfil
   debug.perf.start('fanService.getOrgProfile')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.getOrgProfile(orgId)
       debug.perf.end('fanService.getOrgProfile')
       debug.data('FanService.getOrgProfile', 'Response (fake)', { orgId, found: !!result.data })
@@ -736,7 +948,7 @@ export async function getOrgProfileBySlug(slug: string): Promise<{ data: EntityP
   debug.perf.start('fanService.getOrgProfileBySlug')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.getOrgProfileBySlug(slug)
       debug.perf.end('fanService.getOrgProfileBySlug')
       debug.data('FanService.getOrgProfileBySlug', 'Response (fake)', { slug, found: !!result.data })
@@ -766,7 +978,7 @@ export async function getOrgProfileBySlug(slug: string): Promise<{ data: EntityP
  * Get team profile
  */
 export async function getTeamProfile(teamId: string): Promise<{ data: EntityProfile | null; error: Error | null }> {
-  if (USE_FAKE_DATA) return fakeService.getTeamProfile(teamId)
+  if (await shouldUseFakeDataAsync()) return fakeService.getTeamProfile(teamId)
 
   try {
     const { data, error } = await supabaseAny.rpc('get_team_profile', {
@@ -799,23 +1011,34 @@ export async function getAthleteProfile(athleteId: string): Promise<{ data: Enti
   debug.perf.start('fanService.getAthleteProfile')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       const result = await fakeService.getAthleteProfile(athleteId)
       debug.perf.end('fanService.getAthleteProfile')
       debug.data('FanService.getAthleteProfile', 'Response (fake)', { athleteId, found: !!result.data })
       return result
     }
-    const { data, error } = await supabaseAny.rpc('get_athlete_profile', {
-      p_athlete_id: athleteId,
-    })
-
-    if (error) throw error
-
-    return {
-      data: data as EntityProfile,
-      error: null,
+    // Prefer v2 fan RPC (supports identity IDs and athlete IDs), then fallback to legacy.
+    const v2Result = await getAthleteProfileV2Fan(athleteId)
+    if (v2Result.data && !v2Result.error) {
+      const payload = v2Result.data as Record<string, unknown>
+      if (!payload.error) {
+        debug.perf.end('fanService.getAthleteProfile')
+        debug.data('FanService.getAthleteProfile', 'Response (v2)', { athleteId, found: true })
+        return {
+          data: payload as unknown as EntityProfile,
+          error: null,
+        }
+      }
     }
+
+    const { data, error } = await supabaseAny.rpc('get_athlete_profile', { p_athlete_id: athleteId })
+    if (error) throw error
+    debug.perf.end('fanService.getAthleteProfile')
+    debug.data('FanService.getAthleteProfile', 'Response (legacy)', { athleteId, found: !!data })
+    return { data: data as EntityProfile, error: null }
   } catch (err) {
+    debug.perf.end('fanService.getAthleteProfile')
+    debug.error('FanService.getAthleteProfile', 'Failed to get athlete profile', { athleteId, error: err })
     return {
       data: null,
       error: err instanceof Error ? err : new Error(t('portal.fan.errors.getEntityProfileFailed')),
@@ -847,7 +1070,7 @@ export interface NotificationPreferences {
  * Get user notification preferences
  */
 export async function getNotificationPreferences(): Promise<{ data: NotificationPreferences | null; error: Error | null }> {
-  if (USE_FAKE_DATA) return { data: null, error: null }
+  if (await shouldUseFakeDataAsync()) return { data: null, error: null }
 
   try {
     const { data, error } = await supabaseAny.from('user_notification_preferences')
@@ -883,7 +1106,7 @@ export async function updateNotificationPreferences(
   debug.perf.start('fanService.updateNotificationPreferences')
 
   try {
-    if (USE_FAKE_DATA) {
+    if (await shouldUseFakeDataAsync()) {
       debug.perf.end('fanService.updateNotificationPreferences')
       debug.flow('FanService.updateNotificationPreferences', 'Preferences updated (fake)')
       console.groupEnd()

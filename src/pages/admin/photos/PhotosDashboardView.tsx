@@ -2,20 +2,18 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Card,
-  StatCard,
   Button,
   InlineNotice,
 } from '@/components/platformAdmin'
+import { TopLevelStats } from '@/components/common/TopLevelStats'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '@/i18n/useI18n'
-import { USE_FAKE_DATA } from '@/data/config'
 import { 
   getGalleriesForUser, 
   checkStorageCap,
   getRecentGalleryActivity,
   type RecentActivityItem 
 } from '@/data/services/galleryService'
-import { getMockGalleriesForOrg } from '@/data/fake/mockGalleries'
 import { getLink } from '@/utils/routes'
 import './PhotosDashboardView.css'
 
@@ -43,15 +41,6 @@ export function PhotosDashboardView() {
     let mounted = true
     const load = async () => {
       if (!context?.orgId) {
-        setLoading(false)
-        return
-      }
-
-      if (USE_FAKE_DATA) {
-        const mockGalleries = getMockGalleriesForOrg(context.orgId)
-        setGalleries(mockGalleries)
-        setRecentActivity([])
-        setStorageInfo({ currentUsage: 0, limit: 10 * 1024 * 1024 * 1024 })
         setLoading(false)
         return
       }
@@ -143,24 +132,29 @@ export function PhotosDashboardView() {
       )}
 
       {/* Overview Cards */}
-      <div className="dashboard-stats-grid">
-        <StatCard 
-          label={t('photos.stats.totalPhotos')} 
-          value={stats.totalPhotos} 
+      <TopLevelStats
+        className="dashboard-stats-grid"
+        ariaLabel="Photos dashboard summary metrics"
+        items={[
+          { id: 'photos', label: t('photos.stats.totalPhotos'), value: stats.totalPhotos },
+          { id: 'recent', label: t('photos.dashboard.recentActivity'), value: stats.recentCount },
+          { id: 'pending', label: t('photos.pendingApproval.adminMessage', { count: stats.pending }), value: stats.pending, tone: stats.pending > 0 ? 'warning' : 'default' },
+          {
+            id: 'storage',
+            label: t('photos.dashboard.storageUsed'),
+            value: storageInfo ? (storageInfo.limit > 0 ? `${formatStorage(storageInfo.currentUsage)} / ${formatStorage(storageInfo.limit)} GB` : `${formatStorage(storageInfo.currentUsage)} GB`) : '0 GB',
+          },
+        ]}
+      />
+
+      {/* Storage Limit Warning */}
+      {storageInfo && storageInfo.limit > 0 && storageInfo.currentUsage >= storageInfo.limit && (
+        <InlineNotice
+          tone="warning"
+          title="Storage Limit Reached"
+          message={`You've reached your photo storage limit of ${formatStorage(storageInfo.limit)} GB. Upgrade your plan or delete photos to add more.`}
         />
-        <StatCard 
-          label={t('photos.dashboard.recentActivity')} 
-          value={stats.recentCount}
-        />
-        <StatCard 
-          label={t('photos.pendingApproval.adminMessage', { count: stats.pending })} 
-          value={stats.pending} 
-        />
-        <StatCard 
-          label={t('photos.dashboard.storageUsed')} 
-          value={storageInfo ? `${formatStorage(storageInfo.currentUsage)} GB` : '0 GB'}
-        />
-      </div>
+      )}
 
       {/* Quick Actions */}
       <div className="dashboard-quick-actions">

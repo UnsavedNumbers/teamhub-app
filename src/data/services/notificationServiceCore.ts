@@ -13,8 +13,10 @@ import { defaultPresentationForAction } from '../../types/notifications'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { shouldDeliverNotificationBatch } from './notificationPreferencesResolver'
 import { mapActionToJobType } from './notificationJobMapper'
-import { isUrgentAction, isInQuietHours } from './notificationDigestHelper'
-import { findGroupForAction } from './notificationPreferencesResolver'
+import { getNotificationTypeIdFromAction } from './notificationTypeMapper'
+import { shouldDeliverNotificationBatchRelational } from './userNotificationPreferencesService'
+import { getActiveEmailTemplate } from './notificationTypesService'
+import { enqueueNotification, generateIdempotencyKey } from './notificationOutboxService'
 
 const supabaseAny = supabase as any
 
@@ -95,8 +97,40 @@ export async function notifyUsers(options: NotifyUsersOptions): Promise<NotifyUs
   }
 
   try {
-    // Resolve preferences for all users in batch
-    const preferencesMap = await shouldDeliverNotificationBatch(userIds, orgId, roleContext, action)
+    // Resolve notification type ID from action
+    const { data: notificationTypeId, error: typeError } = await getNotificationTypeIdFromAction(action)
+    
+    let preferencesMap: Map<string, { inApp: boolean; email: boolean; push?: boolean }>
+    
+    if (typeError || !notificationTypeId) {
+      // Fallback to old JSONB preference system for backward compatibility
+      debug.data('NotificationServiceCore.notifyUsers', 'Using legacy preference system', { action, error: typeError })
+      const oldPreferencesMap = await shouldDeliverNotificationBatch(userIds, orgId, roleContext, action)
+      preferencesMap = new Map()
+      oldPreferencesMap.forEach((channels, userId) => {
+        preferencesMap.set(userId, {
+          inApp: channels.inApp,
+          email: channels.email,
+          push: channels.push,
+        })
+      })
+    } else {
+      // Use new relational preference system
+      const relationalMap = await shouldDeliverNotificationBatchRelational(
+        userIds,
+        orgId,
+        roleContext,
+        notificationTypeId
+      )
+      preferencesMap = new Map()
+      relationalMap.forEach((channels, userId) => {
+        preferencesMap.set(userId, {
+          inApp: channels.inApp,
+          email: channels.email,
+          push: channels.push,
+        })
+      })
+    }
 
     // Separate users by channel
     const inAppUsers: string[] = []
@@ -172,34 +206,104 @@ export async function notifyUsers(options: NotifyUsersOptions): Promise<NotifyUs
       }
     }
 
-    // Enqueue email jobs (respecting digest and quiet hours)
-    if (emailUsers.length > 0) {
-      const jobType = mapActionToJobType(action)
-      const isUrgent = isUrgentAction(action)
-      const groupConfig = findGroupForAction(action)
-      
-      if (jobType && !USE_FAKE_DATA) {
-        // Fetch user emails and preferences
-        const { data: users, error: userError } = await supabase
-          .from('users')
-          .select('id, email, preferences')
-          .in('id', emailUsers)
+    // Enqueue email notifications (using new outbox system)
+    if (emailUsers.length > 0 && !USE_FAKE_DATA) {
+      if (notificationTypeId) {
+        // Use new outbox system
+        const { data: activeTemplate } = await getActiveEmailTemplate(notificationTypeId)
+        
+        if (activeTemplate) {
+          // Fetch user emails
+          const { data: users, error: userError } = await supabase
+            .from('users')
+            .select('id, email')
+            .in('id', emailUsers)
 
-        if (!userError && users) {
-          const immediateJobs: Database['public']['Tables']['notification_jobs']['Insert'][] = []
-          const digestEntries: Array<{
-            user_id: string
-            notification_id: string
-            group_id: string
-            digest_window: 'daily' | 'weekly'
-          }> = []
+          if (!userError && users) {
+            // Get notification type key for idempotency key generation
+            const { data: notificationType, error: typeKeyError } = await supabaseAny
+              .from('notification_types')
+              .select('key')
+              .eq('id', notificationTypeId)
+              .single()
 
-          for (const user of users.filter(u => u.email)) {
-            const channels = preferencesMap.get(user.id)
-            const digestInfo = channels?.digestInfo
+            if (!typeKeyError && notificationType) {
+              const typeKey = (notificationType as { key: string }).key
+              const outboxEntries = []
 
-            // Check if urgent - bypass digest and quiet hours
-            if (isUrgent) {
+              for (const user of users.filter(u => u.email)) {
+                const idempotencyKey = generateIdempotencyKey(
+                  typeKey,
+                  orgId,
+                  user.id,
+                  entityId || null,
+                  undefined
+                )
+
+                const { data: entry, error: enqueueError } = await enqueueNotification({
+                  notificationTypeId,
+                  orgId,
+                  actorUserId: null,
+                  targetUserId: user.id,
+                  channel: 'email',
+                  payload: {
+                    action,
+                    title,
+                    body,
+                    link_url: linkUrl,
+                    entity_type: entityType,
+                    entity_id: entityId,
+                    email: user.email,
+                    ...metadata,
+                  },
+                  templateId: activeTemplate.id,
+                  idempotencyKey,
+                  entityId: entityId || null,
+                  entityType: entityType || null,
+                })
+
+                if (!enqueueError && entry) {
+                  outboxEntries.push(entry)
+                }
+              }
+
+              emailCount = outboxEntries.length
+              debug.flow('NotificationServiceCore.notifyUsers', 'Email notifications enqueued to outbox', {
+                count: outboxEntries.length,
+                action,
+                orgId,
+              })
+            } else {
+              debug.error('NotificationServiceCore.notifyUsers', 'Failed to fetch notification type key', {
+                error: typeKeyError,
+                notificationTypeId,
+              })
+            }
+          } else {
+            debug.error('NotificationServiceCore.notifyUsers', 'Failed to fetch user emails', {
+              error: userError,
+            })
+          }
+        } else {
+          // No active template - skip email delivery
+          debug.data('NotificationServiceCore.notifyUsers', 'Skipping email - no active template', {
+            notificationTypeId,
+            action,
+          })
+        }
+      } else {
+        // Fallback to old notification_jobs system for backward compatibility
+        const jobType = mapActionToJobType(action)
+        if (jobType) {
+          const { data: users, error: userError } = await supabase
+            .from('users')
+            .select('id, email')
+            .in('id', emailUsers)
+
+          if (!userError && users) {
+            const immediateJobs: Database['public']['Tables']['notification_jobs']['Insert'][] = []
+
+            for (const user of users.filter(u => u.email)) {
               immediateJobs.push({
                 org_id: orgId,
                 user_id: user.id,
@@ -215,180 +319,86 @@ export async function notifyUsers(options: NotifyUsersOptions): Promise<NotifyUs
                   ...metadata,
                 } as any,
                 status: 'queued' as const,
-                retry_count: 0,
-                next_retry_at: null,
               } as any)
-              continue
             }
 
-            // Check digest settings
-            if (digestInfo?.shouldDigest && groupConfig) {
-              // Add to digest buffer instead of immediate email
-              const notificationIds = userNotificationMap.get(user.id) || []
-              if (notificationIds.length > 0) {
-                digestEntries.push({
-                  user_id: user.id,
-                  notification_id: notificationIds[0], // Use first notification ID
-                  group_id: groupConfig.id,
-                  digest_window: digestInfo.digestWindow,
-                })
-              }
-              continue
-            }
+            if (immediateJobs.length > 0) {
+              const { error: jobError } = await supabaseAny
+                .from('notification_jobs')
+                .insert(immediateJobs)
 
-            // Check quiet hours
-            if (digestInfo?.quietHoursEnabled) {
-              const inQuietHours = isInQuietHours(
-                digestInfo.quietHoursStart,
-                digestInfo.quietHoursEnd,
-                digestInfo.timezone
-              )
-
-              if (inQuietHours && groupConfig) {
-                // Add to digest buffer during quiet hours
-                const notificationIds = userNotificationMap.get(user.id) || []
-                if (notificationIds.length > 0) {
-                  digestEntries.push({
-                    user_id: user.id,
-                    notification_id: notificationIds[0],
-                    group_id: groupConfig.id,
-                    digest_window: digestInfo.digestWindow || 'daily',
-                  })
-                }
-                continue
-              }
-            }
-
-            // Immediate email (no digest, not in quiet hours)
-            immediateJobs.push({
-              org_id: orgId,
-              user_id: user.id,
-              email: user.email!,
-              type: jobType,
-              payload: {
-                action,
-                title,
-                body,
-                link_url: linkUrl,
-                entity_type: entityType,
-                entity_id: entityId,
-                ...metadata,
-              } as any,
-              status: 'queued' as const,
-            })
-          }
-
-          // Insert immediate jobs
-          if (immediateJobs.length > 0) {
-            const { error: jobError } = await supabaseAny
-              .from('notification_jobs')
-              .insert(immediateJobs)
-
-            if (jobError) {
-              debug.error('NotificationServiceCore.notifyUsers', 'Failed to enqueue email jobs', {
-                error: jobError,
-              })
-            } else {
-              emailCount += immediateJobs.length
-              debug.flow('NotificationServiceCore.notifyUsers', 'Email jobs enqueued', {
-                count: immediateJobs.length,
-                action,
-                orgId,
-              })
-            }
-          }
-
-          // Add to digest buffer
-          if (digestEntries.length > 0) {
-            // Group by user/org/group/role/window for upsert
-            const digestMap = new Map<string, string[]>()
-            for (const entry of digestEntries) {
-              const key = `${entry.user_id}:${orgId}:${entry.group_id}:${roleContext}:${entry.digest_window}:${new Date().toISOString().split('T')[0]}`
-              if (!digestMap.has(key)) {
-                digestMap.set(key, [])
-              }
-              digestMap.get(key)!.push(entry.notification_id)
-            }
-
-            // Upsert digest buffer entries
-            for (const [key, notificationIds] of digestMap.entries()) {
-              const [userId, , groupId, , digestWindow] = key.split(':')
-              const today = new Date().toISOString().split('T')[0]
-              
-              // Check if entry exists for today
-              const { data: existing } = await supabaseAny
-                .from('notification_digest_buffer')
-                .select('id, notification_ids')
-                .eq('user_id', userId)
-                .eq('org_id', orgId)
-                .eq('group_id', groupId)
-                .eq('role_context', roleContext)
-                .eq('digest_window', digestWindow)
-                .eq('created_at::date', today)
-                .is('processed_at', null)
-                .single()
-
-              if (existing) {
-                // Update existing entry - merge notification IDs
-                const mergedIds = Array.from(new Set([...existing.notification_ids, ...notificationIds]))
-                await supabaseAny
-                  .from('notification_digest_buffer')
-                  .update({ notification_ids: mergedIds })
-                  .eq('id', existing.id)
-                  .then(() => {
-                    debug.flow('NotificationServiceCore.notifyUsers', 'Digest buffer updated', {
-                      userId,
-                      groupId,
-                      notificationCount: mergedIds.length,
-                    })
-                  })
-                  .catch((err: any) => {
-                    debug.error('NotificationServiceCore.notifyUsers', 'Failed to update digest buffer', {
-                      error: err,
-                      key,
-                    })
-                  })
-              } else {
-                // Insert new entry
-                await supabaseAny
-                  .from('notification_digest_buffer')
-                  .insert({
-                    user_id: userId,
-                    org_id: orgId,
-                    team_id: teamId || null,
-                    group_id: groupId,
-                    role_context: roleContext,
-                    notification_ids: notificationIds,
-                    digest_window: digestWindow,
-                    created_at: new Date().toISOString(),
-                  })
-                  .then(() => {
-                    debug.flow('NotificationServiceCore.notifyUsers', 'Digest buffer entry created', {
-                      userId,
-                      groupId,
-                      digestWindow,
-                      notificationCount: notificationIds.length,
-                    })
-                  })
-                  .catch((err: any) => {
-                    debug.error('NotificationServiceCore.notifyUsers', 'Failed to add to digest buffer', {
-                      error: err,
-                      key,
-                    })
-                  })
+              if (!jobError) {
+                emailCount = immediateJobs.length
               }
             }
           }
+        } else {
+          // Fake data mode - just count
+          emailCount = emailUsers.length
         }
-      } else if (jobType) {
-        // Fake data mode - just count
-        emailCount = emailUsers.length
       }
+    } else if (emailUsers.length > 0 && USE_FAKE_DATA) {
+      // Fake data mode - just count
+      emailCount = emailUsers.length
     }
 
-    // Push - contract only for now
-    pushCount = pushUsers.length
-    // TODO: Phase 3 - enqueue push jobs when push delivery is implemented
+    // Enqueue push notifications (unified outbox channel)
+    if (pushUsers.length > 0 && !USE_FAKE_DATA && notificationTypeId) {
+      // Get notification type key for idempotency generation
+      const { data: notificationType, error: typeKeyError } = await supabaseAny
+        .from('notification_types')
+        .select('key')
+        .eq('id', notificationTypeId)
+        .single()
+
+      if (!typeKeyError && notificationType) {
+        const typeKey = (notificationType as { key: string }).key
+        const pushEntries = []
+
+        for (const userId of pushUsers) {
+          const idempotencyKey = `${generateIdempotencyKey(
+            typeKey,
+            orgId,
+            userId,
+            entityId || null,
+            undefined
+          )}:push`
+
+          const { data: entry, error: enqueueError } = await enqueueNotification({
+            notificationTypeId,
+            orgId,
+            actorUserId: null,
+            targetUserId: userId,
+            channel: 'push',
+            payload: {
+              action,
+              title,
+              body,
+              link_url: linkUrl,
+              entity_type: entityType,
+              entity_id: entityId,
+              ...metadata,
+            },
+            idempotencyKey,
+            entityId: entityId || null,
+            entityType: entityType || null,
+          })
+
+          if (!enqueueError && entry) {
+            pushEntries.push(entry)
+          }
+        }
+
+        pushCount = pushEntries.length
+      } else {
+        debug.error('NotificationServiceCore.notifyUsers', 'Failed to fetch notification type key for push', {
+          error: typeKeyError,
+          notificationTypeId,
+        })
+      }
+    } else if (pushUsers.length > 0 && USE_FAKE_DATA) {
+      pushCount = pushUsers.length
+    }
 
     debug.perf.end('notificationServiceCore.notifyUsers')
     debug.flow('NotificationServiceCore.notifyUsers', 'Notifications created', {

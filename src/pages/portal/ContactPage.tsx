@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Portal Contact Page
  * 
  * Contact page for portal users (parents/guardians and athletes).
@@ -26,13 +26,13 @@ export default function PortalContactPage() {
         {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">{t('contact.title.portal')}</h1>
-          <p className="text-slate-600 dark:text-slate-400">
+          <p className="text-gray-600 dark:text-gray-400">
             {t('contact.subtitle.portal')}
           </p>
         </div>
 
         {/* Contact Form */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow">
+        <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow">
           <ContactForm
             surface="portal"
             subjects={PORTAL_CONTACT_SUBJECTS}
@@ -46,3 +46,4 @@ export default function PortalContactPage() {
     </PortalLayout>
   )
 }
+

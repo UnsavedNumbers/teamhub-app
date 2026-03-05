@@ -263,7 +263,7 @@ export default function TravelDetailSlideOver({
                             <button
                                 className="oa-btn oa-btn--primary"
                                 onClick={() => {
-                                    navigate(getLink('admin.travel.edit', { id: plan.id }))
+                                    navigate(`/portal/travel/${plan.id}`)
                                 }}
                             >
                                 View Travel Page

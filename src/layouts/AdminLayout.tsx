@@ -9,6 +9,7 @@ import { useOrgAdminTheme } from '../hooks/useOrgAdminTheme'
 import { useOrganizationTheme } from '../hooks/useOrganizationTheme'
 import { useTheme } from '../hooks/useTheme'
 import { useT } from '../i18n/useI18n'
+import type { TranslationKey } from '../i18n'
 import { useSidebar } from '../contexts/SidebarContext'
 import { useScrollLock } from '@/hooks/useScrollLock'
 import { ADMIN_LAYOUT_MOBILE_NAV_QUERY } from '@/config/breakpoints'
@@ -16,8 +17,40 @@ import { getLink, getPath, RouteKeys } from '@/utils/routes'
 import SidebarOrganizationSwitcher from '../components/admin/SidebarOrganizationSwitcher'
 import MobileMenu from '../components/common/MobileMenu'
 import GlobalNav from '../components/common/GlobalNav'
+import { DemoGuideIntegration } from '../components/demo/DemoGuideIntegration'
+import { AppPage } from '../components/shared/AppPage'
 import type { NavSection } from '@/types/menu'
 import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '../lib/supabase'
+import { getReasonIcon } from '@/lib/featureGate'
+import { hasAnyRole } from '@/utils/roleHelpers'
+import { USE_FAKE_DATA } from '../data/config'
+
+function SubOrgBanner({ parentOrgId }: { parentOrgId: string }) {
+  const { data: parentOrg } = useQuery({
+    queryKey: ['parent-org', parentOrgId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', parentOrgId)
+        .maybeSingle()
+      return data
+    },
+  })
+
+  return (
+    <div className="oa-banner oa-banner-info" style={{ backgroundColor: '#e3f2fd', color: '#1976d2', padding: '12px 16px', borderBottom: '1px solid #bbdefb' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', maxWidth: '1200px', margin: '0 auto' }}>
+        <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>info</span>
+        <span style={{ fontSize: '14px', fontWeight: 500 }}>
+          This organization is managed by <strong>{parentOrg?.name || 'Parent Organization'}</strong>. Billing is handled by the parent organization.
+        </span>
+      </div>
+    </div>
+  )
+}
 
 export default function AdminLayout() {
   const { loaded: orgThemeLoaded } = useOrgAdminTheme()
@@ -34,6 +67,10 @@ export default function AdminLayout() {
     typeof window !== 'undefined' ? window.matchMedia(ADMIN_LAYOUT_MOBILE_NAV_QUERY).matches : false
   )
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [featureGateModal, setFeatureGateModal] = useState<{ open: boolean; message: string; reasonCode?: string; featureKey?: string }>({
+    open: false,
+    message: '',
+  })
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -45,6 +82,37 @@ export default function AdminLayout() {
   }, [])
 
   const hasOrg = !!currentOrganization?.id
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
+  const isCoach = hasAnyRole(currentOrganization, ['coach'])
+  const isStaff = hasAnyRole(currentOrganization, ['staff'])
+  
+  // Fetch parent_org_id for current org
+  const { data: orgData } = useQuery({
+    queryKey: ['org-parent-check', currentOrganization?.id],
+    queryFn: async () => {
+      if (!currentOrganization?.id) return null
+      const { data } = await supabase
+        .from('organizations')
+        .select('parent_org_id')
+        .eq('id', currentOrganization.id)
+        .maybeSingle()
+      return data
+    },
+    enabled: !!currentOrganization?.id,
+  })
+  
+  // Check if current org is a sub-org (has parent) or parent (no parent)
+  const isSubOrg = useMemo(() => {
+    return orgData?.parent_org_id != null
+  }, [orgData?.parent_org_id])
+  
+  const isParentOrg = useMemo(() => {
+    // In demo mode, always show Sub Organizations menu item
+    if (USE_FAKE_DATA) {
+      return hasOrg
+    }
+    return hasOrg && !isSubOrg
+  }, [hasOrg, isSubOrg])
 
   const handleMobileSidebarClose = useCallback(() => {
     setMobileSidebarOpen(false)
@@ -73,7 +141,11 @@ export default function AdminLayout() {
         { routeKey: 'admin.levels.list', text: t('admin.navigation.organizationLevels'), icon: 'grade', path: getLink('admin.levels.list'), requiresOrg: true },
         { routeKey: 'admin.teams.list', text: t('admin.navigation.organizationTeams'), icon: 'groups', path: getLink('admin.teams.list'), requiresOrg: true },
         { routeKey: 'admin.seasons.list', text: t('admin.navigation.organizationSeasons'), icon: 'calendar_month', path: getLink('admin.seasons.list'), requiresOrg: true },
-        { routeKey: 'admin.organization.users', text: t('admin.navigation.organizationStaff'), icon: 'person', path: getPath(RouteKeys.ADMIN_ORGANIZATION_USERS), requiresOrg: true },
+        ...(isOrgAdmin ? [
+          { routeKey: 'admin.organization.users', text: t('admin.navigation.organizationStaff'), icon: 'person', path: getPath(RouteKeys.ADMIN_ORGANIZATION_USERS), requiresOrg: true },
+          { routeKey: 'admin.organization.bulkInvite', text: t('admin.navigation.bulkInvites'), icon: 'upload', path: getLink(RouteKeys.ADMIN_ORGANIZATION_BULK_INVITE), requiresOrg: true },
+        ] : []),
+        ...(isParentOrg ? [{ routeKey: 'admin.organization.subOrgs', text: 'Sub-Organizations', icon: 'apartment', path: getLink('admin.organization.subOrgs'), requiresOrg: false }] : []),
       ],
     },
     {
@@ -83,8 +155,10 @@ export default function AdminLayout() {
         requiresOrg: true,
         children: [
             { routeKey: 'admin.athletes.list', text: t('admin.navigation.athletesList'), icon: 'child_care', path: getPath(RouteKeys.ADMIN_ATHLETES), requiresOrg: true },
-            { routeKey: 'admin.guardians.list', text: t('admin.navigation.guardians'), icon: 'home', path: getLink('admin.guardians.list'), requiresOrg: true },
-            { routeKey: 'admin.guardianRequests', text: t('admin.navigation.guardianRequests'), icon: 'person_add', path: getLink('admin.guardianRequests'), requiresOrg: true },
+        ...(isOrgAdmin ? [
+          { routeKey: 'admin.guardians.list', text: t('admin.navigation.guardians'), icon: 'home', path: getLink('admin.guardians.list'), requiresOrg: true },
+          { routeKey: 'admin.guardianRequests', text: t('admin.navigation.guardianRequests'), icon: 'person_add', path: getLink('admin.guardianRequests'), requiresOrg: true },
+        ] : []),
         ],
     },
     {
@@ -105,15 +179,36 @@ export default function AdminLayout() {
       path: getPath(RouteKeys.ADMIN_PAYMENTS),
       requiresOrg: true,
       children: [
-        { routeKey: 'admin.payments.list', text: t('admin.navigation.payments'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_PAYMENTS), requiresOrg: true },
+        ...(isOrgAdmin ? [{ routeKey: 'admin.payments.list', text: t('admin.navigation.payments'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_PAYMENTS), requiresOrg: true }] : []),
         { routeKey: 'admin.events.list', text: t('admin.navigation.events'), icon: 'event', path: getPath(RouteKeys.ADMIN_EVENTS), requiresOrg: true },
+        { routeKey: 'admin.facilities.list', text: t('admin.facilities.title'), icon: 'location_city', path: getLink('admin.facilities.list'), requiresOrg: true },
         { routeKey: 'admin.attendance', text: t('admin.navigation.attendance'), icon: 'how_to_reg', path: getLink('admin.attendance'), requiresOrg: true },
         { routeKey: 'admin.notifications', text: t('admin.navigation.notifications'), icon: 'notifications', path: getLink('admin.notifications'), requiresOrg: true },
+        ...(isOrgAdmin ? [{ routeKey: 'admin.contactRequests.list', text: t('admin.navigation.contactRequests'), icon: 'inbox', path: getLink('admin.contactRequests.list'), requiresOrg: true }] : []),
+        { routeKey: isOrgAdmin ? 'admin.tryouts.list' : 'admin.tryouts.assigned', text: isOrgAdmin ? t('admin.navigation.tryouts' as TranslationKey) : t('admin.navigation.myTryouts' as TranslationKey), icon: 'emoji_events', path: isOrgAdmin ? getLink('admin.tryouts.list') : getLink('admin.tryouts.assigned'), requiresOrg: true },
+        ...(isOrgAdmin ? [{ routeKey: 'admin.tryouts.create', text: t('admin.navigation.createTryout' as TranslationKey), icon: 'add', path: getLink('admin.tryouts.create'), requiresOrg: true }] : []),
+        // Staff can access gate scanning
+        ...(isStaff && !isOrgAdmin ? [
+          { routeKey: 'admin.ticketingScanner', text: t('admin.navigation.gateEntry'), icon: 'qr_code_scanner', path: getLink('admin.ticketingScanner'), requiresOrg: true },
+        ] : []),
         { routeKey: 'admin.announcements.list', text: t('admin.navigation.announcements'), icon: 'campaign', path: getPath(RouteKeys.ADMIN_ANNOUNCEMENTS), requiresOrg: true },
         { routeKey: 'admin.travel.list', text: t('admin.navigation.travel'), icon: 'flight', path: getLink('admin.travel.list'), requiresOrg: true },
         { routeKey: 'admin.uniforms.list', text: t('admin.navigation.uniforms'), icon: 'checkroom', path: getPath(RouteKeys.ADMIN_UNIFORMS), requiresOrg: true },
       ],
     },
+    ...(isOrgAdmin ? [{
+      label: t('admin.navigation.reporting'),
+      icon: 'analytics',
+      path: getLink('admin.reports.overview'),
+      requiresOrg: true,
+      children: [
+        { routeKey: 'admin.reports.overview', text: t('admin.navigation.reportsOverview'), icon: 'dashboard', path: getLink('admin.reports.overview'), requiresOrg: true },
+        { routeKey: 'admin.reports.builder', text: t('admin.navigation.reportBuilder'), icon: 'build', path: getLink('admin.reports.builder'), requiresOrg: true },
+        { routeKey: 'admin.reports.saved', text: t('admin.navigation.savedReports'), icon: 'bookmark', path: getLink('admin.reports.saved'), requiresOrg: true },
+        { routeKey: 'admin.reports.exports', text: t('admin.navigation.exportHistory'), icon: 'download', path: getLink('admin.reports.exports'), requiresOrg: true },
+        { routeKey: 'admin.reports.schedules', text: t('admin.navigation.scheduledReports'), icon: 'schedule', path: getLink('admin.reports.schedules'), requiresOrg: true },
+      ],
+    }] : []),
     {
       label: t('admin.navigation.photos'),
       icon: 'photo_library',
@@ -140,13 +235,13 @@ export default function AdminLayout() {
       path: getPath(RouteKeys.ADMIN_SETTINGS),
       requiresOrg: false,
       children: [
-        { routeKey: 'admin.organization.billing', text: t('admin.navigation.billing'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING), requiresOrg: false },
+        ...(isOrgAdmin && !isSubOrg ? [{ routeKey: 'admin.organization.billing', text: t('admin.navigation.billing'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING), requiresOrg: false }] : []),
         { routeKey: 'admin.settings', text: t('admin.navigation.settings'), icon: 'settings', path: getPath(RouteKeys.ADMIN_SETTINGS), requiresOrg: false },
         { routeKey: 'admin.help', text: t('admin.navigation.helpSupport'), icon: 'help', path: getLink('admin.help'), requiresOrg: false },
         { routeKey: 'admin.contact', text: t('admin.navigation.contactSupport'), icon: 'mail', path: getLink('admin.contact'), requiresOrg: false },
       ],
     },
-  ], [t])
+  ], [t, isOrgAdmin, isCoach, isStaff, isParentOrg, isSubOrg])
 
   // Convert to NavigationSection format for feature gate filtering
   const navSections = useMemo(() => {
@@ -185,7 +280,7 @@ export default function AdminLayout() {
   // Convert filtered sections back to menu item format
   const menuItems = useMemo(() => {
     return filteredSections.map((section, index) => {
-      const originalItem = rawMenuItems[index]
+      const originalItem = rawMenuItems.find((item) => item.label === section.label) ?? rawMenuItems[index]
       if (!section.groups[0]?.items.length) return null
 
       const firstItem = section.groups[0].items[0]
@@ -201,12 +296,20 @@ export default function AdminLayout() {
               icon: item.icon,
               path: item.path ?? '',
               requiresOrg: originalItem.requiresOrg,
-              disabled: item.disabled || (item as any).isGated,
+              disabled: item.disabled || ((item as any).isGated && (item as any).gateAction === 'disable'),
               gateMessage: (item as any).gateMessage,
+              gateAction: (item as any).gateAction,
+              isGated: (item as any).isGated,
+              reasonCode: (item as any).reasonCode,
+              featureKey: (item as any).featureKey,
             }))
           : null,
-        disabled: firstItem.disabled || (firstItem as any).isGated,
+        disabled: firstItem.disabled || ((firstItem as any).isGated && (firstItem as any).gateAction === 'disable'),
         gateMessage: (firstItem as any).gateMessage,
+        gateAction: (firstItem as any).gateAction,
+        isGated: (firstItem as any).isGated,
+        reasonCode: (firstItem as any).reasonCode,
+        featureKey: (firstItem as any).featureKey,
       }
     }).filter(Boolean) as any[]
   }, [filteredSections, rawMenuItems])
@@ -219,6 +322,7 @@ export default function AdminLayout() {
   }
 
   const adminDashboardPath = getPath(RouteKeys.ADMIN_DASHBOARD)
+  const isPaywallRoute = location.pathname === getPath(RouteKeys.ADMIN_FEATURE_UPGRADE)
   const isActive = (path: string) => {
     if (path === adminDashboardPath) {
       return location.pathname === adminDashboardPath
@@ -242,13 +346,14 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="oa-root oa-app oa-theme-active">
+    <AppPage className="oa-root oa-app oa-theme-active">
       {/* Mobile header - shown when viewport ≤1023px (matches CSS) */}
       {showMobileNav && (
         <header className="oa-mobile-header">
           <Link to={getLink(RouteKeys.ADMIN_DASHBOARD)} className="oa-mobile-brand">
-            <img 
-              src={resolvedTheme === 'dark' ? '/images/logo-light.png' : '/images/logo-dark.png'} 
+            <img
+              key={resolvedTheme}
+              src={resolvedTheme === 'dark' ? '/images/logo-dark.png' : '/images/logo-light.png'}
               alt={currentOrganization?.name || 'Organization'}
               className="oa-mobile-logo"
               style={{ height: '28px', width: 'auto' }}
@@ -271,16 +376,7 @@ export default function AdminLayout() {
       {/* Sidebar - hidden when viewport ≤1023px */}
       {!showMobileNav && (
         <aside className="oa-sidebar">
-        {/* Brand */}
         <div className="oa-sidebar-header">
-          <Link to={getLink(RouteKeys.ADMIN_DASHBOARD)} className="oa-sidebar-brand">
-            <img 
-              src={resolvedTheme === 'dark' ? '/images/logo-light.png' : '/images/logo-dark.png'} 
-              alt="Youth Sports" 
-              className="oa-sidebar-logo-img"
-              style={{ height: '32px', width: 'auto' }}
-            />
-          </Link>
           <SidebarOrganizationSwitcher />
         </div>
 
@@ -295,13 +391,16 @@ export default function AdminLayout() {
 
             // If item has no children, render as direct link
             if (!hasChildren) {
-              if (isDisabled) {
+              const isGatedDisabled = item.isGated && item.gateAction === 'disable'
+              const isGatedModal = item.isGated && item.gateAction === 'modal'
+              
+              if (isDisabled || isGatedDisabled) {
                 return (
                   <div key={item.label} className="oa-nav-item-top">
                     <div
                       className="oa-nav-link-top"
                       style={{ opacity: 0.4, cursor: 'not-allowed' }}
-                      title={t('admin.navigation.requiresOrganizationSetup')}
+                      title={item.gateMessage || t('admin.navigation.requiresOrganizationSetup')}
                     >
                       <span className="material-symbols-outlined">{item.icon}</span>
                       <span>{item.label}</span>
@@ -313,6 +412,30 @@ export default function AdminLayout() {
               // Dashboard should never show as active (always white like unselected items)
               const isDashboard = item.label === t('admin.navigation.dashboard')
               const shouldShowActive = !isDashboard && active
+
+              // Handle modal gate action
+              if (isGatedModal) {
+                return (
+                  <div key={item.label} className="oa-nav-item-top">
+                    <div
+                      className={`oa-nav-link-top ${shouldShowActive ? 'active' : ''} ${isDashboard ? 'oa-nav-dashboard' : ''}`}
+                      onClick={() => {
+                        setFeatureGateModal({
+                          open: true,
+                          message: item.gateMessage || 'This feature is not available',
+                          reasonCode: item.reasonCode,
+                          featureKey: item.featureKey,
+                        })
+                      }}
+                      style={{ cursor: 'pointer' }}
+                      title={item.gateMessage}
+                    >
+                      <span className="material-symbols-outlined">{item.icon}</span>
+                      <span>{item.label}</span>
+                    </div>
+                  </div>
+                )
+              }
 
               return (
                 <div key={item.label} className="oa-nav-item-top">
@@ -350,8 +473,26 @@ export default function AdminLayout() {
                 {isExpanded && visibleChildren.length > 0 && (
                   <ul className="oa-nav-list">
                     {children.map((child: any) => {
-                      const childDisabled = child.requiresOrg && !hasOrg
+                      // Only disable if explicitly disabled OR gate action is 'disable'
+                      // For 'modal' actions, keep clickable but intercept click
+                      const isOrgDisabled = child.requiresOrg && !hasOrg
+                      const childDisabled = isOrgDisabled || child.disabled
+                      const isModalAction = child.isGated && child.gateAction === 'modal'
                       const childActive = isActiveExact(child.path ?? '')
+                      const disabledTitle = child.gateMessage || (child.requiresOrg && !hasOrg ? t('admin.navigation.requiresOrganizationSetup') : undefined)
+
+                      const handleClick = (e: React.MouseEvent) => {
+                        if (isModalAction) {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setFeatureGateModal({
+                            open: true,
+                            message: child.gateMessage || 'This feature is not available',
+                            reasonCode: (child as any).reasonCode,
+                            featureKey: (child as any).featureKey,
+                          })
+                        }
+                      }
 
                       if (childDisabled) {
                         return (
@@ -359,7 +500,24 @@ export default function AdminLayout() {
                             <div
                               className="oa-nav-link"
                               style={{ opacity: 0.4, cursor: 'not-allowed' }}
-                              title={t('admin.navigation.requiresOrganizationSetup')}
+                              title={disabledTitle}
+                            >
+                              <span className="material-symbols-outlined">{child.icon}</span>
+                              <span>{child.text}</span>
+                            </div>
+                          </li>
+                        )
+                      }
+
+                      // For modal actions, render as clickable but intercept
+                      if (isModalAction) {
+                        return (
+                          <li key={child.path ?? child.text} className="oa-nav-item">
+                            <div
+                              className={`oa-nav-link ${childActive ? 'active' : ''}`}
+                              onClick={handleClick}
+                              style={{ cursor: 'pointer' }}
+                              title={child.gateMessage}
                             >
                               <span className="material-symbols-outlined">{child.icon}</span>
                               <span>{child.text}</span>
@@ -409,18 +567,26 @@ export default function AdminLayout() {
       )}
 
       {/* Main */}
-      <div className="oa-main">
-        {/* Global Navigation Header */}
-        <GlobalNav variant="admin" />
+      <div className="oa-main min-w-0">
+        {/* Global Navigation Header - Hidden on paywall route */}
+        {!isPaywallRoute && <GlobalNav variant="admin" />}
 
-        {/* License Warning Banner */}
-        {summary && <LicenseWarningBanner summary={summary} />}
+        {/* License Warning Banner - Hidden on paywall route */}
+        {!isPaywallRoute && summary && <LicenseWarningBanner summary={summary} />}
+
+        {/* Sub-Org Banner */}
+        {isSubOrg && orgData?.parent_org_id && (
+          <SubOrgBanner parentOrgId={orgData.parent_org_id} />
+        )}
 
         {/* Content */}
-        <main className="oa-content">
+        <main className="oa-content min-w-0" data-testid="app-shell">
           <Outlet />
         </main>
       </div>
+
+      {/* Demo Guide Integration */}
+      <DemoGuideIntegration />
 
       {/* Mobile sidebar drawer */}
       {showMobileNav && (
@@ -432,7 +598,74 @@ export default function AdminLayout() {
           brandSubtitle="Admin Portal"
         />
       )}
-    </div>
+
+      {/* Feature Gate Modal */}
+      {featureGateModal.open && (() => {
+        const featureKey = featureGateModal.featureKey || 'default'
+        const isAdmin = currentOrganization ? hasAnyRole(currentOrganization, ['org_admin']) : false
+        const getFeatureTranslation = (key: string, fallbackKey: string) => {
+          const translationKey = `featureUpgrade.${featureKey}.${key}` as any
+          const fallback = `featureUpgrade.default.${fallbackKey}` as any
+          const translation = t(translationKey)
+          if (translation === translationKey) {
+            return t(fallback)
+          }
+          return translation
+        }
+        const modalTitle = getFeatureTranslation('statusTitle', 'statusTitle')
+        const modalMessage = isAdmin 
+          ? getFeatureTranslation('statusDescriptionAdmin', 'statusDescriptionAdmin')
+          : getFeatureTranslation('statusDescriptionNonAdmin', 'statusDescriptionNonAdmin')
+        
+        return (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={() => setFeatureGateModal({ open: false, message: '' })}
+          >
+            <div 
+              className="oa-card"
+              style={{ maxWidth: '500px', width: '90%' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="text-center">
+                <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--pa-warning)', marginBottom: '16px', display: 'block' }}>
+                  {featureGateModal.reasonCode ? getReasonIcon(featureGateModal.reasonCode as any) : 'lock'}
+                </span>
+                <h3 className="oa-h3 oa-mb-2">{modalTitle}</h3>
+                <p className="oa-body-m oa-text-muted oa-mb-6">
+                  {modalMessage}
+                </p>
+                <div className="oa-flex oa-flex-col oa-items-center oa-gap-4">
+                  <a
+                    href={`${getLink(RouteKeys.ADMIN_FEATURE_UPGRADE)}?referrer=${encodeURIComponent(featureKey)}`}
+                    className="oa-btn oa-btn--primary"
+                    onClick={() => setFeatureGateModal({ open: false, message: '' })}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px', marginRight: '8px' }}>workspace_premium</span>
+                    {t('common.seeMyOptions')}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setFeatureGateModal({ open: false, message: '' })}
+                    className="oa-body-s"
+                    style={{ 
+                      background: 'none', 
+                      border: 'none', 
+                      color: 'var(--org-text-secondary)', 
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      padding: 0
+                    }}
+                  >
+                    {t('common.noThanks')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+    </AppPage>
   )
 }
 

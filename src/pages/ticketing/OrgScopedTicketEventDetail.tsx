@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   createCheckoutSession,
@@ -23,6 +23,8 @@ import { useOffline } from '@/hooks/useOffline'
 import SeatSelector from '@/components/ticketing/SeatSelector'
 import { validateAdjacentSeats } from '@/utils/ticketingHelpers'
 import { useT } from '@/i18n/useI18n'
+import { resolveTicketCheckoutRole } from '@/utils/ticketCheckoutRole'
+import { useOptionalAuth } from '@/hooks/useAuth'
 
 interface CartItem {
   ticket_type_id: string
@@ -40,6 +42,8 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
   
   const t = useT()
   const { eventId, orgSlug } = useParams<{ eventId: string; orgSlug: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const auth = useOptionalAuth()
   const { isOffline } = useOffline()
   const [cart, setCart] = useState<CartItem[]>([])
   const [purchaserEmail, setPurchaserEmail] = useState('')
@@ -213,6 +217,21 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
 
   const emailIsValid = EMAIL_REGEX.test(purchaserEmail.trim())
   const emailError = emailTouched && !emailIsValid ? 'Enter a valid email address.' : null
+  const profileRoles = useMemo(
+    () => auth?.profile?.organizations?.flatMap((organization) => organization.roles ?? []) ?? [],
+    [auth?.profile?.organizations],
+  )
+  const checkoutRole = resolveTicketCheckoutRole(searchParams.get('role'), {
+    profileRoles,
+    fallbackRole: 'guardian',
+  })
+
+  useEffect(() => {
+    if (searchParams.get('role')) return
+    const next = new URLSearchParams(searchParams)
+    next.set('role', checkoutRole)
+    setSearchParams(next, { replace: true })
+  }, [searchParams, checkoutRole, setSearchParams])
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
@@ -255,6 +274,7 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
           quantity: item.quantity,
         })),
         purchaser_email: trimmedEmail,
+        purchaser_role: checkoutRole,
         org_slug: orgSlug,
         seat_selections: cart
           .filter((item) => item.ticketType.seating_mode === 'reserved_seating')
@@ -401,7 +421,7 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
             <div className="flex flex-col items-start md:flex-row md:items-center gap-4 md:gap-6 w-full md:w-auto">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>calendar_month</span>
-                <span className="text-sm font-medium text-[#617589] dark:text-gray-400 whitespace-nowrap">{dateFormatted}</span>
+                <span className="text-sm font-medium text-[#617589] dark:text-gray-400 whitespace-normal break-words leading-5 md:whitespace-nowrap">{dateFormatted}</span>
               </div>
               <div className="flex items-center gap-2 min-w-0">
                 <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>location_on</span>
@@ -411,7 +431,7 @@ function TicketEventDetailContent({ org }: { org: OrgContext }) {
               </div>
               <div className="flex items-center gap-2 min-w-0">
                 <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]" style={{ color: 'var(--org-btn-primary-bg)' }}>schedule</span>
-                <span className="text-sm font-medium text-[#617589] dark:text-gray-400 whitespace-nowrap">Doors open at {timeFormatted}</span>
+                <span className="text-sm font-medium text-[#617589] dark:text-gray-400 whitespace-normal break-words leading-5 md:whitespace-nowrap">Doors open at {timeFormatted}</span>
               </div>
             </div>
           </div>

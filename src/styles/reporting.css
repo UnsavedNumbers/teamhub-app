@@ -1,0 +1,386 @@
+/**
+ * Reporting Layout Styles
+ *
+ * Styles for the reporting dashboard layout, sidebar navigation, and components.
+ * Designed for scalability, maintainability, and a minimal but "wow" aesthetic.
+ */
+
+/* ============================================================================
+   Layout Structure
+   ============================================================================ */
+
+.reporting-layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--pa-surface-subtle, #f7f9fc);
+}
+
+html.dark .reporting-layout {
+  background: var(--pa-surface-subtle, #000000);
+}
+
+.reporting-sidebar {
+  width: 280px;
+  background: var(--pa-surface, #ffffff);
+  border-right: 1px solid var(--pa-n100, #e2e8f0);
+  border-left: none; /* No left border - directly adjacent to admin sidebar */
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 280px; /* Position directly adjacent to admin sidebar */
+  bottom: 0;
+  height: 100vh;
+  overflow-y: auto;
+  flex-shrink: 0;
+  z-index: 99; /* Just below admin sidebar (z-index: 100) */
+}
+
+html.dark .reporting-sidebar {
+  background: var(--pa-surface, #0a0a0a);
+  border-right-color: var(--pa-border-default, #1a1a1a);
+}
+
+.reporting-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  margin-left: 280px; /* Account for reporting sidebar */
+}
+
+/* ============================================================================
+   Sidebar Header
+   ============================================================================ */
+
+.reporting-sidebar-header {
+  padding: 24px 20px;
+  border-bottom: 1px solid var(--pa-n100, #e2e8f0);
+}
+
+html.dark .reporting-sidebar-header {
+  border-bottom-color: var(--pa-border-default, #1a1a1a);
+}
+
+.reporting-sidebar-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--pa-n900, #0b0f14);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+html.dark .reporting-sidebar-title {
+  color: var(--pa-text-primary, #ffffff);
+}
+
+/* ============================================================================
+   Sidebar Navigation
+   ============================================================================ */
+
+.reporting-sidebar-nav {
+  flex: 1;
+  padding: 12px 8px;
+  overflow-y: auto;
+}
+
+.reporting-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.reporting-nav-item {
+  margin-bottom: 4px;
+}
+
+.reporting-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: var(--pa-n500, #6b7280);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+html.dark .reporting-nav-link {
+  color: var(--pa-text-secondary, #d1d5db);
+}
+
+.reporting-nav-link:hover {
+  background: var(--pa-n50, #f9fafb);
+  color: var(--pa-n900, #0b0f14);
+}
+
+html.dark .reporting-nav-link:hover {
+  background: var(--pa-bg-hover, #1a1a1a);
+  color: var(--pa-text-primary, #ffffff);
+}
+
+.reporting-nav-link.active {
+  background: var(--org-btn-primary-bg, var(--org-color-primary, #3b82f6));
+  color: var(--org-btn-primary-text, #ffffff);
+}
+
+html.dark .reporting-nav-link.active {
+  background: var(--org-btn-primary-bg, var(--org-color-primary, #3b82f6));
+  color: var(--org-btn-primary-text, #ffffff);
+}
+
+.reporting-nav-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: var(--org-btn-primary-bg, var(--org-color-primary, #3b82f6));
+  border-radius: 0 2px 2px 0;
+}
+
+.reporting-nav-link .material-symbols-outlined {
+  font-size: 20px;
+  opacity: 0.8;
+}
+
+.reporting-nav-link.active .material-symbols-outlined {
+  opacity: 1;
+}
+
+.reporting-nav-text {
+  flex: 1;
+}
+
+/* ============================================================================
+   Main Content Area
+   ============================================================================ */
+
+.reporting-content {
+  flex: 1;
+  padding: 32px;
+  max-width: 1800px;
+  margin: 0 auto;
+  width: 100%;
+  background: var(--pa-surface-subtle, #f7f9fc);
+}
+
+html.dark .reporting-content {
+  background: var(--pa-surface-subtle, #000000);
+}
+
+/* ============================================================================
+   Metric Cards
+   ============================================================================ */
+
+.reporting-metric-card {
+  background: var(--org-surface-card, #ffffff);
+  border: 1px solid var(--org-border-default, #e2e8f0);
+  border-left: 8px solid var(--org-btn-primary-bg, #137fec);
+  border-radius: 0;
+  padding: 24px;
+  box-shadow: 0 18px 40px -20px rgba(15, 23, 42, 0.25);
+  transition: all 0.2s ease;
+}
+
+.reporting-metric-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.reporting-metric-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.reporting-metric-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--org-text-secondary, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+html.dark .reporting-metric-card-title {
+  color: var(--pa-text-secondary, #d1d5db);
+}
+
+.reporting-metric-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.reporting-metric-card-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--org-text-primary, #0b0f14);
+  margin: 8px 0;
+  line-height: 1.2;
+}
+
+html.dark .reporting-metric-card-value {
+  color: var(--pa-text-primary, #ffffff);
+}
+
+.reporting-metric-card-label {
+  font-size: 14px;
+  color: var(--org-text-secondary, #6b7280);
+  margin: 0;
+}
+
+html.dark .reporting-metric-card-label {
+  color: var(--pa-text-secondary, #d1d5db);
+}
+
+.reporting-metric-card-trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.reporting-metric-card-trend.positive {
+  color: var(--org-status-success, #10b981);
+}
+
+.reporting-metric-card-trend.negative {
+  color: var(--org-status-error, #ef4444);
+}
+
+/* ============================================================================
+   Section Cards
+   ============================================================================ */
+
+.reporting-section-card {
+  background: var(--pa-surface, #ffffff);
+  border: 1px solid var(--org-border-default, #e2e8f0);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 32px;
+}
+
+html.dark .reporting-section-card {
+  background: var(--pa-surface, #0a0a0a);
+  border: none;
+}
+
+.reporting-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.reporting-section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--org-text-primary, #0b0f14);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+html.dark .reporting-section-title {
+  color: var(--pa-text-primary, #ffffff);
+}
+
+.reporting-section-icon {
+  font-size: 24px;
+}
+
+/* ============================================================================
+   Grid Layouts
+   ============================================================================ */
+
+.reporting-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.reporting-grid-auto {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.reporting-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.reporting-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.reporting-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* ============================================================================
+   Responsive Design
+   ============================================================================ */
+
+@media (max-width: 1023px) {
+  .reporting-sidebar {
+    display: none; /* Hide reporting sidebar on mobile - admin sidebar handles navigation */
+  }
+
+  .reporting-main {
+    margin-left: 0; /* Remove margin when sidebar is hidden */
+  }
+
+  .reporting-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .reporting-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .reporting-content {
+    padding: 20px;
+  }
+
+  .reporting-grid-2,
+  .reporting-grid-3,
+  .reporting-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================================
+   Dark Mode Support
+   ============================================================================ */
+
+/* Dark mode styles are defined above with the component styles */
+
+html.dark .empty-state-icon {
+  background: var(--pa-surface, #0a0a0a);
+}
+
+html.dark .empty-state-icon .material-symbols-outlined {
+  color: var(--pa-text-secondary, #d1d5db);
+}
+
+/* Reporting Overview Tiles - No borders in dark mode */
+html.dark .reporting-overview-tile {
+  border: none !important;
+}
+
+html.dark .reporting-overview-tile:hover {
+  border: none !important;
+}

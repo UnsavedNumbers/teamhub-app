@@ -1,12 +1,11 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { LicensePlan } from '../utils/licenseUtils'
 import { t } from '../i18n'
 import { USE_FAKE_DATA, DEMO_TRANSACTION_DELAY_MS } from '../data/config'
 import { getFakeTicketOrdersWithRelations } from '../data/fake/ticketingFakeService'
 
 interface CheckoutSessionParams {
   organizationId: string
-  requestedPlan: LicensePlan
+  tierId: string
   successUrl: string
   cancelUrl: string
 }
@@ -14,6 +13,24 @@ interface CheckoutSessionParams {
 interface PortalSessionParams {
   organizationId: string
   returnUrl: string
+}
+
+interface UpgradeLicenseParams {
+  organizationId: string
+  targetTierId: string
+  returnUrl?: string
+  allowDowngrade?: boolean
+}
+
+export interface UpgradeLicenseResponse {
+  success: boolean
+  new_tier_id?: string
+  stripe_subscription_id?: string
+  stripe_invoice_id?: string
+  payment_action_required?: boolean
+  client_secret?: string
+  message: string
+  audit_log_id?: string
 }
 
 export interface BillingEvent {
@@ -105,8 +122,8 @@ export async function createCheckoutSession(params: CheckoutSessionParams) {
     ensureConfigured()
   }
 
-  const { organizationId, requestedPlan, successUrl, cancelUrl } = params
-  if (!organizationId || !requestedPlan || !successUrl || !cancelUrl) {
+  const { organizationId, tierId, successUrl, cancelUrl } = params
+  if (!organizationId || !tierId || !successUrl || !cancelUrl) {
     throw new Error(t('errors.missingOrganization'))
   }
 
@@ -118,7 +135,7 @@ export async function createCheckoutSession(params: CheckoutSessionParams) {
   const { data, error } = await supabase.functions.invoke('billing-create-checkout-session', {
     body: {
       organization_id: organizationId,
-      requested_plan: requestedPlan,
+      tier_id: tierId,
       success_url: successUrl,
       cancel_url: cancelUrl,
     },
@@ -217,4 +234,42 @@ export async function getBillingHistory(organizationId: string): Promise<Billing
         description,
       } as BillingEvent
     })
+}
+
+export async function upgradeOrgLicense(
+  params: UpgradeLicenseParams,
+): Promise<UpgradeLicenseResponse> {
+  if (!USE_FAKE_DATA) {
+    ensureConfigured()
+  }
+
+  const { organizationId, targetTierId, returnUrl, allowDowngrade } = params
+  if (!organizationId || !targetTierId) {
+    throw new Error(t('errors.missingOrganization'))
+  }
+
+  if (USE_FAKE_DATA) {
+    await new Promise((r) => setTimeout(r, DEMO_TRANSACTION_DELAY_MS))
+    return {
+      success: true,
+      message: 'Upgrade completed successfully',
+      new_tier_id: targetTierId,
+      stripe_subscription_id: `demo_sub_${organizationId}`,
+    }
+  }
+
+  const { data, error } = await supabase.functions.invoke('upgrade-org-license', {
+    body: {
+      org_id: organizationId,
+      target_tier_id: targetTierId,
+      return_url: returnUrl,
+      allow_downgrade: allowDowngrade ?? false,
+    },
+  })
+
+  if (error) {
+    throw new Error(error.message || 'Failed to upgrade license')
+  }
+
+  return data as UpgradeLicenseResponse
 }

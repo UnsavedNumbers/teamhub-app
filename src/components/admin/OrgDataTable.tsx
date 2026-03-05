@@ -253,6 +253,7 @@ export default function OrgDataTable<T extends { id: string }>({
               return (
                 <tr
                   key={row.id}
+                  data-testid={`${(row as any).__entityType || 'row'}-row`}
                   className={cn(
                     {
                       'oa-clickable': !!onRowClick,

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Admin Athletes Page
  *
  * Lists all athletes in the organization with filtering and view options.
@@ -9,17 +9,22 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
-import { supabase } from '../../lib/supabase'
 import { getLink } from '../../utils/routes'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
-import { ConfirmDialog, AdminPageHeader, EmptyState } from '../../components/admin'
+import { ConfirmDialog, AdminPageHeader, Card } from '../../components/admin'
 import AthletesHeader from '../../components/admin/AthletesHeader'
 import AthletesFilters, { type AthletesFilters as AthletesFiltersType } from '../../components/admin/AthletesFilters'
 import AthletesGrid, { type AthleteCardData } from '../../components/admin/AthletesGrid'
 import BulkActionsBar from '../../components/admin/BulkActionsBar'
 import * as athletesListService from '../../data/services/athletesListService'
+import { getSports } from '../../data/services/sportsService'
+import { getTeams } from '../../data/services/teamsService'
+import { getPrograms } from '../../data/services/sportsService'
+import { getLevels } from '../../data/services/levelsService'
+import { getSeasons } from '../../data/services/seasonsService'
 import type { AthleteViewMode } from '../../components/admin/AthletesHeader'
+import '../../styles/orgAdmin.css'
 
 interface Team {
     id: string
@@ -98,60 +103,37 @@ export default function AdminAthletes() {
 
         const loadFilterData = async () => {
             try {
-                // Load sports - filtered by org (via teams)
-                const { data: sportsData } = await supabase
-                    .from('sports')
-                    .select('id, name')
-                    .order('name')
+                // Use existing services that handle fake data
+                const [sportsResult, teamsResult, programsResult, levelsResult, seasonsResult] = await Promise.all([
+                    getSports(context),
+                    getTeams(context, {}),
+                    getPrograms(context),
+                    getLevels(context),
+                    getSeasons(context, {}),
+                ])
 
-                // Filter sports to only show those used by teams in this org
-                const { data: orgTeams } = await supabase
-                    .from('teams')
-                    .select('sport_id')
-                    .eq('org_id', context.orgId)
-
-                const orgSportIds = new Set(orgTeams?.map(t => t.sport_id).filter(Boolean) || [])
-                const orgSports = sportsData?.filter(s => orgSportIds.has(s.id)) || []
-                if (orgSports.length > 0) setSports(orgSports)
-
-                // Load teams
-                const { data: teamsData } = await supabase
-                    .from('teams')
-                    .select('id, name')
-                    .eq('org_id', context.orgId)
-                    .order('name')
-                if (teamsData) setTeams(teamsData)
-
-                // Load programs
-                const { data: programsData } = await supabase
-                    .from('programs')
-                    .select('id, name')
-                    .eq('org_id', context.orgId)
-                    .order('name')
-                if (programsData) setPrograms(programsData)
-
-                // Load levels
-                const { data: levelsData } = await supabase
-                    .from('levels')
-                    .select('id, name')
-                    .eq('org_id', context.orgId)
-                    .order('name')
-                if (levelsData) setLevels(levelsData)
-
-                // Load seasons
-                const { data: seasonsData } = await supabase
-                    .from('seasons')
-                    .select('id, name')
-                    .eq('org_id', context.orgId)
-                    .order('name')
-                if (seasonsData) setSeasons(seasonsData)
+                if (sportsResult.data) {
+                    setSports(sportsResult.data.map(s => ({ id: s.id, name: s.name })))
+                }
+                if (teamsResult.data) {
+                    setTeams(teamsResult.data.map(t => ({ id: t.id, name: t.name })))
+                }
+                if (programsResult.data) {
+                    setPrograms(programsResult.data.map(p => ({ id: p.id, name: p.name })))
+                }
+                if (levelsResult.data) {
+                    setLevels(levelsResult.data.map(l => ({ id: l.id, name: l.name })))
+                }
+                if (seasonsResult.data) {
+                    setSeasons(seasonsResult.data.map(s => ({ id: s.id, name: s.name })))
+                }
             } catch (err) {
                 console.error('Error loading filter data:', err)
             }
         }
 
         loadFilterData()
-    }, [context.orgId, isReady])
+    }, [context, isReady])
 
     // Persist view preferences to localStorage
     useEffect(() => {
@@ -169,74 +151,37 @@ export default function AdminAthletes() {
 
         setLoading(true)
         try {
-            // Use the same RPC function as the portal Athletes page
-            const { data, error } = await supabase
-                .rpc('get_athletes_with_guardian_status', {
-                    p_org_id: context.orgId,
-                    p_limit: 10000,
-                    p_offset: 0
-                })
+            // Use the athletes list service which handles fake data
+            // Pass context so coaches only see athletes from their assigned teams
+            const result = await athletesListService.getAthletes(context.orgId, context)
 
-            if (error) {
-                console.error('Error fetching athletes:', error)
-                throw error
-            }
-
-            console.log('[AdminAthletes] Fetched athletes:', data?.length)
-
-            if (!data || data.length === 0) {
+            if (!result.success || !result.data) {
                 setAthletes([])
                 setTotalCount(0)
                 setLoading(false)
                 return
             }
 
-            // Enrich data with team and sport info
-            const enrichedAthletes = await Promise.all(
-                (data || []).map(async (d: any) => {
-                    // Get primary team
-                    const { data: teamMembership } = await supabase
-                        .from('team_memberships')
-                        .select('team:teams(id, name)')
-                        .eq('athlete_id', d.athlete_id)
-                        .eq('status', 'active')
-                        .order('created_at', { ascending: false })
-                        .limit(1)
-                        .maybeSingle()
-
-                    // Get primary sport
-                    const { data: athleteSport } = await supabase
-                        .from('athlete_sports')
-                        .select('sport:sports(id, name)')
-                        .eq('athlete_id', d.athlete_id)
-                        .eq('is_primary', true)
-                        .limit(1)
-                        .maybeSingle()
-
-                    return {
-                        id: d.athlete_id,
-                        first_name: d.first_name,
-                        last_name: d.last_name,
-                        birthdate: d.birthdate,
-                        gender: d.gender,
-                        jersey_number: d.jersey_number,
-                        photo_url: null,
-                        has_profile_photo: d.has_profile_photo,
-                        org_id: context.orgId,
-                        primary_team: teamMembership?.team,
-                        primary_sport: athleteSport?.sport,
-                    } as AthleteCardData
-                })
-            )
+            console.log('[AdminAthletes] Fetched athletes:', result.data?.length)
 
             // Apply client-side filters
-            let filteredAthletes: AthleteCardData[] = enrichedAthletes
+            let filteredAthletes: AthleteCardData[] = result.data
 
             // Search filter
             if (filters.search) {
                 const searchLower = filters.search.toLowerCase()
                 filteredAthletes = filteredAthletes.filter((a: AthleteCardData) =>
-                    `${a.first_name} ${a.last_name}`.toLowerCase().includes(searchLower)
+                    [
+                        `${a.first_name} ${a.last_name}`,
+                        ...(a.sports?.map((sport) => sport.name) ?? []),
+                        ...(a.teams?.map((team) => team.name) ?? []),
+                        ...(a.roles ?? []),
+                        ...(a.positions ?? []),
+                        ...(a.jersey_numbers ?? []).map((jerseyNumber) => `#${jerseyNumber}`),
+                    ]
+                        .join(' ')
+                        .toLowerCase()
+                        .includes(searchLower)
                 )
             }
 
@@ -250,14 +195,16 @@ export default function AdminAthletes() {
             // Team filter
             if (filters.teamIds.length > 0) {
                 filteredAthletes = filteredAthletes.filter((a: AthleteCardData) =>
-                    a.primary_team && filters.teamIds.includes(a.primary_team.id as string)
+                    a.teams?.some((team) => filters.teamIds.includes(team.id)) ||
+                    (a.primary_team && filters.teamIds.includes(a.primary_team.id as string))
                 )
             }
 
             // Sport filter
             if (filters.sportIds.length > 0) {
                 filteredAthletes = filteredAthletes.filter((a: AthleteCardData) =>
-                    a.primary_sport && filters.sportIds.includes(a.primary_sport.id as string)
+                    a.sports?.some((sport) => sport.id && filters.sportIds.includes(sport.id)) ||
+                    (a.primary_sport && filters.sportIds.includes(a.primary_sport.id as string))
                 )
             }
 
@@ -355,8 +302,21 @@ export default function AdminAthletes() {
     if (!isReady) {
         return (
             <div>
-                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 text-center">
-                    <div className="animate-pulse rounded bg-slate-200 dark:bg-slate-700" style={{ width: '100%', height: '400px' }} />
+                <div 
+                    className="rounded-xl border p-8 text-center"
+                    style={{ 
+                        background: 'var(--pa-surface)',
+                        borderColor: 'var(--pa-border-default)'
+                    }}
+                >
+                    <div 
+                        className="animate-pulse rounded" 
+                        style={{ 
+                            width: '100%', 
+                            height: '400px',
+                            background: 'var(--pa-surface-panel)'
+                        }} 
+                    />
                 </div>
             </div>
         )
@@ -396,15 +356,18 @@ export default function AdminAthletes() {
             />
 
             {athletes.length === 0 && !loading ? (
-                <EmptyState
-                    icon="person_off"
-                    title={t('admin.athletes.noAthletes')}
-                    description={t('admin.athletes.noAthletesDescription')}
-                >
-                    <button className="oa-btn oa-btn--primary" onClick={() => navigate(getLink('admin.athletes.create'))}>
-                        {t('admin.athletes.add')}
-                    </button>
-                </EmptyState>
+                <Card className="oa-border-2 oa-border-dashed">
+                    <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+                        <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>person_off</span>
+                        <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+                            <h3 className="oa-h3 oa-mb-0">{t('admin.athletes.noAthletes')}</h3>
+                            <p className="oa-body-m oa-text-muted oa-mb-4">{t('admin.athletes.noAthletesDescription')}</p>
+                            <button className="oa-btn oa-btn--primary" onClick={() => navigate(getLink('admin.athletes.create'))}>
+                                {t('admin.athletes.add')}
+                            </button>
+                        </div>
+                    </div>
+                </Card>
             ) : (
                 <AthletesGrid
                     athletes={athletes}

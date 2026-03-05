@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { createCheckoutSession } from '../api/billing'
-import { LicensePlan } from '../utils/licenseUtils'
 import { t } from '../i18n'
 import { getErrorMessage } from '../utils/errorUtils'
 
@@ -11,29 +10,34 @@ interface UseCheckoutSessionOptions {
 }
 
 interface UseCheckoutSessionResult {
-  loadingPlan: LicensePlan | null
+  loadingTierId: string | null
   error: string | null
-  handleSelect: (plan: LicensePlan) => Promise<void>
+  handleSelect: (tierId: string) => Promise<void>
 }
 
 export function useCheckoutSession(options: UseCheckoutSessionOptions): UseCheckoutSessionResult {
   const { organizationId, successUrl, cancelUrl } = options
-  const [loadingPlan, setLoadingPlan] = useState<LicensePlan | null>(null)
+  const [loadingTierId, setLoadingTierId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const handleSelect = async (plan: LicensePlan) => {
+  const handleSelect = async (tierId: string) => {
     if (!organizationId) {
       setError(t('errors.missingOrganization'))
       return
     }
 
+    if (!tierId) {
+      setError('Tier ID is required')
+      return
+    }
+
     setError(null)
-    setLoadingPlan(plan)
+    setLoadingTierId(tierId)
 
     try {
       const { checkout_session_url } = await createCheckoutSession({
         organizationId,
-        requestedPlan: plan,
+        tierId,
         successUrl,
         cancelUrl,
       })
@@ -42,16 +46,16 @@ export function useCheckoutSession(options: UseCheckoutSessionOptions): UseCheck
         window.location.href = checkout_session_url
       } else {
         setError(t('billing.errorCreatingSession'))
-        setLoadingPlan(null)
+        setLoadingTierId(null)
       }
     } catch (err: unknown) {
       setError(getErrorMessage(err) || t('billing.errorCreatingSession'))
-      setLoadingPlan(null)
+      setLoadingTierId(null)
     }
   }
 
   return {
-    loadingPlan,
+    loadingTierId,
     error,
     handleSelect,
   }

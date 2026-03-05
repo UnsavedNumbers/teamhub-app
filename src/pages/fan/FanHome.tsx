@@ -7,7 +7,7 @@
  * URL/ROUTE: /fan or /fan/home
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
   getFanCalendar, 
@@ -61,6 +61,16 @@ export default function FanHome() {
   const [loading, setLoading] = useState(true)
   const [feedFilter, setFeedFilter] = useState<'latest' | 'popular'>('latest')
   const eventsScrollRef = useRef<HTMLDivElement>(null)
+  const followedOrgLogoById = useMemo(
+    () =>
+      new Map(
+        followedOrgs.map((follow) => [
+          follow.org_id,
+          (follow.org as OrgData | undefined)?.logo_url || null,
+        ]),
+      ),
+    [followedOrgs],
+  )
 
   useEffect(() => {
     loadAllData()
@@ -193,13 +203,20 @@ export default function FanHome() {
     const date = new Date(dateStr)
     const now = new Date()
     const diffMs = now.getTime() - date.getTime()
+    if (diffMs <= 0) return 'Just now'
+
     const diffMins = Math.floor(diffMs / 60000)
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
+    if (diffMins < 1) return 'Just now'
     if (diffMins < 60) return `${diffMins} Minutes Ago`
     if (diffHours < 24) return `${diffHours} Hours Ago`
     return `${diffDays} Days Ago`
+  }
+
+  const getFeedOrgLogo = (item: FanFeedItem) => {
+    return item.source_entity_logo_url || followedOrgLogoById.get(item.source_entity_id) || null
   }
 
   // Generate friendly feed text based on content type
@@ -288,7 +305,11 @@ export default function FanHome() {
                     style={{ width: '100%', textAlign: 'left' }}
                   >
                     <div className="fan-following-avatar">
-                      {result.name?.[0] || '?'}
+                      {result.logo_url ? (
+                        <img src={result.logo_url} alt={result.name} />
+                      ) : (
+                        result.name?.[0] || '?'
+                      )}
                     </div>
                     <span className="fan-following-name">{result.name}</span>
                   </button>
@@ -452,7 +473,11 @@ export default function FanHome() {
                     <article key={item.id} className="fan-post">
                       <div className="fan-post-header">
                         <div className="fan-post-avatar">
-                          {item.source_entity_name?.[0] || 'F'}
+                          {getFeedOrgLogo(item) ? (
+                            <img src={getFeedOrgLogo(item) || undefined} alt={item.source_entity_name} />
+                          ) : (
+                            item.source_entity_name?.[0] || 'F'
+                          )}
                         </div>
                         <div className="fan-post-meta">
                           <h4>{item.source_entity_name}</h4>
@@ -541,10 +566,14 @@ export default function FanHome() {
                           <button
                             key={follow.id}
                             className="fan-following-item"
-                            onClick={() => org?.slug && navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { slug: org.slug }))}
+                            onClick={() => org?.slug && navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { orgId: org.slug }))}
                           >
                             <div className="fan-following-avatar">
-                              {org?.name?.[0] || 'O'}
+                              {org?.logo_url ? (
+                                <img src={org.logo_url} alt={org.name} />
+                              ) : (
+                                org?.name?.[0] || 'O'
+                              )}
                             </div>
                             <span className="fan-following-name">
                               {org?.name || 'Organization'}

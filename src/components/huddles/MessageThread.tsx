@@ -32,16 +32,16 @@ export default function MessageThread({
   const replyCount = parentMessage.reply_count || 0
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800">
+    <div className="flex flex-col h-full bg-white dark:bg-black border-l border-gray-200 dark:border-neutral-800">
       {/* Thread Header */}
-      <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+      <div className="p-4 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Icon name="forum" size="text-xl" className="text-slate-400" />
+          <Icon name="forum" size="text-xl" className="text-gray-400" />
           <div>
-            <div className="font-semibold text-slate-900 dark:text-white">
+            <div className="font-semibold text-gray-900 dark:text-white">
               Thread
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">
+            <div className="text-xs text-gray-500 dark:text-gray-400">
               {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
             </div>
           </div>
@@ -50,7 +50,7 @@ export default function MessageThread({
           {onJumpToMessage && (
             <button
               onClick={() => onJumpToMessage(parentMessageId)}
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
               title="Jump to original message"
             >
               <Icon name="arrow_upward" size="text-xl" />
@@ -58,14 +58,14 @@ export default function MessageThread({
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
             title={collapsed ? 'Expand' : 'Collapse'}
           >
             <Icon name={collapsed ? 'unfold_more' : 'unfold_less'} size="text-xl" />
           </button>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
             title="Close thread"
           >
             <Icon name="close" size="text-xl" />
@@ -81,7 +81,7 @@ export default function MessageThread({
       )}
 
       {collapsed && (
-        <div className="flex-1 flex items-center justify-center text-slate-400">
+        <div className="flex-1 flex items-center justify-center text-gray-400">
           <div className="text-center">
             <Icon name="forum" size="text-4xl" className="mb-2" />
             <p className="text-sm">Thread collapsed</p>

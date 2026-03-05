@@ -69,7 +69,8 @@ typings/
 .env
 .env.test
 .env.dev
-.env.demo
+#.env.demo
+.env*.backup
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -126,12 +127,20 @@ supabase/tmp
 supabase/.temp
 .supabase.co
 
+# Playwright auth state (screenshots system)
+playwright/.auth/
+artifacts/screenshots/
+
 # Demo assets - exclude large video files and large thumbnails (>50MB)
 public/demo-assets/videos/*.mp4
 public/demo-assets/videos/*.mov
 public/demo-assets/videos/*.webm
+public/demo-assets/*
 
 # Docs
+*xlsx
+*.py
+*.csv
 designs/
 docs
 *.md

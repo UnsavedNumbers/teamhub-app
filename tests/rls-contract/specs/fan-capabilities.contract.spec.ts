@@ -12,6 +12,7 @@
 import { describe, it, expect } from 'vitest';
 import { seeded, clients, anonClient } from '../setup';
 import {
+    expectSelectAllowed,
     expectWriteAllowed,
     expectWriteDenied,
     expectSelectDenied,
@@ -72,7 +73,7 @@ describe('fan_org_follows', () => {
                 .eq('user_id', seeded.userIds.orgAdmin);
             // Should return empty or error – not other users' follows
             if (result.data && result.data.length > 0) {
-                const userIds = result.data.map((r: any) => r.user_id);
+                const userIds = result.data.map((r: { user_id: string }) => r.user_id);
                 expect(userIds).not.toContain(seeded.userIds.orgAdmin);
             }
         });
@@ -110,6 +111,212 @@ describe('fan_org_follows', () => {
 // ═══════════════════════════════════════════════════════════════════
 //  FAN_EVENT_BOOKMARKS
 // ═══════════════════════════════════════════════════════════════════
+
+describe('fan_team_follows', () => {
+    describe('INSERT/SELECT/DELETE', () => {
+        it('fan CAN manage own team follow row', async () => {
+            const svc = getServiceClient();
+            await svc
+                .from('fan_team_follows')
+                .delete()
+                .eq('fan_user_id', seeded.userIds.fan)
+                .eq('team_id', seeded.teamId);
+
+            const inserted = await clients.fan
+                .from('fan_team_follows')
+                .insert({
+                    org_id: seeded.orgId,
+                    team_id: seeded.teamId,
+                    fan_user_id: seeded.userIds.fan,
+                })
+                .select('id');
+            expectWriteAllowed(inserted);
+
+            const selected = await clients.fan
+                .from('fan_team_follows')
+                .select('id')
+                .eq('fan_user_id', seeded.userIds.fan)
+                .eq('team_id', seeded.teamId);
+            expectSelectAllowed(selected);
+
+            const deleted = await clients.fan
+                .from('fan_team_follows')
+                .delete()
+                .eq('fan_user_id', seeded.userIds.fan)
+                .eq('team_id', seeded.teamId)
+                .select('id');
+            expect(deleted.error).toBeNull();
+        });
+
+        it('fan CANNOT insert team follow for another user', async () => {
+            const result = await clients.fan
+                .from('fan_team_follows')
+                .insert({
+                    org_id: seeded.orgId,
+                    team_id: seeded.teamId,
+                    fan_user_id: seeded.userIds.orgAdmin,
+                })
+                .select('id');
+            expectWriteDenied(result, 'either');
+        });
+    });
+
+    describe('SELECT', () => {
+        it('fan CANNOT read another fan user follow row', async () => {
+            const svc = getServiceClient();
+            await svc
+                .from('fan_team_follows')
+                .delete()
+                .eq('fan_user_id', seeded.userIds.parent)
+                .eq('team_id', seeded.teamId);
+            const { data: seededFollow } = await svc
+                .from('fan_team_follows')
+                .insert({
+                    org_id: seeded.orgId,
+                    team_id: seeded.teamId,
+                    fan_user_id: seeded.userIds.parent,
+                })
+                .select('id')
+                .single();
+
+            const result = await clients.fan
+                .from('fan_team_follows')
+                .select('id, fan_user_id')
+                .eq('id', seededFollow!.id);
+            if (result.error) {
+                return;
+            }
+            expect(result.data ?? []).toHaveLength(0);
+        });
+
+        it('org_admin CAN read team follows for their org', async () => {
+            const svc = getServiceClient();
+            await svc
+                .from('fan_team_follows')
+                .delete()
+                .eq('fan_user_id', seeded.userIds.fan)
+                .eq('team_id', seeded.teamId);
+            const { data: seededFollow } = await svc
+                .from('fan_team_follows')
+                .insert({
+                    org_id: seeded.orgId,
+                    team_id: seeded.teamId,
+                    fan_user_id: seeded.userIds.fan,
+                })
+                .select('id')
+                .single();
+
+            const result = await clients.orgAdmin
+                .from('fan_team_follows')
+                .select('id')
+                .eq('id', seededFollow!.id);
+            expectSelectAllowed(result, [seededFollow!.id]);
+        });
+    });
+});
+
+describe('fan_athlete_follows', () => {
+    describe('INSERT/SELECT/DELETE', () => {
+        it('fan CAN manage own athlete follow row', async () => {
+            const svc = getServiceClient();
+            await svc
+                .from('fan_athlete_follows')
+                .delete()
+                .eq('fan_user_id', seeded.userIds.fan)
+                .eq('athlete_id', seeded.athleteId);
+
+            const inserted = await clients.fan
+                .from('fan_athlete_follows')
+                .insert({
+                    org_id: seeded.orgId,
+                    athlete_id: seeded.athleteId,
+                    fan_user_id: seeded.userIds.fan,
+                })
+                .select('id');
+            expectWriteAllowed(inserted);
+
+            const selected = await clients.fan
+                .from('fan_athlete_follows')
+                .select('id')
+                .eq('fan_user_id', seeded.userIds.fan)
+                .eq('athlete_id', seeded.athleteId);
+            expectSelectAllowed(selected);
+
+            const deleted = await clients.fan
+                .from('fan_athlete_follows')
+                .delete()
+                .eq('fan_user_id', seeded.userIds.fan)
+                .eq('athlete_id', seeded.athleteId)
+                .select('id');
+            expect(deleted.error).toBeNull();
+        });
+
+        it('fan CANNOT insert athlete follow for another user', async () => {
+            const result = await clients.fan
+                .from('fan_athlete_follows')
+                .insert({
+                    org_id: seeded.orgId,
+                    athlete_id: seeded.athleteId,
+                    fan_user_id: seeded.userIds.orgAdmin,
+                })
+                .select('id');
+            expectWriteDenied(result, 'either');
+        });
+    });
+
+    describe('SELECT', () => {
+        it('fan CANNOT read another fan user athlete follow row', async () => {
+            const svc = getServiceClient();
+            await svc
+                .from('fan_athlete_follows')
+                .delete()
+                .eq('fan_user_id', seeded.userIds.parent)
+                .eq('athlete_id', seeded.athleteId);
+            const { data: seededFollow } = await svc
+                .from('fan_athlete_follows')
+                .insert({
+                    org_id: seeded.orgId,
+                    athlete_id: seeded.athleteId,
+                    fan_user_id: seeded.userIds.parent,
+                })
+                .select('id')
+                .single();
+
+            const result = await clients.fan
+                .from('fan_athlete_follows')
+                .select('id, fan_user_id')
+                .eq('id', seededFollow!.id);
+            if (result.error) {
+                return;
+            }
+            expect(result.data ?? []).toHaveLength(0);
+        });
+
+        it('org_admin CAN read athlete follows for their org', async () => {
+            const svc = getServiceClient();
+            await svc
+                .from('fan_athlete_follows')
+                .delete()
+                .eq('fan_user_id', seeded.userIds.fan)
+                .eq('athlete_id', seeded.athleteId);
+            const { data: seededFollow } = await svc
+                .from('fan_athlete_follows')
+                .insert({
+                    org_id: seeded.orgId,
+                    athlete_id: seeded.athleteId,
+                    fan_user_id: seeded.userIds.fan,
+                })
+                .select('id')
+                .single();
+
+            const result = await clients.orgAdmin
+                .from('fan_athlete_follows')
+                .select('id')
+                .eq('id', seededFollow!.id);
+            expectSelectAllowed(result, [seededFollow!.id]);
+        });
+    });
+});
 
 describe('fan_event_bookmarks', () => {
     describe('INSERT', () => {
@@ -160,7 +367,7 @@ describe('fan_event_bookmarks', () => {
                 .select('*')
                 .eq('user_id', seeded.userIds.orgAdmin);
             if (result.data && result.data.length > 0) {
-                const userIds = result.data.map((r: any) => r.user_id);
+                const userIds = result.data.map((r: { user_id: string }) => r.user_id);
                 expect(userIds).not.toContain(seeded.userIds.orgAdmin);
             }
         });

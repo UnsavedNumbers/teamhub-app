@@ -15,11 +15,11 @@
  * - Issue 8: Uses existing events RLS
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { debug } from '../../lib/debug'
-import { calculatePermissions } from '../fake/userContext'
+import { calculatePermissions, getCoachTeamIds, getGuardianCanonicalUserId } from '../fake/userContext'
 import {
     type TravelEvent,
     type TravelTrip,
@@ -33,12 +33,11 @@ import {
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import {
     getChildrenForUserId,
-    getAssignedTeamsForCoach,
     getTeamsForUserChildren,
 } from '../fake/relationships'
 import { fakeEvents } from '../fake/fakeEvents'
 import { fakeTravelPlans, type FakeTravelPlan, type MeetingLocation } from '../fake/fakeTravel'
-import { isValidUUID } from '../../utils/uuid'
+import { isValidUuid } from '../../utils/uuid'
 
 const supabaseAny = supabase as any
 import { safeParseJSONB } from '../../utils/featureDiscovery/jsonbUtils'
@@ -234,7 +233,7 @@ async function validateTeamBelongsToOrg(
     _context: UserContext,
     teamId: string
 ): Promise<{ valid: boolean; orgId: string | null; error: Error | null }> {
-    if (!isValidUUID(teamId)) {
+    if (!isValidUuid(teamId)) {
         return { valid: false, orgId: null, error: new Error('Invalid team ID format') }
     }
 
@@ -282,7 +281,7 @@ async function validateTeamSeasonRelationship(
     teamId: string,
     seasonId: string
 ): Promise<{ valid: boolean; error: Error | null }> {
-    if (!isValidUUID(teamId) || !isValidUUID(seasonId)) {
+    if (!isValidUuid(teamId) || !isValidUuid(seasonId)) {
         return { valid: false, error: new Error('Invalid team or season ID format') }
     }
 
@@ -335,10 +334,11 @@ function sanitizeFilename(filename: string): string {
     return sanitized.length > 255 ? sanitized.substring(0, 255) : sanitized
 }
 
-function buildPermissions(context: UserContext): PermissionSet {
-    const childIds = getChildrenForUserId(context.userId)
+async function buildPermissions(context: UserContext): Promise<PermissionSet> {
+    const guardianUserId = getGuardianCanonicalUserId(context)
+    const childIds = getChildrenForUserId(guardianUserId)
     const assignedTeamIds = context.roles.includes('coach')
-        ? getAssignedTeamsForCoach(context.userId)
+        ? await getCoachTeamIds(context)
         : []
 
     return calculatePermissions(context, assignedTeamIds, childIds, [])
@@ -554,13 +554,16 @@ export async function getTravelEvents(
             try {
             await simulateDelay()
 
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
 
             // Get travel plans and convert to travel events
+            // In demo mode, always use DEMO_ORG_A_ID regardless of context.orgId
+            const fakeOrgId = DEMO_ORG_A_ID
             let travelEvents: TravelEvent[] = fakeTravelPlans
-                .filter(p => p.org_id === context.orgId)
+                .filter(p => p.org_id === fakeOrgId)
                 .filter(p => params.includeCancelled || p.status !== 'cancelled')
-                .filter(p => p.status === 'published' || p.status === 'cancelled')
+                // For org admins, show all plans (draft, published, cancelled). For others, only published/cancelled
+                .filter(p => permissions.canViewAllOrgData ? true : (p.status === 'published' || p.status === 'cancelled'))
                 .map(convertTravelPlanToEvent)
 
             // Also check regular events with travel indicators
@@ -600,7 +603,8 @@ export async function getTravelEvents(
                 }
 
                 if (permissions.canViewOwnChildrenData) {
-                    getTeamsForUserChildren(context.userId).forEach(id => accessibleTeamIds.add(id))
+                    const guardianUserId = getGuardianCanonicalUserId(context)
+                    getTeamsForUserChildren(guardianUserId).forEach(id => accessibleTeamIds.add(id))
                 }
 
                 travelEvents = travelEvents.filter(e => (e.team_id ? accessibleTeamIds.has(e.team_id) : false))
@@ -755,14 +759,10 @@ export async function getTravelEventDetails(
         await simulateDelay()
 
         // Check travel plans first
+        // In demo mode, always allow access regardless of orgId match
         const plan = fakeTravelPlans.find(p => p.id === eventId)
         if (plan) {
-            if (plan.org_id !== context.orgId) {
-                debug.perf.end('travelService.getTravelEventDetails')
-                debug.error('TravelService.getTravelEventDetails', 'Access denied (fake)', { eventId, planOrgId: plan.org_id, contextOrgId: context.orgId })
-                console.groupEnd()
-                return { data: null, error: new Error('Access denied') }
-            }
+            // In demo mode, all travel plans belong to DEMO_ORG_A_ID, so always allow access
             debug.perf.end('travelService.getTravelEventDetails')
             debug.data('TravelService.getTravelEventDetails', 'Response (fake, from plan)', { eventId, hasData: true })
             console.groupEnd()
@@ -940,7 +940,7 @@ export async function createTravelPlan(
         }
 
         // Validate UUIDs
-        if (!isValidUUID(data.team_id) || !isValidUUID(data.season_id)) {
+        if (!isValidUuid(data.team_id) || !isValidUuid(data.season_id)) {
             debug.perf.end('travelService.createTravelPlan')
             debug.error('TravelService.createTravelPlan', 'Invalid UUID format', { teamId: data.team_id, seasonId: data.season_id })
             console.groupEnd()
@@ -1174,7 +1174,7 @@ export async function updateTravelPlan(
 
     try {
         // Validate UUID
-        if (!isValidUUID(planId)) {
+        if (!isValidUuid(planId)) {
             debug.perf.end('travelService.updateTravelPlan')
             debug.error('TravelService.updateTravelPlan', 'Invalid plan ID format', { planId })
             console.groupEnd()
@@ -1378,7 +1378,7 @@ export async function uploadTravelItinerary(
 
     try {
         // Validate UUID
-        if (!isValidUUID(planId)) {
+        if (!isValidUuid(planId)) {
             debug.perf.end('travelService.uploadTravelItinerary')
             debug.error('TravelService.uploadTravelItinerary', 'Invalid plan ID format', { planId })
             console.groupEnd()
@@ -1488,7 +1488,7 @@ export async function getTravelItinerarySignedUrl(
 ): Promise<{ data: string | null; error: Error | null }> {
     try {
         // Validate UUID
-        if (!isValidUUID(planId)) {
+        if (!isValidUuid(planId)) {
             return { data: null, error: new Error('Invalid plan ID format') }
         }
 
@@ -1990,7 +1990,7 @@ export async function getTravelPlanContacts(
         return { data: result, error: null }
     }
 
-    if (!isValidUUID(planId)) {
+    if (!isValidUuid(planId)) {
         debug.perf.end('travelService.getTravelPlanContacts')
         debug.error('TravelService.getTravelPlanContacts', 'Invalid plan ID', { planId })
         console.groupEnd()
@@ -2068,7 +2068,7 @@ export async function deleteTravelPlanContactsForPlan(
         return { error: null }
     }
 
-    if (!isValidUUID(planId)) {
+    if (!isValidUuid(planId)) {
         debug.perf.end('travelService.deleteTravelPlanContactsForPlan')
         debug.error('TravelService.deleteTravelPlanContactsForPlan', 'Invalid plan ID', { planId })
         console.groupEnd()
@@ -2133,7 +2133,7 @@ export async function insertTravelPlanContacts(
         return { error: null }
     }
 
-    if (!isValidUUID(planId)) {
+    if (!isValidUuid(planId)) {
         return { error: new Error('Invalid plan ID') }
     }
 
@@ -2222,7 +2222,7 @@ export async function upsertTravelPlanContacts(
         return { error: null }
     }
 
-    if (!isValidUUID(planId)) {
+    if (!isValidUuid(planId)) {
         debug.perf.end('travelService.upsertTravelPlanContacts')
         debug.error('TravelService.upsertTravelPlanContacts', 'Invalid plan ID', { planId })
         console.groupEnd()
@@ -2325,7 +2325,7 @@ export async function resolveAllTravelContactsForPlan(
         return { data: result, error: null }
     }
 
-    if (!isValidUUID(planId)) {
+    if (!isValidUuid(planId)) {
         debug.perf.end('travelService.resolveAllTravelContactsForPlan')
         debug.error('TravelService.resolveAllTravelContactsForPlan', 'Invalid plan ID', { planId })
         console.groupEnd()
@@ -2481,7 +2481,7 @@ export async function publishTravelPlan(
 
     try {
         // Validate UUID
-        if (!isValidUUID(planId)) {
+        if (!isValidUuid(planId)) {
             debug.perf.end('travelService.publishTravelPlan')
             debug.error('TravelService.publishTravelPlan', 'Invalid plan ID format', { planId })
             console.groupEnd()
@@ -2634,7 +2634,7 @@ export async function cancelTravelPlan(
 
     try {
         // Validate UUID
-        if (!isValidUUID(planId)) {
+        if (!isValidUuid(planId)) {
             debug.perf.end('travelService.cancelTravelPlan')
             debug.error('TravelService.cancelTravelPlan', 'Invalid plan ID format', { planId })
             console.groupEnd()

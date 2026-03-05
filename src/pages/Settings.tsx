@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback, useRef, useMemo, startTransition } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+﻿import { useState, useEffect, useCallback, useRef, useMemo, startTransition } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { useUserContext } from '../hooks/useUserContext'
 import { getAthletes } from '../data/services/familyService'
 import { getTeamsForParent } from '../data/services/teamsService'
-import { getUserPreferences, updateUserPreferences, type UserPreferences } from '../data/services/preferencesService'
 import { 
   linkGuardianToAthlete, 
   validateGuardianEmail, 
@@ -27,9 +26,12 @@ import { ThemeSelector } from '../components/portal/ThemeToggle'
 import NotificationPreferences from '../components/common/NotificationPreferences'
 import type { NotificationGroup } from '../types/notificationPreferences'
 import type { NotificationRole } from '../types/notifications'
-import { mergeNotificationPreferences, setPreferencesForContext, canonicalRole } from '../utils/notificationPreferencesConfig'
+import { mergeNotificationPreferences, canonicalRole, loadNotificationGroupsFromRelational, convertNotificationGroupsToRelational } from '../utils/notificationPreferencesConfig'
+import { updatePreferencesBatch } from '../data/services/userNotificationPreferencesService'
 import { showSuccess, showError } from '../utils/toast'
-import { CheckCircle, Mail, Loader2, AlertCircle } from 'lucide-react'
+import { isBrowserPushSupported, isOneSignalConfigured } from '../lib/push/oneSignalWeb'
+import { enablePushForUser, revokePushForUser, syncPushSubscription } from '../data/services/pushSubscriptionService'
+import { CheckCircle, Mail, Loader2, AlertCircle, BellOff } from 'lucide-react'
 import { LocationAutocomplete } from '../components/common/LocationAutocomplete'
 import type { StructuredAddress, HomeLocation } from '../types/location'
 
@@ -50,6 +52,8 @@ interface ChildWithGuardians extends Child {
   pendingInvites: PendingGuardianInvite[]
 }
 
+type SettingsTab = 'account' | 'family' | 'theme' | 'language' | 'notifications' | 'support' | 'legal'
+
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 
 export default function Settings() {
@@ -57,19 +61,24 @@ export default function Settings() {
   const { profile, signOut, updatePassword, updateEmail, user, refreshProfile } = useAuth()
   const { context, isReady } = useUserContext()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const t = useT()
   const translator = t as unknown as (key: string) => string
   const { locale, setLocale } = useLocale()
   const isMountedRef = useRef(true)
   const emailInputRef = useRef<HTMLInputElement>(null)
-  const preferencesRef = useRef<UserPreferences | null>(null)
-  
   const [children, setChildren] = useState<ChildWithGuardians[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTab>('account')
 
   const [notificationGroups, setNotificationGroups] = useState<NotificationGroup[]>([])
   const [savingNotifications, setSavingNotifications] = useState(false)
+  const [loadingNotifications, setLoadingNotifications] = useState(true)
+  const [notificationsError, setNotificationsError] = useState<string | null>(null)
+  const [isOffline, setIsOffline] = useState(false)
+  const [pushChannelSupported, setPushChannelSupported] = useState(false)
+  const pushSyncInFlight = useRef(false)
 
   const [homeAddressInput, setHomeAddressInput] = useState('')
   const [homeAddressDisplay, setHomeAddressDisplay] = useState('')
@@ -88,6 +97,7 @@ export default function Settings() {
   const [confirmEmail, setConfirmEmail] = useState('')
   const [changingEmail, setChangingEmail] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
+  const [showEmailRetryBanner, setShowEmailRetryBanner] = useState(false)
 
   // Invite Guardian Modal State
   const [showInviteGuardianModal, setShowInviteGuardianModal] = useState(false)
@@ -100,16 +110,78 @@ export default function Settings() {
   const [emailTouched, setEmailTouched] = useState(false)
   const [inviteActionLoading, setInviteActionLoading] = useState<string | null>(null)
 
-  const activeRole: NotificationRole = useMemo(
-    () => canonicalRole((context.roles?.[0] as NotificationRole) || 'guardian'),
-    [context.roles]
-  )
+  const activeRole: NotificationRole = useMemo(() => {
+    // Ensure we have a valid role, defaulting to guardian if none found
+    const role = context.roles?.[0] as NotificationRole | undefined
+    return canonicalRole(role || 'guardian')
+  }, [context.roles])
 
   // Cleanup ref on unmount
   useEffect(() => {
     isMountedRef.current = true
     return () => { isMountedRef.current = false }
   }, [])
+
+  useEffect(() => {
+    setPushChannelSupported(isOneSignalConfigured() && isBrowserPushSupported())
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const syncPushState = async () => {
+      if (!isReady || !user?.id || pushSyncInFlight.current) return
+      if (!isOneSignalConfigured() || !isBrowserPushSupported()) return
+
+      pushSyncInFlight.current = true
+      try {
+        const result = await syncPushSubscription({
+          userId: user.id,
+          orgId: context.orgId ?? null,
+        })
+
+        if (!cancelled && result.error && navigator.onLine) {
+          console.error('Failed to sync push subscription state:', result.error)
+        }
+      } finally {
+        pushSyncInFlight.current = false
+      }
+    }
+
+    void syncPushState()
+
+    return () => {
+      cancelled = true
+    }
+  }, [context.orgId, isReady, user?.id])
+
+  // Offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false)
+    const handleOffline = () => setIsOffline(true)
+    
+    setIsOffline(!navigator.onLine)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  // Show friendly message when redirected with email link error (expired or already used)
+  useEffect(() => {
+    const errorCode = searchParams.get('error_code')
+    const errorParam = searchParams.get('error')
+    if (errorCode === 'otp_expired' || errorParam === 'access_denied') {
+      showError(
+        'The confirmation link is invalid or was already used. Some email tools open links automatically, which uses the link before you click. Please try changing your email again and click the new link as soon as you receive it.'
+      )
+      setShowEmailRetryBanner(true)
+      setSearchParams({}, { replace: true })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- run once on mount to clear auth error from URL
 
   const fetchData = useCallback(async () => {
     if (!isReady || !user?.id) return
@@ -154,12 +226,31 @@ export default function Settings() {
       name: t.name,
     })))
 
-    // Load notification preferences
-    const { data: prefs } = await getUserPreferences(user.id)
-    preferencesRef.current = prefs || {}
-    const savedGroups = prefs?.notifications_v2?.[context.orgId]?.[activeRole]
-    const mergedGroups = mergeNotificationPreferences(savedGroups as NotificationGroup[] | undefined, activeRole, translator)
-    setNotificationGroups(mergedGroups)
+    // Load notification preferences with proper error handling
+    setLoadingNotifications(true)
+    setNotificationsError(null)
+    
+    try {
+      // Try loading from relational service first
+      const groups = await loadNotificationGroupsFromRelational(user.id, context.orgId, activeRole, translator)
+      
+      if (isMountedRef.current) {
+        setNotificationGroups(groups)
+        setNotificationsError(null)
+      }
+    } catch (err) {
+      console.error('Error loading notification preferences:', err)
+      if (isMountedRef.current) {
+        // Fallback to defaults on error
+        setNotificationsError(t('common.error.loadFailed'))
+        const defaultGroups = mergeNotificationPreferences(undefined, activeRole, translator)
+        setNotificationGroups(defaultGroups)
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setLoadingNotifications(false)
+      }
+    }
 
     setLoading(false)
   }, [context, isReady, user?.id, activeRole, translator])
@@ -370,30 +461,75 @@ export default function Settings() {
 
   const persistNotificationGroups = useCallback(
     async (nextGroups: NotificationGroup[], previousGroups?: NotificationGroup[]) => {
-      if (!user?.id) return
+      if (!user?.id || !isReady) {
+        showError(t('common.error.permissionDenied'))
+        return
+      }
+
+      // Validate groups before saving
+      if (!Array.isArray(nextGroups) || nextGroups.length === 0) {
+        console.error('Invalid notification groups:', nextGroups)
+        showError(t('common.error.updateFailed'))
+        return
+      }
+
       setSavingNotifications(true)
+      setNotificationsError(null)
+      
       try {
-        const nextPrefs = setPreferencesForContext(
-          preferencesRef.current?.notifications_v2,
-          context.orgId,
-          activeRole,
-          nextGroups
-        )
-        const { error } = await updateUserPreferences(user.id, { notifications_v2: nextPrefs })
-        if (error) throw error
-        preferencesRef.current = { ...(preferencesRef.current || {}), notifications_v2: nextPrefs }
+        // Convert NotificationGroups to relational preferences format
+        const preferences = await convertNotificationGroupsToRelational(nextGroups, activeRole)
+        
+        // Save to relational table
+        const { error } = await updatePreferencesBatch(user.id, context.orgId, activeRole, preferences)
+        
+        if (error) {
+          // Check for specific error types
+          if (error.message?.includes('permission') || error.message?.includes('denied')) {
+            setNotificationsError(t('common.error.permissionDenied'))
+            showError(t('common.error.permissionDenied'))
+          } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+            setNotificationsError(t('common.error.offline'))
+            showError(t('common.error.offline'))
+          } else if (error.message?.includes('no active template')) {
+            setNotificationsError('Email notifications are not available for some notification types')
+            showError('Email notifications are not available for some notification types')
+          } else {
+            throw error
+          }
+          
+          // Revert to previous state on error
+          if (previousGroups && isMountedRef.current) {
+            setNotificationGroups(previousGroups)
+          }
+          return
+        }
+        
+        // Success - show success message
         showSuccess(t('toast.success.notificationPreferencesUpdated'))
+        setNotificationsError(null)
       } catch (err) {
         console.error('Error saving notification preferences:', err)
-        if (previousGroups) {
+        const errorMessage = err instanceof Error ? err.message : t('common.error.updateFailed')
+        setNotificationsError(errorMessage)
+        
+        if (previousGroups && isMountedRef.current) {
           setNotificationGroups(previousGroups)
         }
-        showError(t('toast.error.saveFailed'))
+        
+        // Show user-friendly error
+        if (err instanceof Error && err.message?.includes('network')) {
+          showError(t('common.error.offline'))
+        } else {
+          showError(t('toast.error.saveFailed'))
+        }
       } finally {
-        setSavingNotifications(false)
+        if (isMountedRef.current) {
+          setSavingNotifications(false)
+        }
       }
     },
-    [activeRole, context.orgId, t, updateUserPreferences, user?.id]
+    [activeRole, context.orgId, isReady, t, user?.id]
   )
 
   const handleToggleGroupAll = useCallback(
@@ -441,7 +577,51 @@ export default function Settings() {
   )
 
   const handleToggleChannel = useCallback(
-    (groupId: NotificationGroup['id'], channel: 'in_app' | 'email' | 'push', next: boolean) => {
+    async (groupId: NotificationGroup['id'], channel: 'in_app' | 'email' | 'push', next: boolean) => {
+      if (channel === 'push') {
+        if (!user?.id || !isReady) {
+          showError(t('common.error.permissionDenied'))
+          return
+        }
+
+        if (!isOneSignalConfigured() || !isBrowserPushSupported()) {
+          showError(t('common.featureNotAvailable'))
+          return
+        }
+
+        if (next) {
+          setSavingNotifications(true)
+          const result = await enablePushForUser({
+            userId: user.id,
+            orgId: context.orgId ?? null,
+          })
+          setSavingNotifications(false)
+
+          if (!result.success) {
+            if (result.reason === 'permission_denied') {
+              showError(t('common.error.permissionDenied'))
+            } else if (!navigator.onLine) {
+              showError(t('common.error.offline'))
+            } else {
+              showError(t('common.error.loadFailed'))
+            }
+            return
+          }
+        } else {
+          setSavingNotifications(true)
+          const result = await revokePushForUser({
+            userId: user.id,
+            orgId: context.orgId ?? null,
+          })
+          setSavingNotifications(false)
+
+          if (!result.success) {
+            showError(t('common.error.updateFailed'))
+            return
+          }
+        }
+      }
+
       setNotificationGroups((prev) => {
         const updated = prev.map((group) =>
           group.id === groupId
@@ -457,7 +637,7 @@ export default function Settings() {
         return updated
       })
     },
-    [persistNotificationGroups]
+    [context.orgId, isReady, persistNotificationGroups, t, user?.id]
   )
 
   const handleUpdateDigestWindow = useCallback(
@@ -618,8 +798,9 @@ export default function Settings() {
       return
     }
     
-    // Check if same as current email
-    if (newEmail.toLowerCase() === profile?.email?.toLowerCase()) {
+    // Check if same as current email (use auth user email as source of truth)
+    const currentEmail = user?.email ?? profile?.email
+    if (currentEmail && newEmail.toLowerCase() === currentEmail.toLowerCase()) {
       setEmailError('New email must be different from your current email')
       return
     }
@@ -630,15 +811,20 @@ export default function Settings() {
       const { error } = await updateEmail(newEmail, '/portal/settings')
       if (error) throw error
       
-      showSuccess('Confirmation links have been sent to your current and new email addresses. Click both links to complete the change.')
+      showSuccess('A confirmation link has been sent to your new email address. Click it to complete the change.')
       setShowEmailModal(false)
+      setShowEmailRetryBanner(false)
       setNewEmail('')
       setConfirmEmail('')
     } catch (err) {
+      console.error('Error changing email:', err)
       const rawMessage = err instanceof Error ? err.message : 'Failed to change email'
       const isRateLimit = /rate limit|too many requests/i.test(rawMessage)
+      const isPendingChange = /pending|already.*change|email.*change.*pending/i.test(rawMessage)
       const errorMessage = isRateLimit
         ? 'Too many email requests. Please wait about an hour before trying again.'
+        : isPendingChange
+        ? 'An email change is already pending. Please check your email and confirm the existing change, or wait for it to expire before requesting a new one.'
         : rawMessage
       setEmailError(errorMessage)
       showError(errorMessage)
@@ -680,7 +866,7 @@ export default function Settings() {
     return (
       <PortalLayout>
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
         </div>
       </PortalLayout>
     )
@@ -689,6 +875,16 @@ export default function Settings() {
   const languageOptions: { value: Locale; label: string }[] = [
     { value: 'en', label: t('portal.settings.language.english') },
     { value: 'es', label: t('portal.settings.language.spanish') },
+  ]
+
+  const settingsTabs: { id: SettingsTab; label: string }[] = [
+    { id: 'account', label: t('portal.settings.account.title') },
+    { id: 'family', label: t('portal.settings.family.title') },
+    { id: 'theme', label: 'Theme' },
+    { id: 'language', label: t('portal.settings.language.title') },
+    { id: 'notifications', label: t('portal.settings.notifications.title') },
+    { id: 'support', label: t('portal.settings.support.title') },
+    { id: 'legal', label: t('portal.settings.legal.title') },
   ]
 
   return (
@@ -701,7 +897,7 @@ export default function Settings() {
         <div className="mb-8 sm:mb-12 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 sm:gap-6">
           <div className="flex-1">
             <PageTitle>{t('portal.settings.title')}</PageTitle>
-            <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
+            <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
               Manage your account and preferences.
             </p>
           </div>
@@ -711,44 +907,88 @@ export default function Settings() {
         </div>
 
         <div className="space-y-6 sm:space-y-8">
+          {/* Email retry banner */}
+          {showEmailRetryBanner && (
+            <Card className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+              <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                    Email change confirmation link expired
+                  </p>
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    The confirmation link was invalid or already used. Some email tools open links automatically. Click below to request a new confirmation email.
+                  </p>
+                </div>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setShowEmailRetryBanner(false)
+                    setShowEmailModal(true)
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  Try Again
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          <section>
+            <div className="pa-tabs-list" role="tablist" aria-label={t('portal.settings.title')}>
+              {settingsTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeSettingsTab === tab.id}
+                  className={`pa-tabs-trigger ${activeSettingsTab === tab.id ? 'active' : ''}`}
+                  onClick={() => setActiveSettingsTab(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
           {/* Account */}
+          {activeSettingsTab === 'account' && (
           <section>
             <SectionHeader className="mb-4">{t('portal.settings.account.title')}</SectionHeader>
-            <Card className="overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+            <Card className="overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
               <div 
-                className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+                className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
                 onClick={() => setShowEmailModal(true)}
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('portal.settings.account.email')}</p>
-                  <p className="font-black text-slate-900 dark:text-white break-words">{profile?.email}</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('portal.settings.account.email')}</p>
+                  <p className="font-black text-gray-900 dark:text-white break-words">{user?.email ?? profile?.email}</p>
                 </div>
                 <span className="text-[var(--org-link-color)] text-sm font-bold self-start sm:self-auto">{t('common.change')}</span>
               </div>
               <div 
-                className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+                className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
                 onClick={() => setShowPasswordModal(true)}
               >
                 <div className="flex-1">
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('portal.settings.account.password')}</p>
-                  <p className="font-black text-slate-900 dark:text-white">{t('portal.settings.account.passwordPlaceholder')}</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('portal.settings.account.password')}</p>
+                  <p className="font-black text-gray-900 dark:text-white">{t('portal.settings.account.passwordPlaceholder')}</p>
                 </div>
                 <span className="text-[var(--org-link-color)] text-sm font-bold self-start sm:self-auto">{t('common.change')}</span>
               </div>
               {profile?.phone && (
                 <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                   <div className="flex-1">
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('portal.settings.account.phone')}</p>
-                    <p className="font-black text-slate-900 dark:text-white">{profile.phone}</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('portal.settings.account.phone')}</p>
+                    <p className="font-black text-gray-900 dark:text-white">{profile.phone}</p>
                   </div>
                 </div>
               )}
               <div className="p-4 sm:p-6 flex flex-col gap-4">
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Home Address</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Home Address</p>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="portal-location-autocomplete">
-                    <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
+                    <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
                       Search for your address
                     </label>
                     <LocationAutocomplete
@@ -762,14 +1002,14 @@ export default function Settings() {
                   </div>
                   
                   <div>
-                    <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
+                    <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
                       Full Address
                     </label>
                     <div className="relative">
                       <input
                         value={homeAddressDisplay}
                         readOnly
-                        className="form-input bg-slate-50 dark:bg-slate-800/50 pr-10"
+                        className="form-input bg-gray-50 dark:bg-gray-800/50 pr-10"
                         placeholder="No address selected"
                       />
                       {homeAddressDisplay && (
@@ -777,7 +1017,7 @@ export default function Settings() {
                           type="button"
                           onClick={handleClearHomeAddress}
                           disabled={savingHomeAddress}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 disabled:opacity-50"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50"
                           aria-label="Clear address"
                         >
                           <Icon name="close" size="text-lg" />
@@ -800,8 +1040,10 @@ export default function Settings() {
               </div>
             </Card>
           </section>
+          )}
 
           {/* Family */}
+          {activeSettingsTab === 'family' && (
           <section>
             <div className="flex items-center justify-between mb-4">
               <SectionHeader>{t('portal.settings.family.title')}</SectionHeader>
@@ -813,42 +1055,42 @@ export default function Settings() {
             <div className="space-y-4">
               {children.map(child => (
                 <Card key={child.id} className="overflow-hidden">
-                  <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
+                  <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-lg font-black text-slate-600 dark:text-slate-300">
+                      <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-lg font-black text-gray-600 dark:text-gray-300">
                         {child.first_name[0]}
                       </div>
                       <div>
                         <CardTitle className="text-lg mb-1">{child.first_name} {child.last_name}</CardTitle>
-                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
                           {t('portal.settings.family.born')} {child.date_of_birth ? new Date(child.date_of_birth).getFullYear() : 'Unknown'}
                         </p>
                       </div>
                     </div>
-                    <button className="text-sm font-bold text-slate-400 hover:text-slate-900 dark:hover:text-white">{t('common.edit')}</button>
+                    <button className="text-sm font-bold text-gray-400 hover:text-gray-900 dark:hover:text-white">{t('common.edit')}</button>
                   </div>
                   
                   {/* Teams Section */}
-                  <div className="p-6 bg-white dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Teams</p>
+                  <div className="p-6 bg-white dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-800">
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Teams</p>
                     {teams.length > 0 ? (
                       <ul className="space-y-2">
                          {teams.map((team) => (
-                           <li key={team.id} className="flex items-start gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
-                             <span className="text-slate-400 mt-0.5">•</span>
+                           <li key={team.id} className="flex items-start gap-2 text-sm font-bold text-gray-700 dark:text-gray-300">
+                             <span className="text-gray-400 mt-0.5">&bull;</span>
                              {team.name}
                            </li>
                          ))}
                       </ul>
                     ) : (
-                      <p className="text-sm text-slate-400">{t('portal.settings.family.noTeams')}</p>
+                      <p className="text-sm text-gray-400">{t('portal.settings.family.noTeams')}</p>
                     )}
                   </div>
 
                   {/* Guardians Section */}
-                  <div className="p-6 bg-white dark:bg-slate-900/50">
+                  <div className="p-6 bg-white dark:bg-gray-900/50">
                     <div className="flex items-center justify-between mb-4">
-                      <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{t('portal.settings.family.guardians')}</p>
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-400">{t('portal.settings.family.guardians')}</p>
                       <button 
                         onClick={() => handleOpenInviteModal(child.id)}
                         className="text-xs font-bold text-[var(--org-link-color)] uppercase tracking-widest hover:underline flex items-center gap-1"
@@ -860,14 +1102,14 @@ export default function Settings() {
                     
                     <div className="space-y-2 sm:space-y-3">
                       {/* Current User as Guardian */}
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center flex-shrink-0">
                             <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                           </div>
                           <div className="min-w-0">
-                            <p className="font-bold text-sm text-slate-900 dark:text-white">{t('portal.settings.family.you')}</p>
-                            <p className="text-xs text-slate-500 break-words">{profile?.email}</p>
+                            <p className="font-bold text-sm text-gray-900 dark:text-white">{t('portal.settings.family.you')}</p>
+                            <p className="text-xs text-gray-500 break-words">{profile?.email}</p>
                           </div>
                         </div>
                         <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded self-start sm:self-auto">{t('portal.settings.family.owner')}</span>
@@ -877,7 +1119,7 @@ export default function Settings() {
                       {child.guardians
                         .filter(g => g.email !== profile?.email)
                         .map(guardian => (
-                          <div key={guardian.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                          <div key={guardian.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
                               <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
                                 <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
@@ -885,11 +1127,11 @@ export default function Settings() {
                                 </span>
                               </div>
                               <div className="min-w-0">
-                                <p className="font-bold text-sm text-slate-900 dark:text-white break-words">
+                                <p className="font-bold text-sm text-gray-900 dark:text-white break-words">
                                   {guardian.display_name || guardian.email}
                                 </p>
                                 {guardian.display_name && (
-                                  <p className="text-xs text-slate-500 break-words">{guardian.email}</p>
+                                  <p className="text-xs text-gray-500 break-words">{guardian.email}</p>
                                 )}
                               </div>
                             </div>
@@ -907,8 +1149,8 @@ export default function Settings() {
                               <Mail className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                             </div>
                             <div className="min-w-0">
-                              <p className="font-bold text-sm text-slate-900 dark:text-white italic">{t('admin.athletes.guardians.invitePending')}</p>
-                              <p className="text-xs text-slate-500 break-words">{invite.email}</p>
+                              <p className="font-bold text-sm text-gray-900 dark:text-white italic">{t('admin.athletes.guardians.invitePending')}</p>
+                              <p className="text-xs text-gray-500 break-words">{invite.email}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 self-start sm:self-auto">
@@ -937,7 +1179,7 @@ export default function Settings() {
                       {/* Empty State */}
                       {child.guardians.filter(g => g.email !== profile?.email).length === 0 && 
                        child.pendingInvites.length === 0 && (
-                        <p className="text-sm text-slate-400 text-center py-2">
+                        <p className="text-sm text-gray-400 text-center py-2">
                           {t('portal.settings.family.noGuardians')}
                         </p>
                       )}
@@ -947,23 +1189,27 @@ export default function Settings() {
               ))}
             </div>
           </section>
+          )}
 
           {/* Theme */}
+          {activeSettingsTab === 'theme' && (
           <section>
             <SectionHeader className="mb-4">Theme</SectionHeader>
             <Card className="p-6">
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                 Choose your preferred color theme. Changes apply immediately.
               </p>
               <ThemeSelector />
             </Card>
           </section>
+          )}
 
           {/* Language */}
+          {activeSettingsTab === 'language' && (
           <section>
             <SectionHeader className="mb-4">{t('portal.settings.language.title')}</SectionHeader>
             <Card className="p-6">
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{t('portal.settings.language.description')}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t('portal.settings.language.description')}</p>
               <div className="space-y-2">
                 {languageOptions.map((option) => (
                   <button
@@ -972,11 +1218,11 @@ export default function Settings() {
                     className={`w-full p-3 sm:p-4 rounded-lg border-2 transition-all text-left flex items-center justify-between min-h-[44px] ${
                       locale === option.value
                         ? 'border-[var(--org-btn-primary-bg, #137fec)] bg-[var(--org-btn-primary-bg)]/10 dark:bg-[var(--org-btn-primary-bg)]/20'
-                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-900/50'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-900/50'
                     }`}
                   >
                     <span className={`font-black text-sm sm:text-base ${
-                      locale === option.value ? 'text-[var(--org-link-color)]' : 'text-slate-900 dark:text-white'
+                      locale === option.value ? 'text-[var(--org-link-color)]' : 'text-gray-900 dark:text-white'
                     }`}>
                       {option.label}
                     </span>
@@ -988,47 +1234,145 @@ export default function Settings() {
               </div>
             </Card>
           </section>
+          )}
 
           {/* Notifications */}
+          {activeSettingsTab === 'notifications' && (
           <section>
             <SectionHeader className="mb-3 sm:mb-4">{t('portal.settings.notifications.title')}</SectionHeader>
             <Card className="p-4 sm:p-6">
-              <NotificationPreferences
-                role={activeRole}
-                groups={notificationGroups}
-                onToggleGroupAll={handleToggleGroupAll}
-                onToggleGroupDigest={handleToggleGroupDigest}
-                onToggleAction={handleToggleAction}
-                onToggleChannel={handleToggleChannel}
-                onUpdateDigestWindow={handleUpdateDigestWindow}
-                onToggleQuietHours={handleToggleQuietHours}
-                onUpdateQuietHours={handleUpdateQuietHours}
-                onUpdateTimezone={handleUpdateTimezone}
-                saving={savingNotifications}
-              />
+              {/* Loading State */}
+              {loadingNotifications && (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('common.loading')}
+                  </p>
+                </div>
+              )}
+
+              {/* Error State */}
+              {!loadingNotifications && notificationsError && (
+                <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-red-900 dark:text-red-100 mb-1">
+                        {t('common.error.label')}
+                      </p>
+                      <p className="text-sm text-red-800 dark:text-red-200 mb-3">
+                        {notificationsError}
+                      </p>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setNotificationsError(null)
+                          if (isReady && user?.id) {
+                            void fetchData()
+                          }
+                        }}
+                        className="text-xs"
+                      >
+                        {t('common.retry')}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Offline Banner */}
+              {isOffline && !loadingNotifications && (
+                <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                    <p className="text-xs text-amber-800 dark:text-amber-200">
+                      {t('common.error.offline')}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State - Should rarely happen as mergeNotificationPreferences returns defaults */}
+              {!loadingNotifications && !notificationsError && notificationGroups.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+                    <BellOff className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <div className="text-center max-w-sm">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                      No notification preferences available
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                      {activeRole === 'org_admin' 
+                        ? 'Notification preferences are not available for your role.'
+                        : 'We couldn\'t load your notification preferences. Please refresh the page or contact support if this persists.'}
+                    </p>
+                    {activeRole !== 'org_admin' && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          if (isReady && user?.id) {
+                            void fetchData()
+                          }
+                        }}
+                        className="text-xs"
+                      >
+                        {t('common.retry')}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Main Content - Notification Preferences */}
+              {!loadingNotifications && notificationGroups.length > 0 && (
+                <NotificationPreferences
+                  role={activeRole}
+                  groups={notificationGroups}
+                  onToggleGroupAll={handleToggleGroupAll}
+                  onToggleGroupDigest={handleToggleGroupDigest}
+                  onToggleAction={handleToggleAction}
+                  onToggleChannel={handleToggleChannel}
+                  onUpdateDigestWindow={handleUpdateDigestWindow}
+                  onToggleQuietHours={handleToggleQuietHours}
+                  onUpdateQuietHours={handleUpdateQuietHours}
+                  onUpdateTimezone={handleUpdateTimezone}
+                  pushChannelSupported={pushChannelSupported}
+                  saving={savingNotifications}
+                />
+              )}
             </Card>
           </section>
+          )}
 
-          {/* Support & Legal */}
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+          {/* Support */}
+          {activeSettingsTab === 'support' && (
+          <section>
             <Card className="p-4 sm:p-6">
                <SectionHeader className="mb-3 sm:mb-4">{t('portal.settings.support.title')}</SectionHeader>
                <ul className="space-y-2 sm:space-y-3 text-sm">
-                 <li><a href="#" className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 hover:text-[var(--org-link-color)] min-h-[44px] py-1"><span>{t('portal.settings.support.helpCenter')}</span> <Icon name="chevron_right" className="flex-shrink-0" /></a></li>
-                 <li><a href="#" className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 hover:text-[var(--org-link-color)] min-h-[44px] py-1"><span>{t('portal.settings.support.contactSupport')}</span> <Icon name="chevron_right" className="flex-shrink-0" /></a></li>
-                 <li><a href="#" className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 hover:text-[var(--org-link-color)] min-h-[44px] py-1"><span>{t('portal.settings.support.reportProblem')}</span> <Icon name="chevron_right" className="flex-shrink-0" /></a></li>
+                 <li><a href="#" className="flex items-center justify-between font-bold text-gray-700 dark:text-gray-300 hover:text-[var(--org-link-color)] min-h-[44px] py-1"><span>{t('portal.settings.support.helpCenter')}</span> <Icon name="chevron_right" className="flex-shrink-0" /></a></li>
+                 <li><a href="#" className="flex items-center justify-between font-bold text-gray-700 dark:text-gray-300 hover:text-[var(--org-link-color)] min-h-[44px] py-1"><span>{t('portal.settings.support.contactSupport')}</span> <Icon name="chevron_right" className="flex-shrink-0" /></a></li>
+                 <li><a href="#" className="flex items-center justify-between font-bold text-gray-700 dark:text-gray-300 hover:text-[var(--org-link-color)] min-h-[44px] py-1"><span>{t('portal.settings.support.reportProblem')}</span> <Icon name="chevron_right" className="flex-shrink-0" /></a></li>
                </ul>
             </Card>
+          </section>
+          )}
+
+          {/* Legal */}
+          {activeSettingsTab === 'legal' && (
+          <section>
             <Card className="p-4 sm:p-6">
                <SectionHeader className="mb-3 sm:mb-4">{t('portal.settings.legal.title')}</SectionHeader>
                <ul className="space-y-2 sm:space-y-3 text-sm">
-                 <li><a href="#" className="font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white min-h-[44px] flex items-center py-1">{t('portal.settings.legal.termsOfService')}</a></li>
-                 <li><a href="#" className="font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white min-h-[44px] flex items-center py-1">{t('portal.settings.legal.privacyPolicy')}</a></li>
-                 <li><a href="#" className="font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white min-h-[44px] flex items-center py-1">{t('portal.settings.legal.refundPolicy')}</a></li>
+                 <li><a href="#" className="font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white min-h-[44px] flex items-center py-1">{t('portal.settings.legal.termsOfService')}</a></li>
+                 <li><a href="#" className="font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white min-h-[44px] flex items-center py-1">{t('portal.settings.legal.privacyPolicy')}</a></li>
+                 <li><a href="#" className="font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white min-h-[44px] flex items-center py-1">{t('portal.settings.legal.refundPolicy')}</a></li>
                </ul>
-               <p className="mt-3 sm:mt-4 text-xs text-slate-400">{t('portal.settings.legal.version', { version: '2.4.0', build: '592' })}</p>
+               <p className="mt-3 sm:mt-4 text-xs text-gray-400">{t('portal.settings.legal.version', { version: '2.4.0', build: '592' })}</p>
             </Card>
           </section>
+          )}
         </div>
 
         {/* Email Change Modal */}
@@ -1046,8 +1390,8 @@ export default function Settings() {
               className="w-full max-w-md m-4"
               onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
             >
-              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">Change Email</h3>
+              <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <h3 className="text-lg font-black text-gray-900 dark:text-white">Change Email</h3>
                 <button
                   onClick={() => {
                     setShowEmailModal(false)
@@ -1055,15 +1399,15 @@ export default function Settings() {
                     setNewEmail('')
                     setConfirmEmail('')
                   }}
-                  className="text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  className="text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 >
                   <Icon name="close" />
                 </button>
               </div>
               <div className="p-6 space-y-4">
                 <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                    Current email: <strong className="text-slate-900 dark:text-white">{profile?.email}</strong>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Current email: <strong className="text-gray-900 dark:text-white">{user?.email ?? profile?.email}</strong>
                   </p>
                 </div>
                 <div>
@@ -1103,12 +1447,12 @@ export default function Settings() {
                   <p className="text-sm text-red-600 dark:text-red-400">{emailError}</p>
                 )}
                 <div className="pt-2">
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Confirmation links will be sent to both your current and new email addresses. You must click both links to complete the change.
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    A confirmation link will be sent to your new email address. Click that link to complete the change.
                   </p>
                 </div>
               </div>
-              <div className="p-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
+              <div className="p-6 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end gap-3">
                 <Button
                   variant="secondary"
                   onClick={() => {
@@ -1141,11 +1485,11 @@ export default function Settings() {
               className="w-full max-w-md m-4"
               onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
             >
-              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">Change Password</h3>
+              <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <h3 className="text-lg font-black text-gray-900 dark:text-white">Change Password</h3>
                 <button
                   onClick={() => setShowPasswordModal(false)}
-                  className="text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  className="text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 >
                   <Icon name="close" />
                 </button>
@@ -1179,7 +1523,7 @@ export default function Settings() {
                   <p className="text-sm text-red-600 dark:text-red-400">{passwordError}</p>
                 )}
               </div>
-              <div className="p-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
+              <div className="p-6 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end gap-3">
                 <Button
                   variant="secondary"
                   onClick={() => {
@@ -1214,14 +1558,14 @@ export default function Settings() {
               onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+              <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <h3 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
                   {t('admin.athletes.guardians.linkTitle')}
                 </h3>
                 <button
                   onClick={handleCloseInviteModal}
                   disabled={isInvitingGuardian}
-                  className="text-slate-400 hover:text-slate-900 dark:hover:text-white disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  className="text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
                   aria-label="Close"
                 >
                   <Icon name="close" />
@@ -1233,11 +1577,11 @@ export default function Settings() {
                 <div className="space-y-3 sm:space-y-4">
                   {/* Selected Child Info */}
                   {selectedChildId && (
-                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-                      <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
+                    <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">
                         {t('portal.settings.family.invitingFor')}
                       </p>
-                      <p className="font-bold text-slate-900 dark:text-white">
+                      <p className="font-bold text-gray-900 dark:text-white">
                         {children.find(c => c.id === selectedChildId)?.first_name}{' '}
                         {children.find(c => c.id === selectedChildId)?.last_name}
                       </p>
@@ -1274,7 +1618,7 @@ export default function Settings() {
                     {emailTouched && guardianEmail && !inviteGuardianError && (
                       <div className="mt-3">
                         {isCheckingGuardian ? (
-                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
                             <Loader2 className="w-4 h-4 animate-spin" />
                             <span>Checking...</span>
                           </div>
@@ -1298,7 +1642,7 @@ export default function Settings() {
               </div>
 
               {/* Actions */}
-              <div className="p-4 sm:p-6 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3">
+              <div className="p-4 sm:p-6 border-t border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3">
                 <Button
                   variant="secondary"
                   onClick={handleCloseInviteModal}
@@ -1329,3 +1673,4 @@ export default function Settings() {
       </PortalLayout>
   )
 }
+

@@ -1,11 +1,10 @@
 /**
- * Hook for ticket revenue reporting
+ * Hook for ticket revenue reporting.
+ * Uses unified provider-backed service (demo + real share the same DTOs).
  */
 
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { USE_FAKE_DATA } from '@/data/config'
-import { getFakeTicketOrdersWithRelations } from '@/data/fake/ticketingFakeService'
+import { getTicketingSummary } from '@/services/ticketingService'
 
 export interface TicketRevenueByEvent {
   ticketed_event_id: string
@@ -18,7 +17,7 @@ export interface TicketRevenueByEvent {
 }
 
 export interface MonthlyTicketRevenue {
-  month: string // YYYY-MM
+  month: string
   gross_cents: number
   platform_fee_cents: number
   org_revenue_cents: number
@@ -26,171 +25,20 @@ export interface MonthlyTicketRevenue {
   ticket_count: number
 }
 
-function inDateRange(value: string | null | undefined, start: Date, end: Date): boolean {
-  if (!value) return false
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return false
-  return date >= start && date <= end
-}
-
-function buildFakeEventRevenue(
-  orgId: string,
-  startDate: Date,
-  endDate: Date
-): TicketRevenueByEvent[] {
-  const orders = getFakeTicketOrdersWithRelations(orgId)
-  const eventMap = new Map<string, TicketRevenueByEvent>()
-
-  orders
-    .filter((order) => order.status === 'paid')
-    .filter((order) => inDateRange(order.processed_at ?? order.created_at, startDate, endDate))
-    .forEach((order) => {
-      const eventId = order.event?.id
-      if (!eventId) return
-
-      if (!eventMap.has(eventId)) {
-        eventMap.set(eventId, {
-          ticketed_event_id: eventId,
-          event_title: order.event?.title || 'Unknown Event',
-          gross_cents: 0,
-          platform_fee_cents: 0,
-          org_revenue_cents: 0,
-          order_count: 0,
-          ticket_count: 0,
-        })
-      }
-
-      const item = eventMap.get(eventId)!
-      const gross = order.total_cents || 0
-      const platform = order.platform_fee_cents ?? Math.round(gross * 0.08)
-      const revenue = order.org_revenue_cents ?? gross - platform
-      item.gross_cents += gross
-      item.platform_fee_cents += platform
-      item.org_revenue_cents += revenue
-      item.order_count += 1
-      item.ticket_count += order.ticket_count || 0
-    })
-
-  return Array.from(eventMap.values()).sort((a, b) => b.org_revenue_cents - a.org_revenue_cents)
-}
-
-function buildFakeMonthlyRevenue(
-  orgId: string,
-  startDate: Date,
-  endDate: Date
-): MonthlyTicketRevenue[] {
-  const orders = getFakeTicketOrdersWithRelations(orgId)
-  const monthMap = new Map<string, MonthlyTicketRevenue>()
-
-  orders
-    .filter((order) => order.status === 'paid')
-    .filter((order) => inDateRange(order.processed_at ?? order.created_at, startDate, endDate))
-    .forEach((order) => {
-      const sourceDate = new Date(order.processed_at ?? order.created_at)
-      const monthKey = `${sourceDate.getFullYear()}-${String(sourceDate.getMonth() + 1).padStart(2, '0')}`
-
-      if (!monthMap.has(monthKey)) {
-        monthMap.set(monthKey, {
-          month: monthKey,
-          gross_cents: 0,
-          platform_fee_cents: 0,
-          org_revenue_cents: 0,
-          order_count: 0,
-          ticket_count: 0,
-        })
-      }
-
-      const month = monthMap.get(monthKey)!
-      const gross = order.total_cents || 0
-      const platform = order.platform_fee_cents ?? Math.round(gross * 0.08)
-      const revenue = order.org_revenue_cents ?? gross - platform
-      month.gross_cents += gross
-      month.platform_fee_cents += platform
-      month.org_revenue_cents += revenue
-      month.order_count += 1
-      month.ticket_count += order.ticket_count || 0
-    })
-
-  return Array.from(monthMap.values()).sort((a, b) => b.month.localeCompare(a.month))
-}
-
 /**
- * Get ticket revenue by event for an organization
+ * Get ticket revenue by event for an organization.
  */
 export function useTicketRevenueByEvent(orgId: string | undefined, dateRange?: { start: Date; end: Date }) {
   return useQuery({
-    queryKey: ['ticket-revenue-by-event', orgId, dateRange],
-    queryFn: async () => {
+    queryKey: ['ticket-revenue-by-event', orgId, dateRange?.start?.toISOString(), dateRange?.end?.toISOString()],
+    queryFn: async (): Promise<TicketRevenueByEvent[]> => {
       if (!orgId) return []
-
-      const startDate = dateRange?.start || new Date(new Date().getFullYear(), 0, 1)
-      const endDate = dateRange?.end || new Date()
-
-      if (USE_FAKE_DATA) {
-        return buildFakeEventRevenue(orgId, startDate, endDate)
-      }
-
-      // Query stripe_connect_transactions joined with ticket_orders and ticketed_events
-      const { data: transactions, error } = await supabase
-        .from('stripe_connect_transactions')
-        .select(`
-          gross_amount_cents,
-          application_fee_cents,
-          net_amount_cents,
-          ticket_orders!inner(
-            org_id,
-            ticketed_event_id,
-            ticketed_events!inner(
-              id,
-              title
-            ),
-            ticket_order_items(quantity)
-          )
-        `)
-        .eq('ticket_orders.org_id', orgId)
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString())
-
+      const { data, error } = await getTicketingSummary(orgId, {
+        start: dateRange?.start ?? null,
+        end: dateRange?.end ?? null,
+      })
       if (error) throw error
-
-      if (!transactions || transactions.length === 0) {
-        return []
-      }
-
-      // Group by event
-      const eventMap = new Map<string, TicketRevenueByEvent>()
-
-      for (const tx of transactions) {
-        const order = tx.ticket_orders as any
-        const event = order?.ticketed_events
-        const items = order?.ticket_order_items || []
-
-        if (!event) continue
-
-        const eventId = event.id
-        const ticketCount = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
-
-        if (!eventMap.has(eventId)) {
-          eventMap.set(eventId, {
-            ticketed_event_id: eventId,
-            event_title: event.title || 'Unknown Event',
-            gross_cents: 0,
-            platform_fee_cents: 0,
-            org_revenue_cents: 0,
-            order_count: 0,
-            ticket_count: 0,
-          })
-        }
-
-        const eventRevenue = eventMap.get(eventId)!
-        eventRevenue.gross_cents += tx.gross_amount_cents || 0
-        eventRevenue.platform_fee_cents += tx.application_fee_cents || 0
-        eventRevenue.org_revenue_cents += tx.net_amount_cents || 0
-        eventRevenue.order_count += 1
-        eventRevenue.ticket_count += ticketCount
-      }
-
-      return Array.from(eventMap.values()).sort((a, b) => b.org_revenue_cents - a.org_revenue_cents)
+      return data?.byEvent ?? []
     },
     enabled: !!orgId,
     retry: 2,
@@ -199,75 +47,20 @@ export function useTicketRevenueByEvent(orgId: string | undefined, dateRange?: {
 }
 
 /**
- * Get monthly ticket revenue summary for an organization
+ * Get monthly ticket revenue summary for an organization.
  */
 export function useMonthlyTicketRevenue(orgId: string | undefined, months: number = 12) {
   return useQuery({
     queryKey: ['monthly-ticket-revenue', orgId, months],
-    queryFn: async () => {
+    queryFn: async (): Promise<MonthlyTicketRevenue[]> => {
       if (!orgId) return []
+      const end = new Date()
+      const start = new Date()
+      start.setMonth(start.getMonth() - months)
 
-      const endDate = new Date()
-      const startDate = new Date()
-      startDate.setMonth(startDate.getMonth() - months)
-
-      if (USE_FAKE_DATA) {
-        return buildFakeMonthlyRevenue(orgId, startDate, endDate)
-      }
-
-      const { data: transactions, error } = await supabase
-        .from('stripe_connect_transactions')
-        .select(`
-          gross_amount_cents,
-          application_fee_cents,
-          net_amount_cents,
-          created_at,
-          ticket_orders!inner(
-            org_id,
-            ticket_order_items(quantity)
-          )
-        `)
-        .eq('ticket_orders.org_id', orgId)
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString())
-
+      const { data, error } = await getTicketingSummary(orgId, { start, end })
       if (error) throw error
-
-      if (!transactions || transactions.length === 0) {
-        return []
-      }
-
-      // Group by month
-      const monthMap = new Map<string, MonthlyTicketRevenue>()
-
-      for (const tx of transactions) {
-        const order = tx.ticket_orders as any
-        const items = order?.ticket_order_items || []
-        const ticketCount = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
-
-        const txDate = new Date(tx.created_at)
-        const monthKey = `${txDate.getFullYear()}-${String(txDate.getMonth() + 1).padStart(2, '0')}`
-
-        if (!monthMap.has(monthKey)) {
-          monthMap.set(monthKey, {
-            month: monthKey,
-            gross_cents: 0,
-            platform_fee_cents: 0,
-            org_revenue_cents: 0,
-            order_count: 0,
-            ticket_count: 0,
-          })
-        }
-
-        const monthRevenue = monthMap.get(monthKey)!
-        monthRevenue.gross_cents += tx.gross_amount_cents || 0
-        monthRevenue.platform_fee_cents += tx.application_fee_cents || 0
-        monthRevenue.org_revenue_cents += tx.net_amount_cents || 0
-        monthRevenue.order_count += 1
-        monthRevenue.ticket_count += ticketCount
-      }
-
-      return Array.from(monthMap.values()).sort((a, b) => b.month.localeCompare(a.month))
+      return data?.byMonth ?? []
     },
     enabled: !!orgId,
     retry: 2,

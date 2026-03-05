@@ -108,6 +108,62 @@ export const ROUTE_TO_FEATURE: Record<string, FeatureKey> = {
     'admin.seasons.update': 'team_management',
 
     // -------------------------------------------------------------------------
+    // Admin Routes - Reports (map to children, not parent)
+    // -------------------------------------------------------------------------
+    'admin.reports.overview': 'reports_overview',
+    'admin.reports.builder': 'reports_builder',
+    'admin.reports.saved': 'reports_saved',
+    'admin.reports.exports': 'reports_exports',
+    'admin.reports.schedules': 'reports_schedules',
+    'admin.reports.viewer': 'reports_viewer',
+    'admin.reports.ticketing': 'reports_ticketing',
+    'admin.reports.registration': 'reports_registration',
+    'admin.reports.video': 'reports_video',
+    'admin.reports.events': 'reports_events',
+    'admin.reports.domain.participation': 'reports_domain_participation',
+    'admin.reports.domain.payments': 'reports_domain_payments',
+    'admin.reports.domain.scheduling': 'reports_domain_scheduling',
+    'admin.reports.domain.travel': 'reports_domain_travel',
+    'admin.reports.domain.uniforms': 'reports_domain_uniforms',
+    'admin.reports.domain.communications': 'reports_domain_communications',
+    'admin.reports.domain.operations': 'reports_domain_operations',
+
+    // -------------------------------------------------------------------------
+    // Admin Routes - Facilities (map to children)
+    // -------------------------------------------------------------------------
+    'admin.facilities.list': 'facilities_list',
+    'admin.facilities.detail': 'facilities_detail',
+    'admin.facilities.schedule': 'facilities_schedule',
+    'admin.customers.list': 'facilities_schedule',
+    'admin.customers.detail': 'facilities_schedule',
+    'admin.customers.create': 'facilities_schedule',
+    'admin.customers.edit': 'facilities_schedule',
+
+    // -------------------------------------------------------------------------
+    // Admin Routes - Photos (map to children)
+    // -------------------------------------------------------------------------
+    'admin.photos.list': 'photos_list',
+    'admin.photos.browse': 'photos_list',
+    'admin.photos.search': 'photos_list',
+    'admin.photos.create': 'photos_create',
+    'admin.photos.detail': 'photos_detail',
+    'admin.photos.edit': 'photos_detail',
+    'admin.photos.photo': 'photos_photo',
+    'admin.photosGallery': 'photos_gallery',
+    'admin.photosGalleryManage': 'photos_gallery_manage',
+
+    // -------------------------------------------------------------------------
+    // Admin Routes - Events
+    // -------------------------------------------------------------------------
+    'admin.events.edit': 'event_scheduling',
+
+    // -------------------------------------------------------------------------
+    // Admin Routes - Invitations
+    // -------------------------------------------------------------------------
+    'admin.invitations': 'invitations',
+    'admin.organization.bulkInvite': 'invitations',
+
+    // -------------------------------------------------------------------------
     // Admin Routes - Ticketing
     // -------------------------------------------------------------------------
     'admin.ticketing': 'ticketing',
@@ -115,8 +171,37 @@ export const ROUTE_TO_FEATURE: Record<string, FeatureKey> = {
     'admin.ticketingEvents.list': 'ticketing',
     'admin.ticketingEvents.create': 'ticketing',
     'admin.ticketingEvents.ticketTypes.create': 'ticketing',
+    'admin.ticketingEvents.ticketTypes.edit': 'ticketing',
+    'admin.ticketingEvents.seatMaps.list': 'ticketing',
+    'admin.ticketingEvents.seatMaps.edit': 'ticketing',
+    'admin.ticketingEvents.seatMaps.builder': 'ticketing',
     'admin.ticketingOrders': 'ticketing',
     'admin.ticketingScanner': 'ticketing',
+    'admin.ticketingScannerEvent': 'ticketing',
+
+    // -------------------------------------------------------------------------
+    // Portal Routes - Additional mappings
+    // -------------------------------------------------------------------------
+    'portal.eventDetail': 'event_scheduling',
+    'portal.eventEdit': 'event_scheduling',
+    'portal.myTickets': 'ticketing',
+    'portal.photos': 'photos_list',
+    'portal.photosGallery': 'photos_gallery',
+    'portal.photosGalleryManage': 'photos_gallery_manage',
+
+    // -------------------------------------------------------------------------
+    // Fan Routes
+    // -------------------------------------------------------------------------
+    'fan.schedule': 'event_scheduling',
+    'fan.events.detail': 'event_scheduling',
+    'fan.tickets.list': 'ticketing',
+    'fan.tickets.detail': 'ticketing',
+    'fan.photos.list': 'photos_list',
+    'fan.photos.gallery': 'photos_gallery',
+    'fan.photos.athlete': 'photos_list',
+    'fan.videos.list': 'videos_list',
+    'fan.videos.detail': 'videos_detail',
+    // fan.home, fan.following.*, fan.profile.* are ungated (public features)
 
 };
 
@@ -220,6 +305,7 @@ export const UNGATED_ROUTES: string[] = [
 
     // Trial/billing routes (must be accessible to upgrade)
     'admin.trialExpired',
+    'admin.organization.featureUpgrade',
     'admin.organization.billing',
     'admin.organization.billing.checkoutSuccess',
     'admin.organization.billing.checkoutCancel',
@@ -234,6 +320,21 @@ export const UNGATED_ROUTES: string[] = [
     // Public/join routes
     'public.join',
     'portal.join',
+
+    // Fan public routes (home, following, profile are always accessible)
+    'fan.home',
+    'fan.following.base',
+    'fan.following.discover',
+    'fan.profiles.org',
+    'fan.profiles.team',
+    'fan.profiles.athlete',
+    'fan.profile.base',
+    'fan.profile.edit',
+    'fan.profile.notifications',
+    'fan.profile.linkedAthletes',
+    'fan.profile.privacy',
+    'fan.profile.password',
+    'fan.profile.security',
 
     // Platform Admin Routes — platform admins bypass feature gates entirely
     'platformAdmin.dashboard',
@@ -261,7 +362,7 @@ export const UNGATED_ROUTES: string[] = [
     'platformAdmin.licenses.overrides.create',
     'platformAdmin.licenses.overrides.detail',
     'platformAdmin.licenses.audit',
-    'platformAdmin.emailPreview',
+    'platformAdmin.emailSettings',
 ];
 
 // ============================================================================

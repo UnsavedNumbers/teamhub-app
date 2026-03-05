@@ -29,8 +29,8 @@ jobs:
       - name: Lint app
         run: npm run lint
 
-      - name: Build app
-        run: npm run build
+      - name: Build app (demo mode)
+        run: npm run build:demo
 
   test:
     if: github.ref_name != 'demo' && github.base_ref != 'demo'
@@ -40,6 +40,13 @@ jobs:
       PGOPTIONS: "-c lock_timeout=60s -c statement_timeout=5min"
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
 
       - uses: supabase/setup-cli@v1
         with:
@@ -68,6 +75,14 @@ jobs:
       # Make the local DB state deterministic for lint/tests
       - name: Reset local DB (reapply migrations)
         run: supabase db reset
+
+      - name: Schema preflight contract
+        env:
+          PREFLIGHT_STRICT: "true"
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          STRIPE_SECRET_KEY: ci_preflight_dummy_key
+          STRIPE_WEBHOOK_SECRET: ci_preflight_dummy_webhook
+        run: npm run schema:preflight-contract
 
       - name: Lint database
         run: supabase db lint

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
 import { supabase } from '../../lib/supabase'
@@ -8,15 +9,19 @@ import { getProgram, getSports } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams, getActiveSeason, getTeamRoster } from '../../data/services/teamsService'
 import { getOrganizationUsers } from '../../data/services/usersService'
+import { getVenueById } from '../../data/services/venueService'
 import type { Level, Program, Sport, Team } from '../../data/types/organization'
+import { getProgramStatus } from '../../utils/programStatus'
+import { getRegistrationStatus } from '../../utils/registrationStatus'
 import OfflineBanner from '../../components/admin/OfflineBanner'
-import { AdminPageHeader, Button, Card, Table } from '../../components/admin'
+import { AdminPageHeader, Button, Card, Table, Badge } from '../../components/admin'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import { getLink } from '../../utils/routes'
 import { getRandomSportImagePath } from '../../utils/sportImages'
 import { cn } from '../../utils/cn'
 import { PhotoSection } from '@/components/galleries/PhotoSection'
 import { useI18n } from '../../i18n/useI18n'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import '../../styles/orgAdmin.css'
 
 type LevelRow = {
@@ -86,10 +91,12 @@ export default function ProgramDetail() {
   const programId = id?.trim() || ''
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const { isOffline } = useOffline()
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useI18n()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -104,6 +111,7 @@ export default function ProgramDetail() {
   const [athleteCountByLevel, setAthleteCountByLevel] = useState<Record<string, number> | null>(null)
   const [totalAthletes, setTotalAthletes] = useState<number | null>(null)
   const [totalCoaches, setTotalCoaches] = useState<number | null>(null)
+  const [defaultVenueName, setDefaultVenueName] = useState<string | null>(null)
 
   // Navigation state success message (e.g. returning from forms)
   useEffect(() => {
@@ -183,6 +191,19 @@ export default function ProgramDetail() {
       setSport(foundSport)
       setLevels(Array.isArray(levelsRes.data) ? levelsRes.data : [])
       setTeams(Array.isArray(teamsRes.data) ? teamsRes.data : [])
+
+      // Load default venue name if program has a default_location_id
+      if (foundProgram.default_location_id) {
+        try {
+          const venue = await getVenueById(foundProgram.default_location_id)
+          setDefaultVenueName(venue.name)
+        } catch (venueErr) {
+          console.error('[ProgramDetail] Error loading default venue:', venueErr)
+          setDefaultVenueName(null)
+        }
+      } else {
+        setDefaultVenueName(null)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load program.')
     } finally {
@@ -571,8 +592,7 @@ export default function ProgramDetail() {
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  background: 'linear-gradient(to top, var(--oa-n900), transparent)',
-                  opacity: 0.9,
+                  background: 'rgba(15, 23, 42, 0.72)',
                 }}
               />
               <div
@@ -633,33 +653,77 @@ export default function ProgramDetail() {
                 {/* Action bar */}
                 <Card className="oa-card">
                   <div className="oa-flex oa-flex-col oa-gap-4">
-                    <div className="oa-flex oa-justify-between oa-items-center oa-gap-2">
-                      <span className="oa-badge oa-badge--info" style={{ fontWeight: 700 }}>
-                        {t('admin.programs.statusCard.statusLabel')}: {statusLabel}
-                      </span>
+                    <div className="oa-flex oa-justify-between oa-items-center oa-gap-2 oa-flex-wrap">
+                      <div className="oa-flex oa-gap-2 oa-flex-wrap">
+                        <span className="oa-badge oa-badge--info" style={{ fontWeight: 700 }}>
+                          {t('admin.programs.statusCard.statusLabel')}: {statusLabel}
+                        </span>
+                        {program.is_public && (
+                          <Badge variant="info" className="oa-text-[10px] oa-px-2 oa-py-0.5">
+                            {t('admin.programs.details.visibilityPublic')}
+                          </Badge>
+                        )}
+                        {(() => {
+                          const progStatus = getProgramStatus(program)
+                          const statusColors: Record<string, string> = {
+                            unpublished: 'var(--oa-n500)',
+                            upcoming: 'var(--oa-info)',
+                            live: 'var(--oa-success)',
+                            completed: 'var(--oa-n400)',
+                          }
+                          return (
+                            <Badge 
+                              variant="neutral" 
+                              className="oa-text-[10px] oa-px-2 oa-py-0.5 oa-uppercase"
+                              style={{ backgroundColor: statusColors[progStatus] || statusColors.unpublished, color: 'white' }}
+                            >
+                              {progStatus}
+                            </Badge>
+                          )
+                        })()}
+                        {program.registration_start_date && (() => {
+                          const regStatus = getRegistrationStatus(program)
+                          const regStatusColors: Record<string, string> = {
+                            opens_soon: 'var(--oa-warning)',
+                            accepting: 'var(--oa-success)',
+                            closed: 'var(--oa-n400)',
+                          }
+                          return (
+                            <Badge 
+                              variant="neutral" 
+                              className="oa-text-[10px] oa-px-2 oa-py-0.5 oa-uppercase"
+                              style={{ backgroundColor: regStatusColors[regStatus] || regStatusColors.accepting, color: 'white' }}
+                            >
+                              {regStatus.replace('_', ' ')}
+                            </Badge>
+                          )
+                        })()}
+                      </div>
                     </div>
                     <div className="oa-flex oa-justify-between oa-gap-2 oa-flex-wrap">
                       <div className="oa-flex oa-gap-2 oa-flex-wrap">
-                        <Link
-                          to={`${getLink('admin.programs.update', { id: programId })}?returnUrl=${encodeURIComponent(detailRoute)}`}
-                          onClick={(e) => {
-                            if (!programId) {
-                              e.preventDefault()
-                              setActionError('Program ID is required to edit program.')
-                            }
-                          }}
-                          className="w-full sm:w-auto"
-                        >
-                          <Button
-                            variant="ghost"
-                            icon="edit"
-                            disabled={loading || !programId}
-                            aria-label={`Edit ${program?.name || 'program'}`}
-                            className="w-full sm:w-auto min-h-[44px]"
+                        {isOrgAdmin && (
+                          <Link
+                            to={`${getLink('admin.programs.update', { id: programId })}?returnUrl=${encodeURIComponent(detailRoute)}`}
+                            onClick={(e) => {
+                              if (!programId) {
+                                e.preventDefault()
+                                setActionError('Program ID is required to edit program.')
+                              }
+                            }}
+                            className="w-full sm:w-auto"
                           >
-                            Edit Program
-                          </Button>
-                        </Link>
+                            <Button
+                              variant="ghost"
+                              icon="edit"
+                              disabled={loading || !programId}
+                              aria-label={`Edit ${program?.name || 'program'}`}
+                              className="w-full sm:w-auto min-h-[44px]"
+                            >
+                              Edit Program
+                            </Button>
+                          </Link>
+                        )}
 
                         <Link to={levelsRoute} className="w-full sm:w-auto">
                           <Button
@@ -711,45 +775,158 @@ export default function ProgramDetail() {
                           </OrgAdminButton>
                         </Link>
 
-                        <Link
-                          to={`${formsRoute}?type=team&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
-                          className="w-full sm:w-auto"
-                          onClick={(e) => {
-                            if (isOffline || USE_FAKE_DATA) {
-                              e.preventDefault()
-                              setActionError(
-                                isOffline
-                                  ? 'You appear to be offline. Please reconnect and try again.'
-                                  : 'This action is not available in demo mode. Please sign in to add teams.'
-                              )
-                            } else if (!programId || !program.sport_id) {
-                              e.preventDefault()
-                              setActionError('Program and sport information is required to add a team.')
-                            }
-                          }}
-                        >
-                          <Button
-                            variant="secondary"
-                            disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
-                            title={
-                              isOffline
-                                ? 'Offline - cannot add teams'
-                                : USE_FAKE_DATA
-                                  ? 'Sign in to add teams'
-                                  : !programId || !program.sport_id
-                                    ? 'Missing required information'
-                                    : undefined
-                            }
-                            aria-label="Add a new team to this program"
-                            className="w-full sm:w-auto min-h-[44px]"
+                        {isOrgAdmin && (
+                          <Link
+                            to={`${formsRoute}?type=team&program_id=${programId}&sport_id=${program.sport_id}&returnUrl=${encodeURIComponent(detailRoute)}`}
+                            className="w-full sm:w-auto"
+                            onClick={(e) => {
+                              if (isOffline || USE_FAKE_DATA) {
+                                e.preventDefault()
+                                setActionError(
+                                  isOffline
+                                    ? 'You appear to be offline. Please reconnect and try again.'
+                                    : 'This action is not available in demo mode. Please sign in to add teams.'
+                                )
+                              } else if (!programId || !program.sport_id) {
+                                e.preventDefault()
+                                setActionError('Program and sport information is required to add a team.')
+                              }
+                            }}
                           >
-                            Add Team
-                          </Button>
-                        </Link>
+                            <Button
+                              variant="secondary"
+                              disabled={loading || isOffline || USE_FAKE_DATA || !programId || !program.sport_id}
+                              title={
+                                isOffline
+                                  ? 'Offline - cannot add teams'
+                                  : USE_FAKE_DATA
+                                    ? 'Sign in to add teams'
+                                    : !programId || !program.sport_id
+                                      ? 'Missing required information'
+                                      : undefined
+                              }
+                              aria-label="Add a new team to this program"
+                              className="w-full sm:w-auto min-h-[44px]"
+                            >
+                              Add Team
+                            </Button>
+                          </Link>
+                        )}
                       </div>
                     </div>
                   </div>
                 </Card>
+
+                {/* Program Details */}
+                {(program.is_public !== undefined || 
+                  program.activity_start_date || 
+                  program.activity_end_date || 
+                  program.registration_start_date || 
+                  program.registration_end_date || 
+                  program.program_code || 
+                  program.sponsor || 
+                  program.default_location_id) && (
+                  <Card title={t('admin.programs.details.title')}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--pa-space-4)' }}>
+                      {program.is_public !== undefined && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: 'var(--org-text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                            {t('admin.programs.details.visibility')}
+                          </label>
+                          <p style={{ margin: 0, fontSize: '14px' }}>
+                            {program.is_public ? t('admin.programs.details.visibilityPublic') : t('admin.programs.details.visibilityPrivate')}
+                          </p>
+                        </div>
+                      )}
+                      {program.program_code && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: 'var(--org-text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                            {t('admin.programs.details.programCode')}
+                          </label>
+                          <p style={{ margin: 0, fontSize: '14px', fontFamily: 'monospace' }}>
+                            {program.program_code}
+                          </p>
+                        </div>
+                      )}
+                      {program.sponsor && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: 'var(--org-text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                            {t('admin.programs.details.sponsor')}
+                          </label>
+                          <p style={{ margin: 0, fontSize: '14px' }}>
+                            {program.sponsor}
+                          </p>
+                        </div>
+                      )}
+                      {program.default_location_id && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: 'var(--org-text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                            {t('admin.programs.details.defaultLocation')}
+                          </label>
+                          <p style={{ margin: 0, fontSize: '14px' }}>
+                            {defaultVenueName || t('common.loading')}
+                          </p>
+                        </div>
+                      )}
+                      {program.activity_start_date && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: 'var(--org-text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                            {t('admin.programs.details.activityStartDate')}
+                          </label>
+                          <p style={{ margin: 0, fontSize: '14px' }}>
+                            {new Date(program.activity_start_date).toLocaleDateString('en-US', { 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
+                          </p>
+                        </div>
+                      )}
+                      {program.activity_end_date && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: 'var(--org-text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                            {t('admin.programs.details.activityEndDate')}
+                          </label>
+                          <p style={{ margin: 0, fontSize: '14px' }}>
+                            {new Date(program.activity_end_date).toLocaleDateString('en-US', { 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
+                          </p>
+                        </div>
+                      )}
+                      {program.registration_start_date && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: 'var(--org-text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                            {t('admin.programs.details.registrationStartDate')}
+                          </label>
+                          <p style={{ margin: 0, fontSize: '14px' }}>
+                            {new Date(program.registration_start_date).toLocaleDateString('en-US', { 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
+                          </p>
+                        </div>
+                      )}
+                      {program.registration_end_date && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: 'var(--org-text-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                            {t('admin.programs.details.registrationEndDate')}
+                          </label>
+                          <p style={{ margin: 0, fontSize: '14px' }}>
+                            {new Date(program.registration_end_date).toLocaleDateString('en-US', { 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                )}
 
                 {/* Levels table */}
                 <AnyCard

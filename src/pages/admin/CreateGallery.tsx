@@ -228,20 +228,22 @@ export default function CreateGallery() {
                         <span className="material-symbols-rounded oa-form-icon">category</span>
                         {t('photos.form.entityType')}
                       </label>
-                      <div className="oa-segmented">
+                      <div className="pa-tabs-list oa-gallery-form__tabs" role="tablist" aria-label={t('photos.form.entityType')}>
                         <button
                           type="button"
-                          className={`oa-segmented__button${entityType === 'organization' ? ' is-active' : ''}`}
+                          role="tab"
+                          aria-selected={entityType === 'organization'}
+                          className={`pa-tabs-trigger${entityType === 'organization' ? ' active' : ''}`}
                           onClick={() => setEntityType('organization')}
-                          aria-pressed={entityType === 'organization'}
                         >
                           {t('photos.galleryType.organization')}
                         </button>
                         <button
                           type="button"
-                          className={`oa-segmented__button${entityType === 'season' ? ' is-active' : ''}`}
+                          role="tab"
+                          aria-selected={entityType === 'season'}
+                          className={`pa-tabs-trigger${entityType === 'season' ? ' active' : ''}`}
                           onClick={() => setEntityType('season')}
-                          aria-pressed={entityType === 'season'}
                         >
                           {t('photos.galleryType.season')}
                         </button>

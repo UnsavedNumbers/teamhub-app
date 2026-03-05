@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { getFollowedOrgs } from '../../data/services/fanService'
 import {
   getFanGalleries,
   getFanGallery,
@@ -60,6 +61,7 @@ export default function FanPhotos() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [cursor, setCursor] = useState<KeysetCursor | null>(null)
+  const [orgLogoById, setOrgLogoById] = useState<Record<string, string | null>>({})
   const [pageSize, setPageSize] = useState(getPageSize)
   const [mediaType, setMediaType] = useState<'photos' | 'videos'>('photos')
   const mountedRef = useRef(true)
@@ -160,6 +162,19 @@ export default function FanPhotos() {
   }, [loading, loadingMore, filters.q, filters.org, filters.sort, mediaType, pageSize, cursor, mergeGrouped])
 
   useEffect(() => {
+    const loadFollowedOrgLogos = async () => {
+      const result = await getFollowedOrgs()
+      if (!mountedRef.current || result.error) return
+      const logoMap = (result.data || []).reduce<Record<string, string | null>>((acc, follow) => {
+        acc[follow.org_id] = follow.org?.logo_url ?? null
+        return acc
+      }, {})
+      setOrgLogoById(logoMap)
+    }
+    loadFollowedOrgLogos()
+  }, [])
+
+  useEffect(() => {
     loadGalleries(true)
   }, [loadGalleries])
 
@@ -239,9 +254,16 @@ export default function FanPhotos() {
           {grouped.map((group) => (
             <div key={group.org_id} className="fan-galleries-group">
               <div className="fan-galleries-group-header">
-                <h2 className="fan-galleries-group-title">
-                  {group.org_name || t('common.unknown')}
-                </h2>
+                <div className="fan-galleries-group-title">
+                  <span className="fan-galleries-group-logo">
+                    {orgLogoById[group.org_id] ? (
+                      <img src={orgLogoById[group.org_id] || undefined} alt={group.org_name || 'Organization'} />
+                    ) : (
+                      <span className="material-symbols-outlined">business</span>
+                    )}
+                  </span>
+                  <span>{group.org_name || t('common.unknown')}</span>
+                </div>
                 {!filters.org && (
                   <button
                     className="fan-galleries-group-link"

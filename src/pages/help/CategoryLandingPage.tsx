@@ -16,7 +16,6 @@ import {
 } from '../../data/services/helpCenterDataService'
 import {
   getAllWordPressTagsDirect,
-  getAllWordPressDataDirect,
 } from '../../data/services/helpCenterDataService'
 import type {
   HelpCategory,
@@ -24,7 +23,6 @@ import type {
   HelpArticle,
   HelpSubcategoryGroup,
 } from '../../data/services/helpCenterDataService'
-import type { WordPressPost } from '../../data/services/wordpressApiService'
 import { showError } from '../../utils/toast'
 import { debug } from '../../lib/debug'
 import { getLink, getPath } from '../../utils/routes'
@@ -50,40 +48,6 @@ const categoryPageCache = new Map<
     postExcerptsById: Record<number, string>
   }
 >()
-
-function decodeHtmlEntities(value: string): string {
-  return value.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (_, entity: string) => {
-    const named: Record<string, string> = {
-      amp: '&',
-      lt: '<',
-      gt: '>',
-      quot: '"',
-      apos: "'",
-      nbsp: ' ',
-      hellip: '...',
-    }
-
-    if (entity in named) {
-      return named[entity]
-    }
-
-    if (entity.startsWith('#x') || entity.startsWith('#X')) {
-      const code = Number.parseInt(entity.slice(2), 16)
-      return Number.isFinite(code) && code >= 0 && code <= 0x10ffff
-        ? String.fromCodePoint(code)
-        : `&${entity};`
-    }
-
-    if (entity.startsWith('#')) {
-      const code = Number.parseInt(entity.slice(1), 10)
-      return Number.isFinite(code) && code >= 0 && code <= 0x10ffff
-        ? String.fromCodePoint(code)
-        : `&${entity};`
-    }
-
-    return `&${entity};`
-  })
-}
 
 /** Title for category slug while loading or when no category yet (avoids showing previous page title) */
 function getCategoryPageTitleFromSlug(
@@ -201,11 +165,10 @@ export default function CategoryLandingPage() {
         console.log('[CategoryLandingPage] 🔄 Fetching articles and subcategories...')
       }
 
-      const [articlesResult, childCategoriesResult, tagsResult, postsResult] = await Promise.all([
+      const [articlesResult, childCategoriesResult, tagsResult] = await Promise.all([
         getCategoryArticles(categorySlug, userRole),
         getCategorySubcategoryGroups(categorySlug),
         getAllWordPressTagsDirect(),
-        getAllWordPressDataDirect<WordPressPost>('post'),
       ])
 
       if (categorySlugRef.current !== categorySlug) return
@@ -225,14 +188,7 @@ export default function CategoryLandingPage() {
             .filter((tag) => tag.slug?.toLowerCase() === 'featured' || tag.name?.toLowerCase() === 'featured')
             .map((tag) => tag.id)
         : []
-      const excerpts = !postsResult.error
-        ? Object.fromEntries(
-            (postsResult.data || []).map((post) => [
-              post.id,
-              decodeHtmlEntities((post.excerpt?.rendered || '').replace(/<[^>]*>/g, '').trim()),
-            ])
-          )
-        : {}
+      const excerpts: Record<number, string> = {}
 
       setSections(sectionsData)
       setGeneralArticles(generalArticlesData)

@@ -9,6 +9,7 @@ import { useOrganization } from '../../contexts/OrganizationContext'
 import { useFeatureFlags } from '../../utils/featureFlags'
 import { useLicense } from '../../hooks/useLicense'
 import { useI18n } from '../../i18n/useI18n'
+import { useFeatureGate } from '../../lib/featureGate/useFeatureGate'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
 import { refreshOrganizationTheme } from '../../hooks/useOrganizationTheme'
@@ -96,6 +97,8 @@ export default function OrganizationSettings() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { isEnabled } = useFeatureFlags(['org_advanced_settings', 'org_settings_attendance'])
   const attendanceTabEnabled = isEnabled('org_settings_attendance')
+  const { allowed: hasStripeIntegration } = useFeatureGate('stripe_integration')
+  const { allowed: medicalEnabled } = useFeatureGate('medical_enabled')
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -103,15 +106,11 @@ export default function OrganizationSettings() {
   const [success, setSuccess] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('overview')
 
-  // Check if organization has access to payment features (pro or standard license, and license must be active)
+  // Check if organization has access to payment features using feature gate
   const hasPaymentAccess = useMemo(() => {
-    if (!licenseSummary?.plan) return false
-    // Pro and standard plans have access to Stripe Connect
-    const hasCorrectPlan = licenseSummary.plan === 'pro' || licenseSummary.plan === 'standard'
-    // License must also be active/valid
-    const isActive = licenseSummary.isValid ?? false
-    return hasCorrectPlan && isActive
-  }, [licenseSummary?.plan, licenseSummary?.isValid])
+    // Use feature gate to check stripe_integration access (replaces hardcoded plan checks)
+    return hasStripeIntegration && (licenseSummary?.isValid ?? false)
+  }, [hasStripeIntegration, licenseSummary?.isValid])
 
   // Valid tab values for URL parameter
   const validTabs = useMemo(() => {
@@ -435,7 +434,7 @@ export default function OrganizationSettings() {
         )}
 
         <TabsContent value="registration">
-           {settings && <RegistrationForm settings={settings.registration} onSave={(d) => handleSaveSettings('registration', d)} loading={saving} />}
+           {settings && <RegistrationForm settings={settings.registration} onSave={(d) => handleSaveSettings('registration', d)} loading={saving} medicalEnabled={medicalEnabled} />}
         </TabsContent>
 
         <TabsContent value="joinLinks">
@@ -1015,7 +1014,7 @@ function AttendanceForm({ settings, onSave, loading }: { settings: OrgSettingsTy
 }
 
 
-function RegistrationForm({ settings, onSave, loading }: { settings: OrgSettingsType['registration'], onSave: (d: any) => void, loading: boolean }) {
+function RegistrationForm({ settings, onSave, loading, medicalEnabled }: { settings: OrgSettingsType['registration']; onSave: (d: any) => void; loading: boolean; medicalEnabled?: boolean }) {
   const { t } = useI18n()
   const { control, handleSubmit, reset } = useForm({
     defaultValues: { ...settings }
@@ -1036,9 +1035,11 @@ function RegistrationForm({ settings, onSave, loading }: { settings: OrgSettings
            <Controller name="allow_players_without_guardians" control={control} render={({field}) => (
             <Checkbox label={t('admin.organizationSettings.registration.allowPlayersWithoutGuardians')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
           )} />
-           <Controller name="medical_form_required" control={control} render={({field}) => (
-            <Checkbox label={t('admin.organizationSettings.registration.requireMedicalForm')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
-          )} />
+           {medicalEnabled && (
+             <Controller name="medical_form_required" control={control} render={({field}) => (
+               <Checkbox label={t('admin.organizationSettings.registration.requireMedicalForm')} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+             )} />
+           )}
         </div>
          <div className="oa-form-actions">
           <Button type="submit" loading={loading} variant="primary">{t('admin.organizationSettings.registration.save')}</Button>
@@ -1473,11 +1474,11 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
           justifyContent: 'center',
           fontSize: '40px',
           background: statusType === 'success'
-            ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%)'
+            ? 'rgba(34, 197, 94, 0.1)'
             : statusType === 'error'
-            ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%)'
+            ? 'rgba(239, 68, 68, 0.1)'
             : statusType === 'warning'
-            ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(251, 191, 36, 0.05) 100%)'
+            ? 'rgba(251, 191, 36, 0.1)'
             : 'rgba(0, 0, 0, 0.03)',
           border: statusType === 'success'
             ? '2px solid rgba(34, 197, 94, 0.2)'
@@ -1589,7 +1590,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
 
       {connectStatus && payoutsPaused && (
         <div style={{ 
-          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.04) 100%)',
+          background: 'rgba(239, 68, 68, 0.08)',
           border: '1px solid rgba(239, 68, 68, 0.2)',
           borderRadius: '12px',
           padding: '20px',
@@ -1621,7 +1622,7 @@ function PaymentSettingsForm({ organizationId }: { organizationId: string }) {
 
       {connectStatus && !payoutsPaused && hasDueRequirements && (
         <div style={{ 
-          background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(251, 191, 36, 0.04) 100%)',
+          background: 'rgba(251, 191, 36, 0.08)',
           border: '1px solid rgba(251, 191, 36, 0.3)',
           borderRadius: '12px',
           padding: '20px',

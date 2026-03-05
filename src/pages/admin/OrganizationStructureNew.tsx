@@ -2,15 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useUserContext } from '../../hooks/useUserContext'
-import { AdminPageHeader, Button } from '../../components/admin'
+import { useAuth } from '../../hooks/useAuth'
+import { AdminPageHeader, Button, InlineNotice } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import { getAthletes } from '../../data/services/familyService'
 import { getOrganizationUsers } from '../../data/services/usersService'
+import { getTierLimits, isLimitExceeded, getRemainingCapacity } from '../../data/services/tierLimitsService'
 import type { Sport, Program, Level, Team, Season } from '../../data/types/organization'
 import type { Child } from '../../types/family'
 import '../../styles/orgAdmin.css'
@@ -18,7 +21,9 @@ import '../../styles/orgAdmin.css'
 export default function OrganizationStructureNew() {
   const { currentOrganization } = useOrganization()
   const { context, isReady } = useUserContext()
+  const { user } = useAuth()
   const navigate = useNavigate()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
   const [exampleType, setExampleType] = useState<'school' | 'club' | 'aau' | 'recreation'>('school')
   const [sports, setSports] = useState<Sport[]>([])
   const [programs, setPrograms] = useState<Program[]>([])
@@ -29,6 +34,10 @@ export default function OrganizationStructureNew() {
   const [coachCount, setCoachCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [tierLimits, setTierLimits] = useState<{
+    max_teams: number | null
+    max_athletes: number | null
+  } | null>(null)
 
   const loadData = useCallback(async () => {
     if (!isReady) return
@@ -84,12 +93,22 @@ export default function OrganizationStructureNew() {
         ? usersResult.data.filter((u) => u.roles.includes('coach')).length
         : 0
       setCoachCount(coachTotal)
+
+      // Load tier limits
+      if (context?.orgId && user?.id) {
+        try {
+          const limits = await getTierLimits(context.orgId, user.id, ['max_teams', 'max_athletes'])
+          setTierLimits(limits)
+        } catch (limitErr) {
+          console.warn('[OrganizationStructureNew] Failed to load tier limits:', limitErr)
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load organization data')
     } finally {
       setLoading(false)
     }
-  }, [context, isReady])
+  }, [context, isReady, user?.id])
 
   useEffect(() => {
     if (!isReady) return
@@ -105,6 +124,12 @@ export default function OrganizationStructureNew() {
     players: Array.isArray(children) ? children.length : 0,
     coaches: coachCount,
   }
+
+  // Check if limits are exceeded
+  const teamsLimitExceeded = tierLimits != null && tierLimits.max_teams !== null && isLimitExceeded(stats.teams, tierLimits.max_teams)
+  const athletesLimitExceeded = tierLimits != null && tierLimits.max_athletes !== null && isLimitExceeded(stats.players, tierLimits.max_athletes)
+  const teamsRemaining = tierLimits != null && tierLimits.max_teams !== null ? getRemainingCapacity(stats.teams, tierLimits.max_teams) : null
+  const athletesRemaining = tierLimits != null && tierLimits.max_athletes !== null ? getRemainingCapacity(stats.players, tierLimits.max_athletes) : null
 
   const activeSeasons = Array.isArray(seasons) ? seasons.filter((s) => s.is_active) : []
   const currentSeason = activeSeasons.length > 0 ? activeSeasons[0] : null
@@ -179,12 +204,40 @@ export default function OrganizationStructureNew() {
           <StatBox label="Sports" value={stats.sports} />
           <StatBox label="Programs" value={stats.programs} />
           <StatBox label="Levels" value={stats.levels} />
-          <StatBox label="Teams" value={stats.teams} />
+          <StatBox 
+            label="Teams" 
+            value={stats.teams} 
+            limit={tierLimits?.max_teams ?? undefined}
+            remaining={teamsRemaining ?? undefined}
+            exceeded={teamsLimitExceeded}
+          />
           <StatBox label="Seasons" value={stats.seasons} />
-          <StatBox label="Players" value={stats.players} isEmpty={stats.players === 0} />
+          <StatBox 
+            label="Players" 
+            value={stats.players} 
+            isEmpty={stats.players === 0}
+            limit={tierLimits?.max_athletes ?? undefined}
+            remaining={athletesRemaining ?? undefined}
+            exceeded={athletesLimitExceeded}
+          />
           <StatBox label="Coaches" value={stats.coaches} isEmpty={stats.coaches === 0} />
         </div>
       </section>
+
+      {/* Limit Warnings */}
+      {(teamsLimitExceeded || athletesLimitExceeded) && (
+        <InlineNotice
+          tone="warning"
+          title="Limit Reached"
+          message={
+            (teamsLimitExceeded && athletesLimitExceeded)
+              ? `You've reached your team limit (${tierLimits?.max_teams} teams) and athlete limit (${tierLimits?.max_athletes} athletes). Upgrade your plan to add more.`
+              : teamsLimitExceeded
+                ? `You've reached your team limit (${tierLimits?.max_teams} teams). Upgrade your plan to add more teams.`
+                : `You've reached your athlete limit (${tierLimits?.max_athletes} athletes). Upgrade your plan to add more athletes.`
+          }
+        />
+      )}
 
       {currentSeason && (
         <section className="org-season-banner">
@@ -224,13 +277,15 @@ export default function OrganizationStructureNew() {
               disabled={!canCreateLevel}
               tooltip={!canCreateLevel ? 'Add a Program first' : undefined}
             />
-            <QuickActionButton
-              icon="groups"
-              label="Add Team"
-              onClick={() => navigate(`${getLink('admin.organization.forms')}?type=team`)}
-              disabled={!canCreateTeam}
-              tooltip={!canCreateTeam ? 'Add a Level first' : undefined}
-            />
+            {isOrgAdmin && (
+              <QuickActionButton
+                icon="groups"
+                label="Add Team"
+                onClick={() => navigate(`${getLink('admin.organization.forms')}?type=team`)}
+                disabled={!canCreateTeam}
+                tooltip={!canCreateTeam ? 'Add a Level first' : undefined}
+              />
+            )}
             <QuickActionButton
               icon="calendar_today"
               label="Add Season"
@@ -371,11 +426,40 @@ export default function OrganizationStructureNew() {
   )
 }
 
-function StatBox({ label, value, isEmpty }: { label: string; value: number; isEmpty?: boolean }) {
+function StatBox({ 
+  label, 
+  value, 
+  isEmpty, 
+  limit, 
+  remaining, 
+  exceeded 
+}: { 
+  label: string
+  value: number
+  isEmpty?: boolean
+  limit?: number
+  remaining?: number
+  exceeded?: boolean
+}) {
+  const showLimit = limit !== undefined
+  const isUnlimited = limit === null || limit === undefined
+  
   return (
-    <div className="org-stat-box">
+    <div className={`org-stat-box ${exceeded ? 'org-stat-box--exceeded' : ''}`}>
       <span className="org-stat-label">{label}</span>
-      <span className={`org-stat-value ${isEmpty ? 'empty' : ''}`}>{String(value).padStart(2, '0')}</span>
+      <span className={`org-stat-value ${isEmpty ? 'empty' : ''} ${exceeded ? 'org-stat-value--exceeded' : ''}`}>
+        {String(value).padStart(2, '0')}
+      </span>
+      {showLimit && !isUnlimited && (
+        <span className="org-stat-limit" style={{ fontSize: '0.75rem', color: 'var(--oa-text-muted)', marginTop: '0.25rem' }}>
+          {exceeded ? 'Limit reached' : remaining !== null ? `${remaining} remaining` : `of ${limit}`}
+        </span>
+      )}
+      {showLimit && isUnlimited && (
+        <span className="org-stat-limit" style={{ fontSize: '0.75rem', color: 'var(--oa-text-muted)', marginTop: '0.25rem' }}>
+          Unlimited
+        </span>
+      )}
     </div>
   )
 }

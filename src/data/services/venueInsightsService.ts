@@ -8,6 +8,7 @@
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../config'
+import { invokeApiOperation } from '../../services/apiManagerService'
 import type { VenueInsights, PlaceDetailsResponse } from '../../types/venueInsights'
 import { mapVenueInsightsRow } from '../../types/venueInsights'
 import { getDemoVenueInsightImages } from '../../utils/demoImagePlaceholders'
@@ -198,26 +199,6 @@ export async function getCachedVenueInsights(
   if (USE_FAKE_DATA) {
     const mock = buildMockVenueInsights(placeId)
     const timestamp = new Date().toISOString()
-    return {
-      data: {
-        id: `venue-insights-${placeId}`,
-        place_id: placeId,
-        place_details: mock.place_details,
-        photos: [],
-        ai_summary: mock.ai_summary,
-        ai_what_to_expect: mock.ai_what_to_expect,
-        ai_generated_at: timestamp,
-        ai_validation_status: 'valid',
-        place_details_fetched_at: timestamp,
-        last_place_details_call_at: timestamp,
-        last_gemini_call_at: timestamp,
-        fetch_in_progress: false,
-        place_id_valid: true,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      error: null,
-    }
     debug.perf.end('venueInsightsService.getCachedVenueInsights')
     debug.data('VenueInsightsService.getCachedVenueInsights', 'Response (fake)', { placeId })
     console.groupEnd()
@@ -318,31 +299,19 @@ export interface NeighborhoodSummaryResponse {
 export async function fetchNeighborhoodSummaryDirect(
   placeId: string
 ): Promise<{ data: NeighborhoodSummaryResponse | null; error: Error | null }> {
+  console.groupCollapsed(`%cfetchNeighborhoodSummaryDirect: ${placeId}`, 'color: #666; font-weight: bold;');
+  debug.data('VenueInsightsService.fetchNeighborhoodSummaryDirect', 'Request', { placeId })
+  debug.perf.start('venueInsightsService.fetchNeighborhoodSummaryDirect')
+
   if (!placeId) {
+    debug.perf.end('venueInsightsService.fetchNeighborhoodSummaryDirect')
+    debug.error('VenueInsightsService.fetchNeighborhoodSummaryDirect', 'place_id is required', { placeId })
+    console.groupEnd()
     return { data: null, error: new Error('place_id is required') }
   }
 
   if (USE_FAKE_DATA) {
     const mock = buildMockVenueInsights(placeId)
-    return {
-      data: {
-        name: mock.place_details?.name || 'Demo Venue',
-        area_summary: {
-          content_blocks: [
-            {
-              topic: 'overview',
-              content: mock.ai_summary || 'Popular youth sports destination with family-oriented amenities.',
-            },
-            {
-              topic: 'description',
-              content: mock.ai_what_to_expect || 'Plan for early arrival and event-day pedestrian traffic around entry gates.',
-            },
-          ],
-        },
-        error: null,
-      },
-      error: null,
-    }
     debug.perf.end('venueInsightsService.fetchNeighborhoodSummaryDirect')
     debug.data('VenueInsightsService.fetchNeighborhoodSummaryDirect', 'Response (fake)', { placeId })
     console.groupEnd()
@@ -367,40 +336,25 @@ export async function fetchNeighborhoodSummaryDirect(
     }
   }
 
-  const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY
-  if (!apiKey) {
-    debug.perf.end('venueInsightsService.fetchNeighborhoodSummaryDirect')
-    debug.error('VenueInsightsService.fetchNeighborhoodSummaryDirect', 'API key not configured', { placeId })
-    console.groupEnd()
-    return { data: null, error: new Error('Google Places API key not configured') }
-  }
-
   try {
-    const fields = ['displayName', 'neighborhoodSummary']
-    const url = `https://places.googleapis.com/v1/places/${placeId}`
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': fields.join(','),
+    const gatewayResponse = await invokeApiOperation<{ providerResponse: any }>({
+      operation: 'places.getNeighborhoodSummary',
+      input: {
+        placeId,
       },
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
+    if (!gatewayResponse.ok || !gatewayResponse.data?.providerResponse) {
       debug.perf.end('venueInsightsService.fetchNeighborhoodSummaryDirect')
-      debug.error('VenueInsightsService.fetchNeighborhoodSummaryDirect', 'API error', { status: response.status, placeId })
+      debug.error('VenueInsightsService.fetchNeighborhoodSummaryDirect', 'API error', { placeId })
       console.groupEnd()
-      console.error('Google Places API error:', response.status, errorText)
       return {
-        data: { name: null, area_summary: null, error: `API error: ${response.status}` },
+        data: { name: null, area_summary: null, error: gatewayResponse.ok ? 'API error' : gatewayResponse.error.message },
         error: null,
       }
     }
 
-    const data = await response.json()
+    const data = gatewayResponse.data.providerResponse
 
     // Map neighborhoodSummary to our area_summary shape
     const ns = data.neighborhoodSummary

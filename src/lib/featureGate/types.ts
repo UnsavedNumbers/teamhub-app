@@ -34,6 +34,7 @@ export type ReasonCode =
     | 'no_organization'       // No org context provided
     | 'limit_exceeded'        // Usage limit has been reached
     | 'parent_feature_unavailable' // Denied because parent feature is unavailable
+    | 'parent_inherited'      // Child feature allowed via parent inheritance
     | 'error';                // Resolution error occurred
 
 /**

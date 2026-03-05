@@ -121,17 +121,33 @@ async function hashToken(token: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
 }
 
-function priceToPlan(priceId: string | null): string | null {
-  switch (priceId) {
-    case priceStarter:
-      return "starter"
-    case priceStandard:
-      return "standard"
-    case pricePro:
-      return "pro"
-    default:
-      return null
+async function priceToTierId(
+  supabase: any,
+  priceId: string | null
+): Promise<string | null> {
+  if (!priceId) {
+    console.warn('priceToTierId: priceId is null')
+    return null
   }
+  
+  const { data, error } = await supabase
+    .from('license_tiers')
+    .select('id')
+    .eq('stripe_price_id', priceId)
+    .eq('status', 'active')
+    .maybeSingle()
+  
+  if (error) {
+    console.error('priceToTierId: error looking up tier', { priceId, error })
+    return null
+  }
+  
+  if (!data) {
+    console.warn('priceToTierId: no tier found for price', { priceId })
+    return null
+  }
+  
+  return data.id
 }
 
 // Extract org_id robustly from different Stripe object types
@@ -167,10 +183,10 @@ async function upsertLicense(
   orgId: string,
   payload: {
     status?: string
-    plan?: string | null
     current_period_start?: number | null
     current_period_end?: number | null
     cancel_at_period_end?: boolean | null
+    trial_start?: number | null
     trial_end?: number | null
     grace_days?: number | null
     stripe_customer_id?: string | null
@@ -186,13 +202,14 @@ async function upsertLicense(
       : null
 
   // IMPORTANT: use org_id (not organization_id)
+  // Note: plan parameter removed - tier is derived from stripe_price_id via sync_org_license_summary
   const record = {
     org_id: orgId,
     status: payload.status,
-    plan: payload.plan,
     current_period_start: payload.current_period_start ? new Date(payload.current_period_start * 1000).toISOString() : null,
     current_period_end: payload.current_period_end ? new Date(payload.current_period_end * 1000).toISOString() : null,
     cancel_at_period_end: payload.cancel_at_period_end ?? false,
+    trial_start: payload.trial_start ? new Date(payload.trial_start * 1000).toISOString() : null,
     trial_ends_at: payload.trial_end ? new Date(payload.trial_end * 1000).toISOString() : null,
     grace_ends_at: graceEndsAt ? graceEndsAt.toISOString() : null,
     stripe_customer_id: payload.stripe_customer_id,
@@ -243,6 +260,164 @@ async function markFeeAssignmentPaid(
     .eq("id", feeAssignmentId)
 
   if (updErr) throw updErr
+}
+
+/**
+ * Reconcile add-on entitlements with Stripe subscription items
+ * Called when subscription is updated to ensure entitlements match Stripe state
+ */
+async function reconcileAddOnEntitlements(
+  supabase: any,
+  orgId: string,
+  subscription: Stripe.Subscription,
+) {
+  try {
+    // Get all current entitlements for this subscription
+    const { data: currentEntitlements, error: entitlementsErr } = await supabase
+      .from("org_addon_entitlements")
+      .select("id, feature_key, stripe_subscription_item_id, stripe_price_id")
+      .eq("stripe_subscription_id", subscription.id)
+
+    if (entitlementsErr) {
+      console.error(`[webhook] Error fetching add-on entitlements for org ${orgId}:`, entitlementsErr)
+      return // Don't throw - non-critical
+    }
+
+    // Get all Stripe subscription items (excluding base license item)
+    const baseLicensePriceId = subscription.items.data[0]?.price?.id
+    const addOnItems = subscription.items.data.filter((item) => item.price.id !== baseLicensePriceId)
+
+    // Map Stripe items by subscription_item_id
+    const stripeItemsByItemId = new Map<string, Stripe.SubscriptionItem>()
+    addOnItems.forEach((item) => {
+      stripeItemsByItemId.set(item.id, item)
+    })
+
+    // Map Stripe items by price_id (for finding features)
+    const stripeItemsByPriceId = new Map<string, Stripe.SubscriptionItem>()
+    addOnItems.forEach((item) => {
+      stripeItemsByPriceId.set(item.price.id, item)
+    })
+
+    // Find features by price_id
+    const priceIds = Array.from(stripeItemsByPriceId.keys())
+    if (priceIds.length > 0) {
+      const { data: features, error: featuresErr } = await supabase
+        .from("feature_entitlements")
+        .select("feature_key, addon_stripe_price_id")
+        .in("addon_stripe_price_id", priceIds)
+        .eq("available_as_addon", true)
+
+      if (featuresErr) {
+        console.error(`[webhook] Error fetching features for add-ons:`, featuresErr)
+        return
+      }
+
+      // Map price_id to feature_key
+      const priceIdToFeatureKey = new Map<string, string>()
+      features?.forEach((f) => {
+        if (f.addon_stripe_price_id) {
+          priceIdToFeatureKey.set(f.addon_stripe_price_id, f.feature_key)
+        }
+      })
+
+      // Update or create entitlements for Stripe items
+      for (const stripeItem of addOnItems) {
+        const featureKey = priceIdToFeatureKey.get(stripeItem.price.id)
+        if (!featureKey) {
+          console.warn(`[webhook] No feature found for price_id ${stripeItem.price.id}`)
+          continue
+        }
+
+        // Find existing entitlement
+        const existingEntitlement = currentEntitlements?.find(
+          (e) => e.stripe_subscription_item_id === stripeItem.id,
+        )
+
+        if (existingEntitlement) {
+          // Determine status based on subscription status
+          // Only update status if entitlement is not already canceled (preserve canceled state)
+          let statusUpdate: { status?: string } = {}
+          if (existingEntitlement.status !== "canceled") {
+            if (subscription.status === "active" || subscription.status === "trialing") {
+              statusUpdate.status = "active"
+            } else if (subscription.status === "past_due" || subscription.status === "unpaid") {
+              statusUpdate.status = "past_due"
+            } else {
+              // Other statuses (incomplete, incomplete_expired, etc.) -> pending_payment
+              statusUpdate.status = "pending_payment"
+            }
+          }
+
+          // Update existing entitlement
+          await supabase
+            .from("org_addon_entitlements")
+            .update({
+              current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              stripe_price_id: stripeItem.price.id,
+              updated_at: new Date().toISOString(),
+              ...statusUpdate,
+            })
+            .eq("id", existingEntitlement.id)
+        } else {
+          // Create new entitlement (item was added externally or via another system)
+          // Determine status based on subscription status
+          let newStatus: "active" | "pending_payment" | "past_due"
+          if (subscription.status === "active" || subscription.status === "trialing") {
+            newStatus = "active"
+          } else if (subscription.status === "past_due" || subscription.status === "unpaid") {
+            newStatus = "past_due"
+          } else {
+            // Other statuses (incomplete, incomplete_expired, etc.) -> pending_payment
+            newStatus = "pending_payment"
+          }
+
+          await supabase.from("org_addon_entitlements").insert({
+            org_id: orgId,
+            feature_key: featureKey,
+            status: newStatus,
+            stripe_subscription_id: subscription.id,
+            stripe_subscription_item_id: stripeItem.id,
+            stripe_price_id: stripeItem.price.id,
+            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          })
+        }
+      }
+
+      // Mark entitlements as canceled if Stripe item no longer exists
+      if (currentEntitlements) {
+        for (const entitlement of currentEntitlements) {
+          if (!stripeItemsByItemId.has(entitlement.stripe_subscription_item_id)) {
+            // Item was removed from Stripe subscription
+            await supabase
+              .from("org_addon_entitlements")
+              .update({
+                status: "canceled",
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", entitlement.id)
+          }
+        }
+      }
+    } else {
+      // No add-on items in Stripe - mark all entitlements as canceled
+      if (currentEntitlements && currentEntitlements.length > 0) {
+        await supabase
+          .from("org_addon_entitlements")
+          .update({
+            status: "canceled",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("stripe_subscription_id", subscription.id)
+          .neq("status", "canceled")
+      }
+    }
+  } catch (err) {
+    console.error(`[webhook] Error reconciling add-on entitlements for org ${orgId}:`, err)
+    // Don't throw - non-critical
+  }
 }
 
 serve(async (req) => {
@@ -722,20 +897,40 @@ serve(async (req) => {
 
         const subscription = await stripe.subscriptions.retrieve(subId)
         const priceId = subscription.items.data[0]?.price?.id ?? null
-        const plan = priceToPlan(priceId)
+        const tierId = await priceToTierId(supabase, priceId)
 
         await upsertLicense(supabase, resolvedOrgId, {
           status: subscription.status === "trialing" ? "trial" : "active",
-          plan,
           current_period_start: subscription.current_period_start,
           current_period_end: subscription.current_period_end,
           cancel_at_period_end: subscription.cancel_at_period_end,
+          trial_start: subscription.trial_start ?? null,
           trial_end: subscription.trial_end,
           stripe_customer_id: subscription.customer as string,
           stripe_subscription_id: subscription.id,
           stripe_price_id: priceId,
           stripe_latest_invoice_id: subscription.latest_invoice as string | null,
         })
+
+        // If subscription is trialing, set trial_used_at on organizations (idempotent)
+        if (subscription.status === "trialing" && subscription.trial_start) {
+          try {
+            const trialStartIso = new Date(subscription.trial_start * 1000).toISOString()
+            const { error: trialUsedErr } = await supabase
+              .from("organizations")
+              .update({ trial_used_at: trialStartIso })
+              .eq("id", resolvedOrgId)
+              .is("trial_used_at", null) // Only set if not already set (idempotent)
+
+            if (trialUsedErr) {
+              console.error(`[webhook] Failed to update trial_used_at for org ${resolvedOrgId}:`, trialUsedErr)
+              // Continue - not critical, eligibility check will still work
+            }
+          } catch (err) {
+            console.error(`[webhook] Error updating trial_used_at for org ${resolvedOrgId}:`, err)
+            // Continue - not critical
+          }
+        }
 
         // OPTIONAL: update your checkout_sessions row status if you stored checkout_session_id in metadata
         const checkoutSessionId = session.metadata?.checkout_session_id as string | undefined
@@ -749,8 +944,7 @@ serve(async (req) => {
         // Set webhook result for org license
         webhookResult.org_id = resolvedOrgId
         webhookResult.subscription_id = subscription.id
-        webhookResult.plan = plan
-        webhookResult.message = `Organization license activated: ${plan || 'unknown'} plan for org ${resolvedOrgId.slice(-8).toUpperCase()}`
+        webhookResult.message = `Organization license activated: tier ${tierId ? tierId.slice(-8).toUpperCase() : 'unknown'} for org ${resolvedOrgId.slice(-8).toUpperCase()}`
 
         break
       }
@@ -762,19 +956,52 @@ serve(async (req) => {
 
         const { data: lic, error: licErr } = await supabase
           .from("org_licenses")
-          .select("org_id")
+          .select("org_id, stripe_price_id")
           .eq("stripe_subscription_id", subId)
           .maybeSingle()
 
         if (licErr) throw licErr
         if (!lic?.org_id) break
 
+        // Check if invoice has proration (indicates upgrade)
+        const hasProration = invoice.lines.data.some(
+          (line) => line.proration === true || (line.type === "subscription" && line.amount < 0),
+        )
+
+        // Get new price from invoice (subscription line item)
+        const newPriceId = invoice.lines.data.find((line) => line.type === "subscription" && line.price)
+          ?.price?.id
+
+        // Update license with new price if changed
         await upsertLicense(supabase, lic.org_id, {
           status: "active",
           current_period_end: invoice.lines.data[0]?.period?.end ?? invoice.period_end ?? null,
           stripe_subscription_id: subId,
           stripe_latest_invoice_id: invoice.id,
+          stripe_price_id: newPriceId || lic.stripe_price_id, // Update price if changed
         })
+
+        // If this was an upgrade, update audit log
+        if (hasProration && newPriceId && newPriceId !== lic.stripe_price_id) {
+          const { data: newTier } = await supabase
+            .from("license_tiers")
+            .select("id")
+            .eq("stripe_price_id", newPriceId)
+            .eq("status", "active")
+            .maybeSingle()
+
+          if (newTier) {
+            await supabase
+              .from("license_change_log")
+              .update({
+                result_status: "succeeded",
+                stripe_invoice_id: invoice.id,
+              })
+              .eq("stripe_subscription_id", subId)
+              .eq("result_status", "pending")
+              .is("stripe_invoice_id", null)
+          }
+        }
 
         // Set webhook result for license invoice
         webhookResult.payment_type = PAYMENT_TYPES.ORG_LICENSE
@@ -782,6 +1009,17 @@ serve(async (req) => {
         webhookResult.subscription_id = subId
         webhookResult.amount_cents = invoice.amount_paid ?? 0
         webhookResult.message = `License invoice paid: $${((invoice.amount_paid ?? 0) / 100).toFixed(2)} for subscription ${subId.slice(-8).toUpperCase()}`
+
+        // Update add-on entitlements to active if payment succeeded
+        // Update both pending_payment and past_due entitlements (payment can succeed for either)
+        await supabase
+          .from("org_addon_entitlements")
+          .update({
+            status: "active",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("stripe_subscription_id", subId)
+          .in("status", ["pending_payment", "past_due"])
 
         break
       }
@@ -807,6 +1045,32 @@ serve(async (req) => {
           stripe_latest_invoice_id: invoice.id,
           grace_days: 7,
         })
+
+        // Mark upgrade as failed if pending
+        await supabase
+          .from("license_change_log")
+          .update({
+            result_status: "failed",
+            error_json: {
+              reason: "payment_failed",
+              invoice_id: invoice.id,
+              failure_reason: invoice.last_payment_error?.message,
+            },
+          })
+          .eq("stripe_subscription_id", subId)
+          .eq("result_status", "pending")
+
+        // Update add-on entitlements to past_due if payment failed
+        // Update both pending_payment and active entitlements (payment can fail for active subscriptions)
+        await supabase
+          .from("org_addon_entitlements")
+          .update({
+            status: "past_due",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("stripe_subscription_id", subId)
+          .in("status", ["pending_payment", "active"])
+
         break
       }
 
@@ -815,7 +1079,7 @@ serve(async (req) => {
 
         const { data: lic, error: licErr } = await supabase
           .from("org_licenses")
-          .select("org_id")
+          .select("org_id, stripe_price_id")
           .eq("stripe_subscription_id", subscription.id)
           .maybeSingle()
 
@@ -823,7 +1087,7 @@ serve(async (req) => {
         if (!lic?.org_id) break
 
         const priceId = subscription.items.data[0]?.price?.id ?? null
-        const plan = priceToPlan(priceId)
+        const tierId = await priceToTierId(supabase, priceId)
         const status =
           ["past_due", "unpaid"].includes(subscription.status)
             ? "past_due"
@@ -833,16 +1097,45 @@ serve(async (req) => {
 
         await upsertLicense(supabase, lic.org_id, {
           status,
-          plan,
           current_period_start: subscription.current_period_start,
           current_period_end: subscription.current_period_end,
           cancel_at_period_end: subscription.cancel_at_period_end,
+          trial_start: subscription.trial_start ?? null,
           trial_end: subscription.trial_end,
           stripe_customer_id: subscription.customer as string,
           stripe_subscription_id: subscription.id,
-          stripe_price_id: priceId,
+          stripe_price_id: priceId, // Always update price_id
           stripe_latest_invoice_id: subscription.latest_invoice as string | null,
         })
+
+        // If subscription transitions to trialing, set trial_used_at (idempotent)
+        if (subscription.status === "trialing" && subscription.trial_start) {
+          try {
+            const trialStartIso = new Date(subscription.trial_start * 1000).toISOString()
+            const { error: trialUsedErr } = await supabase
+              .from("organizations")
+              .update({ trial_used_at: trialStartIso })
+              .eq("id", lic.org_id)
+              .is("trial_used_at", null) // Only set if not already set (idempotent)
+
+            if (trialUsedErr) {
+              console.error(`[webhook] Failed to update trial_used_at for org ${lic.org_id}:`, trialUsedErr)
+              // Continue - not critical
+            }
+          } catch (err) {
+            console.error(`[webhook] Error updating trial_used_at for org ${lic.org_id}:`, err)
+            // Continue - not critical
+          }
+        }
+
+        // If price changed and subscription is active, sync tier
+        if (priceId && priceId !== lic.stripe_price_id && status === "active") {
+          await supabase.rpc("sync_org_license_summary", { org_id: lic.org_id })
+        }
+
+        // Reconcile add-on entitlements
+        await reconcileAddOnEntitlements(supabase, lic.org_id, subscription)
+
         break
       }
 
@@ -865,6 +1158,17 @@ serve(async (req) => {
           current_period_end: subscription.current_period_end,
           stripe_subscription_id: subscription.id,
         })
+
+        // Mark all add-on entitlements as canceled when subscription is deleted
+        await supabase
+          .from("org_addon_entitlements")
+          .update({
+            status: "canceled",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("stripe_subscription_id", subscription.id)
+          .neq("status", "canceled")
+
         break
       }
 

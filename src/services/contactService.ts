@@ -7,6 +7,7 @@
 
 import type { ContactSurface } from '../types/contact'
 import { getEnvironment } from '../utils/featureFlags'
+import { invokeApiOperation } from './apiManagerService'
 
 // ============================================================================
 // Webhook URL Resolution
@@ -17,17 +18,8 @@ import { getEnvironment } from '../utils/featureFlags'
  * Checks surface-specific env var first, then falls back to default
  */
 export function getWebhookUrl(surface: ContactSurface): string | null {
-  const surfaceKey = surface.toUpperCase()
-  const surfaceSpecific = import.meta.env[`VITE_CONTACT_WEBHOOK_URL_${surfaceKey}`]
-  const defaultUrl = import.meta.env.VITE_CONTACT_WEBHOOK_URL
-
-  const url = (typeof surfaceSpecific === 'string' && surfaceSpecific.trim()) 
-    ? surfaceSpecific.trim() 
-    : (typeof defaultUrl === 'string' && defaultUrl.trim()) 
-      ? defaultUrl.trim() 
-      : null
-
-  return url || null
+  void surface
+  return null
 }
 
 // ============================================================================
@@ -225,7 +217,7 @@ export async function submitContact(
   payload: ContactPayload,
   surface: ContactSurface
 ): Promise<ContactSubmissionResult> {
-  const webhookUrl = getWebhookUrl(surface)
+  const webhookUrl = null
   
   // Check offline mode
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -235,52 +227,32 @@ export async function submitContact(
     }
   }
 
-  // Set up timeout (10 seconds)
-  const controller = typeof AbortController !== 'undefined' 
-    ? new AbortController() 
-    : null
-  const timeoutId = controller 
-    ? setTimeout(() => controller.abort(), 10000)
-    : null
-
   let webhookSuccess = false
   let webhookResponseStatus: number | null = null
   let webhookErrorMessage: string | null = null
 
-  // Submit to webhook (if configured)
-  if (webhookUrl) {
-    try {
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-        signal: controller?.signal,
-      })
+  try {
+    const response = await invokeApiOperation<{ statusCode: number }>({
+      operation: 'automation.submitContact',
+      input: {
+        ...payload,
+        surface,
+      } as unknown as Record<string, unknown>,
+    })
 
-      if (timeoutId) clearTimeout(timeoutId)
-
-      webhookResponseStatus = response.status
-      webhookSuccess = response.ok
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Unknown error')
-        webhookErrorMessage = `Webhook returned ${response.status}: ${errorText}`
-      }
-    } catch (error) {
-      if (timeoutId) clearTimeout(timeoutId)
-
-      if (error instanceof Error && error.name === 'AbortError') {
-        webhookErrorMessage = 'Request timed out'
-      } else {
-        webhookErrorMessage = error instanceof Error ? error.message : 'Unknown error'
-      }
+    if (response.ok) {
+      webhookSuccess = true
+      webhookResponseStatus = response.data.statusCode
+      webhookErrorMessage = null
+    } else {
       webhookSuccess = false
+      webhookResponseStatus = null
+      webhookErrorMessage = `${response.error.message} [${response.error.code}]`
     }
-  } else {
-    // Webhook not configured - still store in DB but mark as not sent
-    webhookErrorMessage = 'Webhook URL not configured'
+  } catch (error) {
+    webhookSuccess = false
+    webhookResponseStatus = null
+    webhookErrorMessage = error instanceof Error ? error.message : 'Unknown error'
   }
 
   // Store submission in database (always, even if webhook fails)
@@ -334,8 +306,7 @@ export async function submitContact(
     // Continue - webhook submission is primary, DB storage is secondary
   }
 
-  // Return success if webhook succeeded OR if webhook not configured (stored in DB)
-  if (webhookSuccess || !webhookUrl) {
+  if (webhookSuccess) {
     return { success: true }
   }
 

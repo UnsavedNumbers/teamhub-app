@@ -7,7 +7,7 @@
  * Technical Bug Prevention #10: Type Coercion Bugs - String vs Number vs UUID
  */
 
-import { isValidUUID } from './uuid'
+import { isValidUuid } from './uuid'
 
 /**
  * Convert a value to a UUID, validating it
@@ -17,7 +17,7 @@ import { isValidUUID } from './uuid'
  */
 export function toUUID(value: unknown): string | null {
   if (typeof value !== 'string') return null
-  return isValidUUID(value) ? value : null
+  return isValidUuid(value) ? value : null
 }
 
 /**

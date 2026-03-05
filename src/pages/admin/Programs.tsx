@@ -7,6 +7,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useSearchParams, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useOffline } from '../../hooks/useOffline'
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 import { debug } from '../../lib/debug'
@@ -15,22 +16,29 @@ import { getSports, getPrograms, deleteProgram, getSportBySlug } from '../../dat
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
 import type { Sport, Program, Level, Team } from '../../data/types/organization'
-import { AdminPageHeader, Select, ConfirmDialog, Button, Card, EmptyState, Badge, InlineNotice } from '../../components/admin'
+import { getProgramStatus } from '../../utils/programStatus'
+import { getRegistrationStatus } from '../../utils/registrationStatus'
+import { AdminPageHeader, Select, ConfirmDialog, Button, Card, Badge, InlineNotice } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import { useI18n } from '../../i18n/useI18n'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import './Programs.css'
 import '../../styles/orgAdmin.css'
 
 export default function Programs() {
   // Add lifecycle logging
   useDebugLifecycle('Programs')
+  const { t } = useI18n()
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const { isOffline } = useOffline()
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
   const params = useParams<{ sport_slug?: string }>()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -443,23 +451,23 @@ export default function Programs() {
 
       <div className="oa-flex oa-flex-col oa-gap-4">
         {filteredPrograms.length === 0 ? (
-          <Card>
-            <EmptyState
-              icon="category"
-              title={filterSportId ? 'No programs for this sport' : 'No programs yet'}
-              description={
-                filterSportId 
-                  ? `Create a program for ${sportById.get(filterSportId)?.name || 'this sport'}.`
-                  : 'Start by selecting a sport or create a program from the Sports page.'
-              }
-              noCard
-            >
-              {filterSportId ? (
-                <Button onClick={() => handleNavigateToAddProgram(filterSportId)} icon="add">Add Program</Button>
-              ) : (
-                <Button onClick={handleNavigateToSports}>View Sports</Button>
-              )}
-            </EmptyState>
+          <Card className="oa-border-2 oa-border-dashed">
+            <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
+              <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>category</span>
+              <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
+                <h3 className="oa-h3 oa-mb-0">{filterSportId ? 'No programs for this sport' : 'No programs yet'}</h3>
+                <p className="oa-body-m oa-text-muted oa-mb-4">
+                  {filterSportId 
+                    ? `Create a program for ${sportById.get(filterSportId)?.name || 'this sport'}.`
+                    : 'Start by selecting a sport or create a program from the Sports page.'}
+                </p>
+                {filterSportId ? (
+                  <Button onClick={() => handleNavigateToAddProgram(filterSportId)} icon="add">Add Program</Button>
+                ) : (
+                  <Button onClick={handleNavigateToSports}>View Sports</Button>
+                )}
+              </div>
+            </div>
           </Card>
         ) : (
           <Card className="oa-stacked-list">
@@ -487,6 +495,46 @@ export default function Programs() {
                         >
                           {program.name}
                         </span>
+                        {program.is_public && (
+                          <Badge variant="info" className="oa-text-[10px] oa-px-2 oa-py-0.5">
+                            {t('admin.programs.details.visibilityPublic')}
+                          </Badge>
+                        )}
+                        {(() => {
+                          const status = getProgramStatus(program)
+                          const statusColors: Record<string, string> = {
+                            unpublished: 'var(--oa-n500)',
+                            upcoming: 'var(--oa-info)',
+                            live: 'var(--oa-success)',
+                            completed: 'var(--oa-n400)',
+                          }
+                          return (
+                            <Badge 
+                              variant="neutral" 
+                              className="oa-text-[10px] oa-px-2 oa-py-0.5 oa-uppercase"
+                              style={{ backgroundColor: statusColors[status] || statusColors.unpublished, color: 'white' }}
+                            >
+                              {status}
+                            </Badge>
+                          )
+                        })()}
+                        {program.registration_start_date && (() => {
+                          const regStatus = getRegistrationStatus(program)
+                          const regStatusColors: Record<string, string> = {
+                            opens_soon: 'var(--oa-warning)',
+                            accepting: 'var(--oa-success)',
+                            closed: 'var(--oa-n400)',
+                          }
+                          return (
+                            <Badge 
+                              variant="neutral" 
+                              className="oa-text-[10px] oa-px-2 oa-py-0.5 oa-uppercase"
+                              style={{ backgroundColor: regStatusColors[regStatus] || regStatusColors.accepting, color: 'white' }}
+                            >
+                              {regStatus.replace('_', ' ')}
+                            </Badge>
+                          )
+                        })()}
                       </div>
 
                       <div className="programs-meta">
@@ -508,37 +556,39 @@ export default function Programs() {
                       </div>
                     </div>
                     
-                    <div className="oa-stacked-list-row-actions">
-                      <Button
-                        variant="ghost"
-                        size="dense"
-                        onClick={() => handleNavigateToEditProgram(program.id)}
-                        disabled={loading || deletingProgramId === program.id}
-                        icon="edit"
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="dense"
-                        onClick={() => handleNavigateToAddLevel(program.id, program.sport_id)}
-                        disabled={loading || isOffline || USE_FAKE_DATA || deletingProgramId === program.id}
-                        icon="add"
-                      >
-                        Add Level
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="dense"
-                        onClick={() => handleDeleteProgram(program.id, program.name)}
-                        disabled={deletingProgramId === program.id || loading || isOffline || USE_FAKE_DATA || levelCount > 0}
-                        loading={deletingProgramId === program.id}
-                        icon="delete"
-                        className="oa-text-danger hover:oa-bg-danger-surface"
-                      >
-                         Delete
-                      </Button>
-                    </div>
+                    {isOrgAdmin && (
+                      <div className="oa-stacked-list-row-actions">
+                        <Button
+                          variant="ghost"
+                          size="dense"
+                          onClick={() => handleNavigateToEditProgram(program.id)}
+                          disabled={loading || deletingProgramId === program.id}
+                          icon="edit"
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="dense"
+                          onClick={() => handleNavigateToAddLevel(program.id, program.sport_id)}
+                          disabled={loading || isOffline || USE_FAKE_DATA || deletingProgramId === program.id}
+                          icon="add"
+                        >
+                          Add Level
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="dense"
+                          onClick={() => handleDeleteProgram(program.id, program.name)}
+                          disabled={deletingProgramId === program.id || loading || isOffline || USE_FAKE_DATA || levelCount > 0}
+                          loading={deletingProgramId === program.id}
+                          icon="delete"
+                          className="oa-text-danger hover:oa-bg-danger-surface"
+                        >
+                           Delete
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )

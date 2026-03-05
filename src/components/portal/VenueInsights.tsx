@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Venue Insights Component
  * 
  * Displays venue information including photos, AI summary, and "What to expect" tips.
@@ -53,10 +53,10 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
   if (isLoading && !hasData) {
     return (
       <div className={className}>
-        <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
           <div className="animate-pulse space-y-3">
-            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3"></div>
-            <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
           </div>
         </div>
       </div>
@@ -66,8 +66,8 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
   if (error && !hasData) {
     return (
       <div className={className}>
-        <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">
-          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm">
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
             <Icon name="error_outline" size="text-base" />
             <span>Venue information temporarily unavailable</span>
           </div>
@@ -84,7 +84,7 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
 
   return (
     <div className={className}>
-      <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
         {/* Collapsible Header (shows venue name) */}
         <button
           type="button"
@@ -92,13 +92,13 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
           className="w-full flex items-center justify-between text-left group"
         >
           <div className="flex items-center gap-2">
-            <Icon name="place" size="text-lg" className="text-slate-500 dark:text-slate-400" />
-            <span className="font-bold text-slate-900 dark:text-white">{venueName}</span>
+            <Icon name="place" size="text-lg" className="text-gray-500 dark:text-gray-400" />
+            <span className="font-bold text-gray-900 dark:text-white">{venueName}</span>
           </div>
           <Icon
             name={isExpanded ? 'expand_less' : 'expand_more'}
             size="text-xl"
-            className="text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors"
+            className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors"
           />
         </button>
 
@@ -145,19 +145,19 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
             {hasAreaSummary && (
               <div className="space-y-4">
                  <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 dark:text-white text-sm">Area Overview</h4>
-                   <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                  <h4 className="font-bold text-gray-900 dark:text-white text-sm">Area Overview</h4>
+                   <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
                     Google
                   </span>
                 </div>
                 {placeDetails!.area_summary!.content_blocks.map((block, idx) => (
                   <div key={idx}>
                     {block.topic !== 'overview' && (
-                        <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                        <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
                             {block.topic}
                         </p>
                     )}
-                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                         {block.content}
                     </p>
                   </div>
@@ -169,12 +169,12 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
             {aiSummary && (
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <h4 className="font-bold text-slate-900 dark:text-white text-sm">About this venue</h4>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                  <h4 className="font-bold text-gray-900 dark:text-white text-sm">About this venue</h4>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
                     AI
                   </span>
                 </div>
-                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                   {sanitizeVenueSummary(aiSummary)}
                 </p>
               </div>
@@ -183,15 +183,15 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
             {/* What to Expect */}
             {aiWhatToExpect && (
               <div>
-                <h4 className="font-bold text-slate-900 dark:text-white text-sm mb-2">What to expect</h4>
-                <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-2">What to expect</h4>
+                <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                   {sanitizeVenueTips(aiWhatToExpect)
                     .split('\n')
                     .filter((line) => line.trim())
                     .map((line, index) => (
                       <div key={index} className="flex items-start gap-2 mb-1.5">
-                        <span className="text-slate-500 dark:text-slate-400 mt-0.5">•</span>
-                        <span>{line.replace(/^[-*•]\s*/, '').trim()}</span>
+                        <span className="text-gray-500 dark:text-gray-400 mt-0.5">&bull;</span>
+                        <span>{line.replace(/^[-*\u2022]\s*/, '').trim()}</span>
                       </div>
                     ))}
                 </div>
@@ -204,8 +204,8 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
                 {/* venue name already shown in accordion header - omit duplicate here */}
                 {placeDetails.formatted_address && (
                   <div className="flex items-center gap-2">
-                    <Icon name="place" size="text-sm" className="text-slate-400" />
-                    <span className="text-sm text-slate-700 dark:text-slate-300">
+                    <Icon name="place" size="text-sm" className="text-gray-400" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
                       {placeDetails.formatted_address}
                     </span>
                   </div>
@@ -213,7 +213,7 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
                 {placeDetails.rating && (
                   <div className="flex items-center gap-2">
                     <Icon name="star" size="text-sm" className="text-amber-500" />
-                    <span className="text-sm text-slate-700 dark:text-slate-300">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
                       {placeDetails.rating}/5
                       {placeDetails.user_ratings_total &&
                         ` (${placeDetails.user_ratings_total} reviews)`}
@@ -222,7 +222,7 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
                 )}
                 {placeDetails.website && (
                   <div className="flex items-center gap-2">
-                    <Icon name="link" size="text-sm" className="text-slate-400" />
+                    <Icon name="link" size="text-sm" className="text-gray-400" />
                     <a
                       href={placeDetails.website}
                       target="_blank"
@@ -234,7 +234,7 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
                   </div>
                 )}
                 {errors?.gemini && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                     AI summary unavailable. Basic venue information shown.
                   </p>
                 )}
@@ -254,3 +254,4 @@ export default function VenueInsights({ placeId, className = '' }: VenueInsights
     </div>
   )
 }
+

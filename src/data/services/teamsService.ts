@@ -8,9 +8,9 @@
  * Each method includes a TODO comment showing the equivalent Supabase query pattern.
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import type { UserContext, PermissionSet } from '../fake/userContext'
-import { calculatePermissions } from '../fake/userContext'
+import { calculatePermissions, getGuardianCanonicalUserId } from '../fake/userContext'
 import {
     getTeamById,
     getTeamsForOrg,
@@ -19,6 +19,8 @@ import {
     getTeamMembersForSeason,
     getCoachAssignmentsForTeam,
     getTeamWithDetails,
+    getActiveTeamMembershipsForChild,
+    getSeasonById,
     type FakeTeam,
     type FakeSeason,
     type FakeTeamMember,
@@ -26,18 +28,22 @@ import {
 } from '../fake/fakeTeams'
 import {
     getChildrenForUserId,
-    getAssignedTeamsForCoach,
     getTeamsForUserChildren,
 } from '../fake/relationships'
+import { getCoachTeamIds } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { Team, CreateTeamDTO, UpdateTeamDTO } from '../types/organization'
+import { captureEvent } from '../../lib/analytics/analytics'
 import type { AddAthletesToTeamResponse } from '../../types/athletes'
-import { buildTeamQuery, buildTeamMembershipQuery, buildCoachAssignmentQuery } from './queryHelpers'
+import { buildTeamQuery, buildTeamMembershipQuery } from './queryHelpers'
 import { normalizeSupabaseResponse } from './responseHelpers'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
 import { logEvent, logTeamEvent } from '../../utils/eventLogger'
 import { debug } from '../../lib/debug'
+import { getTierLimit, isLimitExceeded } from './tierLimitsService'
+import { validateRosterLimits } from '../../utils/rosterValidation'
+import { logPlayerTransferAudit } from '../../utils/teamMembershipAuditLogger'
 
 // ============================================================================
 // Helper Functions
@@ -80,10 +86,12 @@ async function simulateDelay(): Promise<void> {
     }
 }
 
-function buildPermissions(context: UserContext): PermissionSet {
-    const childIds = getChildrenForUserId(context.userId)
+async function buildPermissions(context: UserContext): Promise<PermissionSet> {
+    // Align fake-data permissions with canonical guardian ID so demo users see their teams/children
+    const guardianUserId = getGuardianCanonicalUserId(context)
+    const childIds = getChildrenForUserId(guardianUserId)
     const assignedTeamIds = context.roles.includes('coach')
-        ? getAssignedTeamsForCoach(context.userId)
+        ? await getCoachTeamIds(context)
         : []
 
     return calculatePermissions(context, assignedTeamIds, childIds, [])
@@ -141,13 +149,6 @@ function mapSupabaseTeamToDomain(team: any): Team {
  */
 function mapSupabaseTeamMemberToDomain(member: any): FakeTeamMember {
     return member as FakeTeamMember
-}
-
-/**
- * Map Supabase coach assignment row to domain type
- */
-function mapSupabaseCoachAssignmentToDomain(assignment: any): FakeCoachAssignment {
-    return assignment as FakeCoachAssignment
 }
 
 function isOrgAdmin(context: UserContext): boolean {
@@ -285,10 +286,11 @@ export async function getTeams(
         try {
             await simulateDelay()
 
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
+            const fakeOrgId = USE_FAKE_DATA ? DEMO_ORG_A_ID : context.orgId
             let teams = params.activeOnly
-                ? getActiveTeamsForOrg(context.orgId)
-                : getTeamsForOrg(context.orgId)
+                ? getActiveTeamsForOrg(fakeOrgId)
+                : getTeamsForOrg(fakeOrgId)
 
             // Filter by sport if provided
             if (params.sportId) {
@@ -308,6 +310,7 @@ export async function getTeams(
             // Non-admin users only see teams they have access to
             if (!permissions.canViewAllOrgData) {
                 const accessibleTeamIds = new Set<string>()
+                const guardianUserId = getGuardianCanonicalUserId(context)
 
                 // Add coached teams
                 if (permissions.canViewAssignedTeams) {
@@ -316,7 +319,7 @@ export async function getTeams(
 
                 // Add children's teams
                 if (permissions.canViewOwnChildrenData) {
-                    getTeamsForUserChildren(context.userId).forEach((id) => accessibleTeamIds.add(id))
+                    getTeamsForUserChildren(guardianUserId).forEach((id) => accessibleTeamIds.add(id))
                 }
 
                 teams = teams.filter((t) => accessibleTeamIds.has(t.id))
@@ -396,7 +399,39 @@ export async function createTeam(
                 updated_at: now,
                 deleted_at: null,
             }
+            captureEvent('team_created', {
+              team_id: created.id,
+              organization_id: dto.org_id,
+              user_id: _context.userId,
+            })
             return { data: created, error: null }
+        }
+
+        // Check max_teams tier limit before creating
+        const limitResult = await getTierLimit(dto.org_id, _context.userId, 'max_teams')
+        if (limitResult.error) {
+            // Fail open on error (allow creation) but log warning
+            console.warn('[teamsService] Failed to check max_teams limit, allowing creation:', limitResult.error)
+        } else if (limitResult.limit !== null) {
+            // Count current teams for this org
+            const { count: currentTeamCount, error: countError } = await supabase
+                .from('teams')
+                .select('id', { count: 'exact', head: true })
+                .eq('org_id', dto.org_id)
+                .is('deleted_at', null)
+
+            if (!countError && currentTeamCount !== null) {
+                if (isLimitExceeded(currentTeamCount, limitResult.limit)) {
+                    const errorMessage = `You've reached your team limit (${limitResult.limit} teams). Upgrade your plan to add more teams.`
+                    debug.perf.end('teamsService.createTeam')
+                    debug.error('TeamsService.createTeam', 'Team limit exceeded', { currentCount: currentTeamCount, limit: limitResult.limit })
+                    console.groupEnd()
+                    return { 
+                        data: null, 
+                        error: new Error(errorMessage)
+                    }
+                }
+            }
         }
         type TeamInsert = Database['public']['Tables']['teams']['Insert']
         // Generate a temporary invite code - the database trigger will generate the actual one
@@ -448,6 +483,11 @@ export async function createTeam(
         const mappedTeam = mapSupabaseTeamToDomain(data)
         debug.perf.end('teamsService.createTeam')
         debug.flow('TeamsService.createTeam', 'Team created successfully', { teamId: data.id, teamName: dto.name })
+        captureEvent('team_created', {
+          team_id: (data as { id: string }).id,
+          organization_id: dto.org_id,
+          user_id: _context.userId,
+        })
         console.groupEnd()
         return { data: mappedTeam, error: null }
     } catch (err) {
@@ -479,16 +519,15 @@ export async function updateTeam(
 
     try {
         type TeamUpdate = Database['public']['Tables']['teams']['Update']
-        const updateData = {
-            name: dto.name,
-            level_id: dto.level_id,
-            sport_id: dto.sport_id ?? null,
-            program_id: dto.program_id ?? null,
-            max_roster_size: dto.max_roster_size ?? null,
-            is_active: dto.is_active ?? true,
-            visible_to_fans: dto.visible_to_fans,
-            updated_at: new Date().toISOString(),
-        } satisfies TeamUpdate
+        const updateData: TeamUpdate = {}
+        if (dto.name !== undefined) updateData.name = dto.name
+        if (dto.level_id !== undefined) updateData.level_id = dto.level_id
+        if (dto.sport_id !== undefined) updateData.sport_id = dto.sport_id ?? null
+        if (dto.program_id !== undefined) updateData.program_id = dto.program_id ?? null
+        if (dto.max_roster_size !== undefined) updateData.max_roster_size = dto.max_roster_size ?? null
+        if (dto.is_active !== undefined) updateData.is_active = dto.is_active
+        if (dto.visible_to_fans !== undefined) updateData.visible_to_fans = dto.visible_to_fans
+        updateData.updated_at = new Date().toISOString()
         const { data, error } = await supabase
             .from('teams')
             .update(updateData)
@@ -498,6 +537,11 @@ export async function updateTeam(
             .single()
 
         if (error) throw error
+        captureEvent('team_updated', {
+          team_id: teamId,
+          organization_id: context.orgId,
+          user_id: context.userId,
+        })
         return { data: data as Team, error: null }
     } catch (err) {
         return { data: null, error: err instanceof Error ? err : new Error('Update team failed') }
@@ -852,26 +896,48 @@ export async function createTeamMembership(
 
         // If this is a new membership, check roster capacity
         if (isNew) {
-            // Get team max_roster_size
-            const { data: teamData, error: teamError } = await supabase
+            // Get organization ID for tier limit check
+            const { data: teamOrgData, error: teamOrgError } = await supabase
                 .from('teams')
-                .select('max_roster_size')
+                .select('org_id, max_roster_size')
                 .eq('id', teamId)
                 .single()
 
-            if (!teamError && teamData?.max_roster_size) {
-                // Count active memberships for this team/season
-                const { count, error: countError } = await supabase
-                    .from('team_memberships')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('team_id', teamId)
-                    .eq('season_id', seasonId)
-                    .eq('status', 'active')
+            if (teamOrgError || !teamOrgData) {
+                return { data: null, error: new Error('Team not found') }
+            }
 
-                if (!countError && count !== null && count >= teamData.max_roster_size) {
+            // Check tier limit max_players_per_team (if orgId available)
+            let tierLimit: number | null = null
+            if (teamOrgData.org_id) {
+                const limitResult = await getTierLimit(teamOrgData.org_id, context.userId, 'max_players_per_team')
+                if (!limitResult.error && limitResult.limit !== null) {
+                    tierLimit = limitResult.limit
+                }
+            }
+
+            // Count active memberships for this team/season
+            const { count: currentCount, error: countError } = await supabase
+                .from('team_memberships')
+                .select('id', { count: 'exact', head: true })
+                .eq('team_id', teamId)
+                .eq('season_id', seasonId)
+                .eq('status', 'active')
+
+            if (!countError && currentCount !== null) {
+                // Validate roster limits using centralized utility
+                const validation = validateRosterLimits(
+                    currentCount,
+                    null,
+                    teamOrgData.max_roster_size,
+                    tierLimit,
+                    1 // Adding 1 player
+                )
+
+                if (!validation.isValid && validation.error) {
                     return {
                         data: null,
-                        error: new Error('This team is full. Please contact the organization for more information.')
+                        error: new Error(validation.error)
                     }
                 }
             }
@@ -1002,6 +1068,51 @@ export async function addAthletesToTeam(
     seasonId: string,
     athleteIds: string[]
 ): Promise<AddAthletesToTeamResponse> {
+        // Check tier limit max_players_per_team before bulk add
+        const { data: teamData, error: teamDataError } = await supabase
+            .from('teams')
+            .select('org_id, max_roster_size')
+            .eq('id', teamId)
+            .single()
+
+    if (!teamDataError && teamData?.org_id) {
+        const limitResult = await getTierLimit(teamData.org_id, context.userId, 'max_players_per_team')
+        if (!limitResult.error && limitResult.limit !== null) {
+            // Count current active memberships
+            const { count: currentCount, error: countError } = await supabase
+                .from('team_memberships')
+                .select('id', { count: 'exact', head: true })
+                .eq('team_id', teamId)
+                .eq('season_id', seasonId)
+                .eq('status', 'active')
+                .is('deleted_at', null)
+
+            if (!countError && currentCount !== null) {
+                // Validate roster limits using centralized utility
+                const validation = validateRosterLimits(
+                    currentCount,
+                    null,
+                    teamData.max_roster_size,
+                    limitResult.limit,
+                    athleteIds.length
+                )
+
+                if (!validation.isValid && validation.error) {
+                    return {
+                        data: {
+                            added: [],
+                            skipped: [],
+                            errors: athleteIds.map(id => ({
+                                athleteId: id,
+                                error: validation.error || 'Cannot add athletes due to roster size constraints.'
+                            }))
+                        },
+                        error: null
+                    }
+                }
+            }
+        }
+    }
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
@@ -1089,6 +1200,30 @@ export async function addAthletesToTeam(
             }
         }
 
+        // Check tier limit max_players_per_team before bulk add
+        let tierLimit: number | null = null
+        if (teamData.org_id) {
+            const limitResult = await getTierLimit(teamData.org_id, context.userId, 'max_players_per_team')
+            if (!limitResult.error && limitResult.limit !== null) {
+                tierLimit = limitResult.limit
+            }
+        }
+
+        // Get team roster size limits and current count
+        const { data: teamRosterData, error: _teamRosterError } = await supabase
+            .from('teams')
+            .select('max_roster_size')
+            .eq('id', teamId)
+            .single()
+
+        const { count: currentCount, error: countError } = await supabase
+            .from('team_memberships')
+            .select('id', { count: 'exact', head: true })
+            .eq('team_id', teamId)
+            .eq('season_id', seasonId)
+            .eq('status', 'active')
+            .is('deleted_at', null)
+
         // Get existing memberships to identify skipped athletes (Issue #2 solution)
         const { data: existingMemberships } = await supabase
             .from('team_memberships')
@@ -1113,6 +1248,31 @@ export async function addAthletesToTeam(
                     errors: []
                 },
                 error: null
+            }
+        }
+
+        // Validate roster limits using centralized utility
+        if (!countError && currentCount !== null) {
+            const validation = validateRosterLimits(
+                currentCount,
+                null,
+                teamRosterData?.max_roster_size,
+                tierLimit,
+                athletesToAdd.length
+            )
+
+            if (!validation.isValid && validation.error) {
+                return {
+                    data: {
+                        added: [],
+                        skipped,
+                        errors: athletesToAdd.map(id => ({
+                            athleteId: id,
+                            error: validation.error || 'Cannot add athletes due to roster size constraints.'
+                        }))
+                    },
+                    error: null
+                }
             }
         }
 
@@ -1249,7 +1409,7 @@ export async function getTeamRoster(
         try {
             await simulateDelay()
 
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
 
             if (
                 permissions.canViewAllOrgData ||
@@ -1260,7 +1420,8 @@ export async function getTeamRoster(
             }
 
             const members = getTeamMembersForSeason(teamId, seasonId)
-            const childIds = getChildrenForUserId(context.userId)
+            const guardianUserId = getGuardianCanonicalUserId(context)
+            const childIds = getChildrenForUserId(guardianUserId)
             const filtered = members.filter((m) => childIds.includes((m as { athlete_id?: string }).athlete_id ?? (m as { child_id?: string }).child_id ?? ''))
 
             return { data: filtered, error: null }
@@ -1304,60 +1465,45 @@ export async function getTeamRoster(
 }
 
 /**
- * Get coaches for a team and season
+ * Get coaches for a team
+ * Note: seasonId parameter kept for backward compatibility but not used (coaches are assigned to teams, not seasons)
  */
 export async function getTeamCoaches(
     _context: UserContext,
     teamId: string,
-    seasonId: string
+    seasonId?: string  // Optional, kept for backward compatibility
 ): Promise<{ data: FakeCoachAssignment[]; error: Error | null }> {
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
 
-            const coaches = getCoachAssignmentsForTeam(teamId, seasonId)
+            const coaches = getCoachAssignmentsForTeam(teamId, seasonId || '')
             return { data: coaches, error: null }
         } catch (err) {
             return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
         }
     }
 
-    // Real Supabase implementation - NO FALLBACK
+    // Real Supabase implementation - query team_coaches table
     try {
-        // Try coach_assignments table first, fall back to organization_members if it doesn't exist
-        let query: any = buildCoachAssignmentQuery(supabase)
-        query = query.eq('team_id', teamId).eq('season_id', seasonId)
+        const { data, error } = await (supabase as any)
+            .from('team_coaches')
+            .select('*, user:users(id, email, display_name, phone)')
+            .eq('team_id', teamId)
+            .eq('status', 'active')
+            .order('created_at', { ascending: true })
 
-        const { data, error } = await query
+        if (error) throw error
 
-        if (error) {
-            // If coach_assignments doesn't exist, fall back to organization_members
-            const { data: orgData, error: orgError } = await supabase
-                .from('organization_members')
-                .select('user:users(id, email, display_name, phone), role')
-                .eq('role', 'coach')
-                .eq('org_id', _context.orgId)
-
-            if (orgError) throw orgError
-
-            const mapped: FakeCoachAssignment[] = (orgData ?? []).map((row: any) => ({
-                id: row.user?.id ?? '',
-                team_id: teamId,
-                season_id: seasonId,
-                user_id: row.user?.id ?? '',
-                role: 'head_coach' as const,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            }))
-
-            return { data: mapped, error: null }
-        }
-
-        // Normalize and map response
-        const normalizedData = normalizeSupabaseResponse(data, true)
-        const mapped = Array.isArray(normalizedData)
-            ? normalizedData.map(mapSupabaseCoachAssignmentToDomain)
-            : []
+        // Map to FakeCoachAssignment format (keeping season_id empty since assignments are team-level)
+        const mapped: FakeCoachAssignment[] = (data ?? []).map((row: any) => ({
+            id: row.id,
+            team_id: row.team_id,
+            season_id: seasonId || '',  // Keep for compatibility but not used
+            user_id: row.coach_user_id,
+            role: row.role || 'head_coach',
+            created_at: row.created_at,
+        }))
 
         return { data: mapped, error: null }
     } catch (err) {
@@ -1380,7 +1526,8 @@ export async function getTeamsForParent(
         try {
             await simulateDelay()
 
-            const teamIds = getTeamsForUserChildren(context.userId)
+            const guardianUserId = getGuardianCanonicalUserId(context)
+            const teamIds = getTeamsForUserChildren(guardianUserId)
             const teams = teamIds
                 .map((id) => getTeamById(id))
                 .filter((t): t is FakeTeam => t !== undefined)
@@ -1451,7 +1598,7 @@ export async function getTeamsForCoach(
         try {
             await simulateDelay()
 
-            const teamIds = getAssignedTeamsForCoach(context.userId)
+            const teamIds = await getCoachTeamIds(context)
             const teams = teamIds
                 .map((id) => getTeamById(id))
                 .filter((t): t is FakeTeam => t !== undefined)
@@ -1462,46 +1609,254 @@ export async function getTeamsForCoach(
         }
     }
 
-    // Real Supabase implementation - NO FALLBACK
+    // Real Supabase implementation - query team_coaches table
     try {
-        // Try to get teams from coach_assignments, fall back to all org teams if table doesn't exist
-        try {
-            const { data: assignments, error: assignError } = await buildCoachAssignmentQuery(supabase)
-                .eq('user_id', context.userId)
+        const { data: assignments, error: assignError } = await (supabase as any)
+            .from('team_coaches')
+            .select('team:teams(*), role, status')
+            .eq('coach_user_id', context.userId)
+            .eq('status', 'active')
+            .is('end_at', null)  // Only active assignments without end date
 
-            if (!assignError && assignments) {
-                const teamIds = [...new Set((assignments ?? []).map((a: any) => a.team_id))]
-                if (teamIds.length > 0) {
-                    const teamQuery: any = buildTeamQuery(supabase)
-                    const { data: teams, error: teamError } = await teamQuery.in('id', teamIds).order('name')
+        if (assignError) throw assignError
 
-                    if (!teamError) {
-                        const normalizedData = normalizeSupabaseResponse(teams, true)
-                        const mappedTeams = Array.isArray(normalizedData)
-                            ? normalizedData.map(mapSupabaseTeamToDomain)
-                            : []
-                        return { data: mappedTeams as FakeTeam[], error: null }
-                    }
-                }
-            }
-        } catch {
-            // Fall through to org teams query
-        }
-
-        // Fall back to all org teams
-        const { data, error } = await buildTeamQuery(supabase)
-            .eq('org_id', context.orgId)
-            .order('name')
-
-        if (error) throw error
+        // Extract teams from assignments
+        const teams = (assignments ?? [])
+            .map((row: any) => row.team)
+            .filter(Boolean)
 
         // Normalize and map response
-        const normalizedData = normalizeSupabaseResponse(data, true)
+        const normalizedData = normalizeSupabaseResponse(teams, true)
         const mappedTeams = Array.isArray(normalizedData)
             ? normalizedData.map(mapSupabaseTeamToDomain)
             : []
 
         return { data: mappedTeams as FakeTeam[], error: null }
+    } catch (err) {
+        const classifiedError = classifySupabaseError(err)
+        return { data: [], error: classifiedError }
+    }
+}
+
+/**
+ * Assign a coach to a team
+ */
+export async function assignCoachToTeam(
+    context: UserContext,
+    teamId: string,
+    coachUserId: string,
+    role: 'head_coach' | 'assistant_coach' | 'team_manager' = 'head_coach'
+): Promise<{ data: FakeCoachAssignment | null; error: Error | null }> {
+    try {
+        // Get team's org_id
+        const { data: team, error: teamError } = await supabase
+            .from('teams')
+            .select('org_id')
+            .eq('id', teamId)
+            .single()
+
+        if (teamError) throw teamError
+        if (!team) {
+            return { data: null, error: new Error('Team not found') }
+        }
+
+        const { data, error } = await (supabase as any)
+            .from('team_coaches')
+            .insert({
+                org_id: team.org_id,
+                team_id: teamId,
+                coach_user_id: coachUserId,
+                role,
+                status: 'active',
+                created_by: context.userId
+            })
+            .select()
+            .single()
+
+        if (error) {
+            // Handle unique constraint violation (coach already assigned)
+            return { data: null, error: classifySupabaseError(error) }
+        }
+
+        // Map to FakeCoachAssignment format
+        const mapped: FakeCoachAssignment = {
+            id: data.id,
+            team_id: data.team_id,
+            season_id: '',  // Not used for team-level assignments
+            user_id: data.coach_user_id,
+            role: data.role as 'head_coach' | 'assistant_coach' | 'team_manager',
+            created_at: data.created_at,
+        }
+
+        return { data: mapped, error: null }
+    } catch (err) {
+        const classifiedError = classifySupabaseError(err)
+        return { data: null, error: classifiedError }
+    }
+}
+
+/**
+ * Remove a coach from a team (sets status to inactive)
+ */
+export async function removeCoachFromTeam(
+    _context: UserContext,
+    teamId: string,
+    coachUserId: string
+): Promise<{ error: Error | null }> {
+    try {
+        const { error } = await (supabase as any)
+            .from('team_coaches')
+            .update({ 
+                status: 'inactive', 
+                end_at: new Date().toISOString() 
+            })
+            .eq('team_id', teamId)
+            .eq('coach_user_id', coachUserId)
+            .eq('status', 'active')
+
+        if (error) {
+            return { error: classifySupabaseError(error) }
+        }
+
+        return { error: null }
+    } catch (err) {
+        const classifiedError = classifySupabaseError(err)
+        return { error: classifiedError }
+    }
+}
+
+/**
+ * Display shape for an athlete's team membership on portal (guardian/athlete view).
+ */
+export interface AthleteTeamMembershipDisplay {
+    id: string
+    team_id: string
+    team_name: string
+    season_id: string
+    season_name: string
+    program_name: string | null
+    sport_name: string | null
+    status: string
+    jersey_number: string | null
+    position: string | null
+    joined_at: string | null
+}
+
+/**
+ * Get all team memberships for an athlete with team, season, program, and sport details.
+ * Used on Athlete Profile Teams tab for guardians and athletes.
+ */
+export async function getAthleteTeamMemberships(
+    context: UserContext,
+    athleteId: string
+): Promise<{ data: AthleteTeamMembershipDisplay[]; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        try {
+            await simulateDelay()
+            const memberships = getActiveTeamMembershipsForChild(athleteId)
+            const guardianUserId = getGuardianCanonicalUserId(context)
+            const childIds = getChildrenForUserId(guardianUserId)
+            const isAdmin = isOrgAdmin(context)
+            const allowed = isAdmin || childIds.includes(athleteId)
+            if (!allowed) {
+                return { data: [], error: null }
+            }
+            const out: AthleteTeamMembershipDisplay[] = memberships.map((m) => {
+                const details = getTeamWithDetails(m.team_id)
+                const season = getSeasonById(m.season_id)
+                return {
+                    id: m.id,
+                    team_id: m.team_id,
+                    team_name: details?.name ?? 'Unknown Team',
+                    season_id: m.season_id,
+                    season_name: season?.name ?? 'Unknown Season',
+                    program_name: details?.program?.name ?? null,
+                    sport_name: details?.sport?.name ?? null,
+                    status: m.status,
+                    jersey_number: m.jersey_number ?? null,
+                    position: m.position ?? null,
+                    joined_at: m.joined_at ?? null,
+                }
+            })
+            return { data: out, error: null }
+        } catch (err) {
+            return { data: [], error: err instanceof Error ? err : new Error('Unknown error') }
+        }
+    }
+
+    try {
+        // Verify guardian has access to this athlete
+        const isAdmin = isOrgAdmin(context)
+        if (!isAdmin) {
+            // For guardians, use get_guardian_athletes RPC to check access
+            const { data: guardianAthletes, error: guardianError } = await supabase
+                .rpc('get_guardian_athletes', {
+                    p_user_id: context.userId,
+                    p_org_id: context.orgId
+                })
+            
+            if (guardianError) {
+                console.error('Error checking guardian access:', guardianError)
+                return { data: [], error: guardianError instanceof Error ? guardianError : new Error('Access check failed') }
+            }
+            
+            const childIds = (guardianAthletes ?? []).map((a: any) => a.athlete_id)
+            if (!childIds.includes(athleteId)) {
+                return { data: [], error: null }
+            }
+        }
+
+        const { data, error } = await supabase
+            .from('team_memberships')
+            .select(`
+                id,
+                team_id,
+                season_id,
+                status,
+                jersey_number,
+                position,
+                created_at,
+                teams!team_memberships_team_id_fkey!inner(name, org_id, program:programs(name), sport:sports(name))
+            `)
+            .eq('athlete_id', athleteId)
+            .eq('status', 'active')
+            .eq('teams.org_id', context.orgId)
+            .is('deleted_at', null)
+
+        if (error) throw error
+
+        const rows = (data ?? []) as any[]
+        const seasonIds = [...new Set(rows.map((r) => r.season_id).filter(Boolean))]
+        let seasonNames: Record<string, string> = {}
+        if (seasonIds.length > 0) {
+            const { data: seasonsData } = await supabase
+                .from('seasons')
+                .select('id, name')
+                .in('id', seasonIds)
+            if (seasonsData) {
+                seasonNames = Object.fromEntries(seasonsData.map((s) => [s.id, s.name ?? '']))
+            }
+        }
+
+        const result: AthleteTeamMembershipDisplay[] = rows.map((row) => {
+            const team = row.teams
+            const program = team?.program
+            const sport = team?.sport
+            return {
+                id: row.id,
+                team_id: row.team_id,
+                team_name: team?.name ?? 'Unknown Team',
+                season_id: row.season_id,
+                season_name: seasonNames[row.season_id] ?? 'Unknown Season',
+                program_name: program?.name ?? null,
+                sport_name: sport?.name ?? null,
+                status: row.status ?? 'active',
+                jersey_number: row.jersey_number ?? null,
+                position: row.position ?? null,
+                joined_at: row.created_at ?? null,
+            }
+        })
+        return { data: result, error: null }
     } catch (err) {
         const classifiedError = classifySupabaseError(err)
         return { data: [], error: classifiedError }
@@ -1524,7 +1879,7 @@ export async function getAthleteTeamHistory(
     try {
         const { data, error } = await supabase
             .from('team_memberships')
-            .select('team:teams(sport_id)')
+            .select('team:teams!team_memberships_team_id_fkey(sport_id)')
             .eq('athlete_id', athleteId)
 
         if (error) throw error
@@ -1544,6 +1899,275 @@ export async function getAthleteTeamHistory(
         return { data: Array.from(sportIds), error: null }
     } catch (err) {
         return { data: [], error: mapDatabaseError(err) }
+    }
+}
+
+/**
+ * Transfer a player from one team to another within the same organization
+ * 
+ * This function:
+ * - Validates user is org admin
+ * - Validates both teams belong to the same org
+ * - Validates season belongs to destination team
+ * - Checks roster limits for destination team
+ * - Creates/updates membership on destination team with transfer tracking
+ * - Updates old membership to mark as transferred
+ * - Logs audit events
+ * 
+ * @param context - User context
+ * @param athleteId - ID of the athlete to transfer
+ * @param fromTeamId - ID of the source team
+ * @param toTeamId - ID of the destination team
+ * @param seasonId - ID of the season (must belong to destination team)
+ * @param transferReason - Optional reason for the transfer
+ * @returns Result with new membership ID or error
+ */
+export async function transferPlayerBetweenTeams(
+    context: UserContext,
+    athleteId: string,
+    fromTeamId: string,
+    toTeamId: string,
+    seasonId: string,
+    transferReason?: string | null
+): Promise<{ data: { membershipId: string } | null; error: Error | null }> {
+    if (USE_FAKE_DATA) {
+        await simulateDelay()
+        return {
+            data: { membershipId: 'fake-membership-id' },
+            error: null
+        }
+    }
+
+    try {
+        // Validate user is org admin
+        if (!isOrgAdmin(context)) {
+            return {
+                data: null,
+                error: new Error('You do not have permission to transfer players between teams.')
+            }
+        }
+
+        // Validate both teams belong to the same org
+        const { data: teamsData, error: teamsError } = await supabase
+            .from('teams')
+            .select('id, org_id, max_roster_size')
+            .in('id', [fromTeamId, toTeamId])
+
+        if (teamsError || !teamsData || teamsData.length !== 2) {
+            return {
+                data: null,
+                error: new Error('One or both teams not found.')
+            }
+        }
+
+        const fromTeam = teamsData.find(t => t.id === fromTeamId)
+        const toTeam = teamsData.find(t => t.id === toTeamId)
+
+        if (!fromTeam || !toTeam) {
+            return {
+                data: null,
+                error: new Error('One or both teams not found.')
+            }
+        }
+
+        if (fromTeam.org_id !== toTeam.org_id || fromTeam.org_id !== context.orgId) {
+            return {
+                data: null,
+                error: new Error('Both teams must belong to your organization.')
+            }
+        }
+
+        // Validate season belongs to destination team
+        const { data: teamSeasonData, error: teamSeasonError } = await supabase
+            .from('team_seasons')
+            .select('team_id')
+            .eq('team_id', toTeamId)
+            .eq('season_id', seasonId)
+            .single()
+
+        if (teamSeasonError || !teamSeasonData) {
+            // Fallback: check if season has direct team_id
+            const { data: seasonData, error: seasonError } = await supabase
+                .from('seasons')
+                .select('id, team_id')
+                .eq('id', seasonId)
+                .single()
+
+            if (seasonError || !seasonData || seasonData.team_id !== toTeamId) {
+                return {
+                    data: null,
+                    error: new Error('Selected season is not available for the destination team.')
+                }
+            }
+        }
+
+        // Find existing membership on source team
+        const { data: existingMembership, error: membershipError } = await supabase
+            .from('team_memberships')
+            .select('id, athlete_id, team_id, season_id, status, created_at, updated_at')
+            .eq('athlete_id', athleteId)
+            .eq('team_id', fromTeamId)
+            .eq('season_id', seasonId)
+            .is('deleted_at', null)
+            .single()
+
+        if (membershipError || !existingMembership) {
+            return {
+                data: null,
+                error: new Error('Player is not a member of the source team for this season.')
+            }
+        }
+
+        // Check roster limits for destination team
+        const { count: currentCount, error: countError } = await supabase
+            .from('team_memberships')
+            .select('id', { count: 'exact', head: true })
+            .eq('team_id', toTeamId)
+            .eq('season_id', seasonId)
+            .eq('status', 'active')
+            .is('deleted_at', null)
+
+        if (countError) {
+            return {
+                data: null,
+                error: new Error('Failed to check destination team roster size.')
+            }
+        }
+
+        // Get tier limit for destination team
+        let tierLimit: number | null = null
+        if (toTeam.org_id) {
+            const limitResult = await getTierLimit(toTeam.org_id, context.userId, 'max_players_per_team')
+            if (!limitResult.error && limitResult.limit !== null) {
+                tierLimit = limitResult.limit
+            }
+        }
+
+        // Validate roster limits (adding 1 player to destination team)
+        const validation = validateRosterLimits(
+            currentCount || 0,
+            null,
+            toTeam.max_roster_size,
+            tierLimit,
+            1
+        )
+
+        if (!validation.isValid && validation.error) {
+            return {
+                data: null,
+                error: new Error(validation.error)
+            }
+        }
+
+        // Check if player is already on destination team (shouldn't happen, but handle gracefully)
+        const { data: existingDestMembership } = await supabase
+            .from('team_memberships')
+            .select('id')
+            .eq('athlete_id', athleteId)
+            .eq('team_id', toTeamId)
+            .eq('season_id', seasonId)
+            .is('deleted_at', null)
+            .single()
+
+        let newMembershipId: string
+
+        if (existingDestMembership) {
+            // Update existing membership on destination team
+            const { data: updatedMembership, error: updateError } = await supabase
+                .from('team_memberships')
+                .update({
+                    status: 'active',
+                    transferred_from_team_id: fromTeamId,
+                    transferred_at: new Date().toISOString(),
+                    transfer_reason: transferReason || null,
+                    updated_at: new Date().toISOString(),
+                } as any)
+                .eq('id', existingDestMembership.id)
+                .select('id')
+                .single()
+
+            if (updateError || !updatedMembership) {
+                return {
+                    data: null,
+                    error: new Error('Failed to update membership on destination team.')
+                }
+            }
+
+            newMembershipId = updatedMembership.id
+        } else {
+            // Create new membership on destination team with transfer tracking
+            const insertData: any = {
+                athlete_id: athleteId,
+                team_id: toTeamId,
+                season_id: seasonId,
+                status: 'active',
+                transferred_from_team_id: fromTeamId,
+                transferred_at: new Date().toISOString(),
+                transfer_reason: transferReason || null,
+            }
+
+            const { data: newMembership, error: insertError } = await supabase
+                .from('team_memberships')
+                .insert(insertData)
+                .select('id')
+                .single()
+
+            if (insertError || !newMembership) {
+                return {
+                    data: null,
+                    error: new Error('Failed to create membership on destination team.')
+                }
+            }
+
+            newMembershipId = newMembership.id
+        }
+
+        // Update old membership to mark as transferred (soft delete or update status)
+        // We'll soft delete it to preserve history
+        const { error: deleteError } = await supabase
+            .from('team_memberships')
+            .update({
+                deleted_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', existingMembership.id)
+
+        if (deleteError) {
+            console.warn('Failed to soft delete old membership, but transfer succeeded:', deleteError)
+            // Don't fail the transfer if we can't update the old membership
+        }
+
+        // Log audit event
+        await logPlayerTransferAudit({
+            teamMembershipId: newMembershipId,
+            athleteId,
+            fromTeamId,
+            toTeamId,
+            seasonId,
+            changedBy: context.userId,
+            oldValues: {
+                team_id: existingMembership.team_id,
+                status: existingMembership.status,
+                created_at: existingMembership.created_at,
+            },
+            newValues: {
+                team_id: toTeamId,
+                status: 'active',
+                transferred_from_team_id: fromTeamId,
+                transferred_at: new Date().toISOString(),
+            },
+            transferReason: transferReason || null,
+        })
+
+        return {
+            data: { membershipId: newMembershipId },
+            error: null
+        }
+    } catch (err) {
+        return {
+            data: null,
+            error: mapDatabaseError(err)
+        }
     }
 }
 

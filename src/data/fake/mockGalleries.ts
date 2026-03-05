@@ -5,8 +5,9 @@
  * Galleries are linked to teams, athletes, events, seasons, and organizations.
  */
 
-import { DEMO_ORG_A_ID } from '../config'
+import { DEMO_ORG_A_ID, DEMO_ORG_B_ID } from '../config'
 import type { Database } from '@/lib/database.types'
+import type { PhotoStatus } from '@/data/services/galleryService'
 
 type Gallery = Database['public']['Tables']['galleries']['Row']
 type GalleryPhoto = Database['public']['Tables']['gallery_photos']['Row']
@@ -383,6 +384,8 @@ export const MOCK_GALLERIES: Gallery[] = [
  */
 export const DEMO_GALLERY_IDS = ['mock-gallery-1', 'mock-gallery-3', 'mock-gallery-5'] as const
 const DEMO_GALLERY_ID_SET = new Set<string>(DEMO_GALLERY_IDS)
+const ORG_B_GALLERY_PREFIX = 'orgb-gallery-'
+const ORG_B_PHOTO_PREFIX = 'orgb-photo-'
 
 export type MockGalleryWithComputed = Gallery & {
   photo_count: number
@@ -390,13 +393,55 @@ export type MockGalleryWithComputed = Gallery & {
   cover_url: string | null
 }
 
+function toOrgBGalleryId(baseGalleryId: string): string {
+  return `${ORG_B_GALLERY_PREFIX}${baseGalleryId}`
+}
+
+function toOrgBPhotoId(basePhotoId: string): string {
+  return `${ORG_B_PHOTO_PREFIX}${basePhotoId}`
+}
+
+function toOrgBEntityId(entityId: string | null, galleryType: Gallery['gallery_type']): string | null {
+  if (!entityId) return entityId
+  if (galleryType === 'org') return DEMO_ORG_B_ID
+  return `orgb-${entityId}`
+}
+
+const ORG_B_MOCK_GALLERIES: Gallery[] = MOCK_GALLERIES.map((gallery) => ({
+  ...gallery,
+  id: toOrgBGalleryId(gallery.id),
+  org_id: DEMO_ORG_B_ID,
+  entity_id: toOrgBEntityId(gallery.entity_id, gallery.gallery_type),
+  cover_photo_id: gallery.cover_photo_id ? toOrgBPhotoId(gallery.cover_photo_id) : null,
+  name: `Lincoln HS - ${gallery.name}`,
+}))
+
+const ORG_B_MOCK_GALLERY_PHOTOS: GalleryPhoto[] = MOCK_GALLERY_PHOTOS.map((photo) => ({
+  ...photo,
+  id: toOrgBPhotoId(photo.id),
+  gallery_id: toOrgBGalleryId(photo.gallery_id),
+}))
+
+const ORG_B_DEMO_GALLERY_ID_SET = new Set<string>(DEMO_GALLERY_IDS.map((id) => toOrgBGalleryId(id)))
+
+function getAllMockGalleriesInternal(): Gallery[] {
+  return [...MOCK_GALLERIES, ...ORG_B_MOCK_GALLERIES]
+}
+
+function getAllMockPhotosInternal(): GalleryPhoto[] {
+  return [...MOCK_GALLERY_PHOTOS, ...ORG_B_MOCK_GALLERY_PHOTOS]
+}
+
 /**
  * Get mock galleries for a specific organization
+ * Supports curated gallery sets for both primary demo organizations.
  */
 export function getMockGalleriesForOrg(orgId?: string | null): MockGalleryWithComputed[] {
   const effectiveOrgId = orgId || DEMO_ORG_A_ID
-  return MOCK_GALLERIES
-    .filter((g) => g.org_id === effectiveOrgId && DEMO_GALLERY_ID_SET.has(g.id))
+  const allowedIds = effectiveOrgId === DEMO_ORG_B_ID ? ORG_B_DEMO_GALLERY_ID_SET : DEMO_GALLERY_ID_SET
+
+  return getAllMockGalleriesInternal()
+    .filter((g) => g.org_id === effectiveOrgId && allowedIds.has(g.id))
     .map((gallery) => {
       const photos = getMockPhotosForGallery(gallery.id)
       const pendingCount = photos.filter((photo) => photo.status === 'pending').length
@@ -414,26 +459,93 @@ export function getMockGalleriesForOrg(orgId?: string | null): MockGalleryWithCo
  * Get mock gallery by ID
  */
 export function getMockGalleryById(galleryId: string): Gallery | undefined {
-  return MOCK_GALLERIES.find((g) => g.id === galleryId)
+  return getAllMockGalleriesInternal().find((g) => g.id === galleryId)
 }
 
 /**
  * Get mock photos for a specific gallery
  */
 export function getMockPhotosForGallery(galleryId: string): GalleryPhoto[] {
-  return MOCK_GALLERY_PHOTOS.filter((p) => p.gallery_id === galleryId)
+  return getAllMockPhotosInternal().filter((p) => p.gallery_id === galleryId)
 }
 
 /**
  * Get all mock galleries (for demo mode)
  */
 export function getAllMockGalleries(): Gallery[] {
-  return MOCK_GALLERIES
+  return getAllMockGalleriesInternal()
 }
 
 /**
  * Get all mock photos (for demo mode)
  */
 export function getAllMockPhotos(): GalleryPhoto[] {
-  return MOCK_GALLERY_PHOTOS
+  return getAllMockPhotosInternal()
+}
+
+/**
+ * Get mock recent gallery activity for dashboard
+ */
+export function getMockRecentActivity(limit: number = 10): Array<{
+  type: 'photo_upload' | 'gallery_created' | 'gallery_updated'
+  gallery_id: string
+  gallery_name: string
+  gallery_cover_url: string | null
+  timestamp: string
+  photo_count?: number
+  status?: PhotoStatus
+}> {
+  const activity: Array<{
+    type: 'photo_upload' | 'gallery_created' | 'gallery_updated'
+    gallery_id: string
+    gallery_name: string
+    gallery_cover_url: string | null
+    timestamp: string
+    photo_count?: number
+    status?: PhotoStatus
+  }> = []
+
+  // Generate activity from galleries that have photos
+  for (const gallery of MOCK_GALLERIES) {
+    const photos = getMockPhotosForGallery(gallery.id)
+    if (photos.length === 0) continue
+
+    // Group photos by upload date (simplified - use gallery updated_at)
+    const recentPhotos = photos.filter(p => {
+      const photoDate = new Date(p.created_at)
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      return photoDate >= weekAgo
+    })
+
+    if (recentPhotos.length > 0) {
+      const coverPhoto = photos.find(p => p.id === gallery.cover_photo_id) || photos[0]
+      activity.push({
+        type: 'photo_upload',
+        gallery_id: gallery.id,
+        gallery_name: gallery.name,
+        gallery_cover_url: coverPhoto?.storage_path || null,
+        timestamp: gallery.updated_at,
+        photo_count: recentPhotos.length,
+        status: recentPhotos[recentPhotos.length - 1]?.status || 'approved',
+      })
+    }
+  }
+
+  // Sort by timestamp descending and limit
+  return activity
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, limit)
+}
+
+/**
+ * Calculate mock storage usage from all photos
+ */
+export function getMockStorageUsage(): { currentUsage: number; limit: number } {
+  const totalBytes = MOCK_GALLERY_PHOTOS.reduce((sum, photo) => sum + (photo.size_bytes || 0), 0)
+  // 10GB limit
+  const limitBytes = 10 * 1024 * 1024 * 1024
+  return {
+    currentUsage: totalBytes,
+    limit: limitBytes,
+  }
 }

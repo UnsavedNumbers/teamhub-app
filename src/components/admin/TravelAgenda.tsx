@@ -70,7 +70,8 @@ export default function TravelAgenda({
     }
 
     return (
-        <div>
+        <div className="w-full">
+            <div className="max-w-2xl">
             {groupedPlans.map((group) => (
                 <div key={group.date} className="ios-agenda-day-group">
                     <div className="ios-agenda-day-header" style={{ background: 'var(--org-btn-primary-bg)', color: 'var(--org-btn-primary-text)' }}>
@@ -87,53 +88,51 @@ export default function TravelAgenda({
                                 className={`ios-agenda-event-card ${STATUS_CLASS[plan.status]} ${plan.status === 'cancelled' ? 'ios-event-cancelled' : ''}`}
                                 onClick={() => onPlanClick(plan)}
                             >
-                                <div style={{ display: 'flex', gap: '16px', paddingLeft: '12px' }}>
-                                    <div style={{ flexShrink: 0, width: '80px' }}>
+                                <div className="flex gap-4 md:gap-6 px-3 md:px-4">
+                                    <div className="flex-shrink-0 w-20 md:w-24">
                                         <div className="ios-agenda-event-time">
                                             {new Date(plan.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                         </div>
                                         <div className="ios-agenda-event-duration">{formatDateRange(plan.start_date, plan.end_date)}</div>
                                     </div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div className="flex-1 min-w-0">
                                         <div
+                                            className="text-base md:text-lg font-semibold mb-1"
                                             style={{
-                                                fontSize: 'var(--ios-text-lg)',
-                                                fontWeight: 'var(--ios-weight-semibold)',
                                                 color: plan.status === 'cancelled' ? 'var(--ios-text-tertiary)' : 'var(--ios-text-primary)',
-                                                marginBottom: '4px',
                                                 textDecoration: plan.status === 'cancelled' ? 'line-through' : 'none',
                                             }}
                                         >
                                             {plan.title}
-                                            {plan.status === 'cancelled' && <span className="ios-cancelled-badge" style={{ marginLeft: '8px' }}>Cancelled</span>}
+                                            {plan.status === 'cancelled' && <span className="ios-cancelled-badge ml-2">Cancelled</span>}
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-1">
                                             {plan.team && (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--ios-text-sm)', color: 'var(--ios-text-tertiary)' }}>
-                                                    <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--ios-text-quaternary)' }}>group</span>
+                                                <div className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--ios-text-tertiary)' }}>
+                                                    <span className="material-symbols-outlined text-base" style={{ color: 'var(--ios-text-quaternary)' }}>group</span>
                                                     <span>{plan.team.name}</span>
                                                 </div>
                                             )}
                                             {plan.location && (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--ios-text-sm)', color: 'var(--ios-text-tertiary)' }}>
-                                                    <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--ios-text-quaternary)' }}>location_on</span>
+                                                <div className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--ios-text-tertiary)' }}>
+                                                    <span className="material-symbols-outlined text-base" style={{ color: 'var(--ios-text-quaternary)' }}>location_on</span>
                                                     <span>{plan.location}</span>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
-                                    <div className="ios-event-actions" style={{ flexShrink: 0, display: 'flex', gap: '4px', alignItems: 'flex-start' }}>
-                                        <button className="ios-action-button" onClick={(e) => { e.stopPropagation(); onEdit(plan) }} title="Edit plan">
-                                            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>edit</span>
+                                    <div className="ios-event-actions flex-shrink-0 flex gap-1 items-start" onClick={(e) => e.stopPropagation()}>
+                                        <button className="ios-action-button" onClick={() => onEdit(plan)} title="Edit plan">
+                                            <span className="material-symbols-outlined text-lg">edit</span>
                                         </button>
                                         {plan.status !== 'published' && plan.status !== 'cancelled' && (
-                                            <button className="ios-action-button" onClick={(e) => { e.stopPropagation(); onPublish(plan) }} title="Publish" disabled={loadingThis}>
-                                                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>publish</span>
+                                            <button className="ios-action-button" onClick={() => onPublish(plan)} title="Publish" disabled={loadingThis}>
+                                                <span className="material-symbols-outlined text-lg">publish</span>
                                             </button>
                                         )}
                                         {plan.status !== 'cancelled' && (
-                                            <button className="ios-action-button destructive" onClick={(e) => { e.stopPropagation(); onCancel(plan) }} title="Cancel plan" disabled={loadingThis}>
-                                                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>cancel</span>
+                                            <button className="ios-action-button destructive" onClick={() => onCancel(plan)} title="Cancel plan" disabled={loadingThis}>
+                                                <span className="material-symbols-outlined text-lg">cancel</span>
                                             </button>
                                         )}
                                     </div>
@@ -143,6 +142,7 @@ export default function TravelAgenda({
                     })}
                 </div>
             ))}
+            </div>
         </div>
     )
 }

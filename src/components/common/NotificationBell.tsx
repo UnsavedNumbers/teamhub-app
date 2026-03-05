@@ -4,21 +4,24 @@ import { cn } from '../../utils/cn'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
 import { notificationService } from '../../data/services/notificationService'
+import { getLink, RouteKeys } from '../../utils/routes'
 import type { NotificationRecord, NotificationPresentation } from '../../types/notifications'
 import { showError } from '../../utils/toast'
 
 interface NotificationBellProps {
   viewAllPath?: string
+  neutralPalette?: boolean
 }
 
-export default function NotificationBell({ viewAllPath = '/dashboard' }: NotificationBellProps) {
+export default function NotificationBell({ viewAllPath, neutralPalette = false }: NotificationBellProps) {
   // All hooks must be called unconditionally at the top
   const userContextResult = useUserContext()
   const context = userContextResult.context
-  const isReady = userContextResult.isReady
-  const hasReadyContext = Boolean(isReady && context?.userId && context?.orgId)
+  /** Show bell when user is authenticated (userId present). Platform admin may have no org. */
+  const hasUserForNotifications = Boolean(context?.userId)
   const t = useT()
   const navigate = useNavigate()
+  const defaultPath = viewAllPath || getLink(RouteKeys.PORTAL_NOTIFICATIONS)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])
@@ -28,10 +31,10 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
   const unreadCount = useMemo(() => notifications.filter((n) => !n.read_at).length, [notifications])
 
   const fetchNotifications = async () => {
-    if (!hasReadyContext) return
+    if (!hasUserForNotifications) return
     setLoading(true)
     setError(null)
-    const { data, error: fetchError } = await notificationService.getNotifications(context, 10)
+    const { data, error: fetchError } = await notificationService.getNotifications(context, { limit: 10 })
     if (fetchError) {
       const message = fetchError.message || t('common.error.label')
       setError(message)
@@ -46,13 +49,14 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
   useEffect(() => {
     fetchNotifications()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasReadyContext])
+  }, [hasUserForNotifications])
 
   useEffect(() => {
-    if (!hasReadyContext) return
+    if (!hasUserForNotifications) return
 
+    let channel: any = null
     import('../../lib/supabase').then(({ supabase }) => {
-      supabase
+      channel = supabase
         .channel('notifications')
         .on(
           'postgres_changes',
@@ -70,11 +74,13 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
     })
 
     return () => {
-      import('../../lib/supabase').then(({ supabase }) => {
-         supabase.channel('notifications').unsubscribe()
+      if (channel) {
+        import('../../lib/supabase').then(({ supabase }) => {
+          supabase.channel('notifications').unsubscribe()
         })
+      }
     }
-  }, [context.userId, hasReadyContext])
+  }, [context.userId, hasUserForNotifications])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -98,7 +104,7 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
     if (notification.link_url) {
       navigate(notification.link_url)
     }
-    if (!notification.read_at && hasReadyContext) {
+    if (!notification.read_at && hasUserForNotifications) {
       const { error } = await notificationService.markAsRead(context, notification.id)
       if (!error) {
         setNotifications((prev) =>
@@ -109,8 +115,8 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
     setOpen(false)
   }
 
-  // Early return after all hooks are called
-  if (!hasReadyContext) {
+  // Early return after all hooks are called — show bell when user is logged in (platform admin may have no org)
+  if (!hasUserForNotifications) {
     return null
   }
 
@@ -126,7 +132,7 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
   }
 
   return (
-    <div className="gn-notif" ref={containerRef}>
+    <div className={cn('gn-notif', neutralPalette && 'gn-notif--neutral')} ref={containerRef}>
       <button
         className={cn('gn-util-btn', unreadCount > 0 && 'gn-util-btn--active')}
         aria-label={t('portal.settings.notifications.title')}
@@ -144,7 +150,7 @@ export default function NotificationBell({ viewAllPath = '/dashboard' }: Notific
           <button
             className="gn-notif-link"
             type="button"
-            onClick={() => navigate(viewAllPath)}
+            onClick={() => navigate(defaultPath)}
           >
             {t('portal.settings.notifications.viewAll')}
           </button>

@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { useI18n } from '../i18n/useI18n'
-import { useDemoSession } from '../contexts/DemoSessionContext'
 import { getHostAppContext } from '../utils/host'
 import {
   setSetupOrganizationFlag,
@@ -23,10 +22,8 @@ import { debug } from '../lib/debug'
 
 export default function Login() {
   const { t } = useI18n()
-  const { setPendingDemoCode } = useDemoSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [demoCode, setDemoCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -38,7 +35,6 @@ export default function Login() {
   const navigate = useNavigate()
   const [logoVersion, setLogoVersion] = useState(0)
   const appContext = getHostAppContext()
-  const showDemoCodeInput = USE_FAKE_DATA && appContext !== 'platform-admin'
 
   // Add lifecycle logging
   useDebugLifecycle('Login')
@@ -61,11 +57,7 @@ export default function Login() {
     debug.flow('Login', 'Form submission started', { email, rememberMe })
     debug.perf.start('login.formSubmission')
 
-    if (showDemoCodeInput && demoCode.trim()) {
-      setPendingDemoCode(demoCode)
-    }
-
-    const { error } = await signInWithEmail(email, password, demoCode)
+    const { error } = await signInWithEmail(email, password)
     
     if (error) {
       debug.perf.end('login.formSubmission')
@@ -228,7 +220,7 @@ export default function Login() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-white antialiased relative flex">
+    <div className="min-h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-white antialiased relative flex">
       {/* Background Field Markings (Grid) */}
       <div 
         className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1]"
@@ -269,12 +261,6 @@ export default function Login() {
       {/* Right side - Login Form */}
       <div className="flex-1 flex flex-col px-6 py-8 lg:px-20 xl:px-24 bg-white dark:bg-slate-900/50 overflow-y-auto">
         <div className="mx-auto w-full max-w-sm lg:w-96 flex flex-col">
-          {showDemoCodeInput && (
-            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-              {t('errors.auth.demoBanner')}
-            </div>
-          )}
-
           {/* Logo */}
           <div className="mb-8 pt-4">
             <img 
@@ -304,30 +290,6 @@ export default function Login() {
 
           {/* Email Form */}
           <form onSubmit={handleEmailLogin} className="space-y-6">
-            {showDemoCodeInput && (
-              <div>
-                <label 
-                  htmlFor="demo-code" 
-                  className="block text-xs font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white mb-2 font-impact"
-                >
-                  {t('formFields.demoCode')}
-                </label>
-                <div className="mt-2">
-                  <input
-                    id="demo-code"
-                    name="demo-code"
-                    type="text"
-                    autoComplete="off"
-                    tabIndex={0}
-                    value={demoCode}
-                    onChange={(e) => setDemoCode(e.target.value)}
-                    placeholder={t('formFields.demoCodePlaceholder')}
-                    className="block w-full rounded border-0 py-3 px-4 bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[var(--org-btn-primary-bg, #137fec)] sm:text-sm text-base min-h-[44px]"
-                  />
-                </div>
-              </div>
-            )}
-
             <div>
               <label 
                 htmlFor="email" 
@@ -426,11 +388,23 @@ export default function Login() {
           <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 space-y-4">
             <div>
               <p className="text-center text-sm text-slate-500 dark:text-slate-400 mb-2">
+                WANT TO TRY THE DEMO?
+              </p>
+              <Link 
+                to={getLink(RouteKeys.DEMO_ENTRY)}
+                tabIndex={6}
+                className="block text-center font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors"
+              >
+                ENTER DEMO CODE
+              </Link>
+            </div>
+            <div>
+              <p className="text-center text-sm text-slate-500 dark:text-slate-400 mb-2">
                 NEW PARENT TO YOUTHSPORTS?
               </p>
               <Link 
                 to={getLink(RouteKeys.AUTH_SIGNUP)}
-                tabIndex={6}
+                tabIndex={7}
                 className="block text-center font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors"
               >
                 CREATE AN ACCOUNT
@@ -456,7 +430,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={handleSetupOrganization}
-                tabIndex={7}
+                tabIndex={9}
                 className="w-full text-center font-bold text-[var(--org-link-color)] hover:text-[var(--org-link-color)]/80 transition-colors"
               >
                 CREATE AN ORGANIZATION

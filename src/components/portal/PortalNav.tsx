@@ -1,18 +1,23 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import MegaMenu from '../common/MegaMenu'
 import ThemeToggle from './ThemeToggle'
 import UserContextDropdown from '../common/UserContextDropdown'
 import NotificationBell from '../common/NotificationBell'
 import MobileMenu from '../common/MobileMenu'
+import { DemoModeBadge } from '../demo/DemoModeBadge'
 import { useAuth } from '../../hooks/useAuth'
 import { useOrganization } from '../../contexts/OrganizationContext'
+import { useUserContext } from '../../hooks/useUserContext'
 import { useTheme } from '../../hooks/useTheme'
 import { useT } from '../../i18n/useI18n'
 import { useMobile } from '@/hooks/useMobile'
 import { getLink } from '../../utils/routes'
 import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
 import { athleteNavSections } from '../../utils/routes/navigation'
+import { TeamSwitcher } from './TeamSwitcher'
+import { useCoachTeamSelection } from '../../hooks/useCoachTeamSelection'
+import PwaInstallCta from '../pwa/PwaInstallCta'
 
 // ============================================================================
 // ORGANIZATION ADMIN MENU STRUCTURE
@@ -55,6 +60,7 @@ interface PortalNavProps {
  */
 export default function PortalNav({ forceRole }: PortalNavProps) {
   const { hasAnyRole, isOrgAdmin } = useAuth()
+  const { context } = useUserContext()
   const { currentOrganization, isLoading: isOrgLoading } = useOrganization()
   const { resolvedTheme } = useTheme()
   const t = useT()
@@ -86,6 +92,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
           items: [
             { routeKey: 'admin.organization.base', text: 'Organization Settings', icon: 'settings', path: getLink('admin.organization.base'), description: 'Organization info' },
             { routeKey: 'admin.organization.users', text: 'Users', icon: 'admin_panel_settings', path: getLink('admin.organization.users'), description: 'Access and roles' },
+            { routeKey: 'admin.organization.bulkInvite', text: 'Bulk Invites', icon: 'upload', path: getLink('admin.organization.bulkInvite'), description: 'Onboard multiple users' },
             { routeKey: 'admin.organization.billing', text: 'Billing', icon: 'credit_card', path: getLink('admin.organization.billing'), description: 'Plan and billing' },
           ],
         },
@@ -174,7 +181,9 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
           items: [
             { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', path: getLink('portal.tryouts'), description: 'Tryout sessions' },
             { routeKey: 'portal.travel', text: 'Travel', icon: 'flight', path: getLink('portal.travel'), description: 'Trip details' },
-            { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: getLink('portal.messages'), description: 'Communications' },
+            { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: getLink('portal.messages'), description: 'Direct user-to-user messages' },
+            { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', path: getLink('portal.huddles'), description: 'Team and organization chat channels' },
+            { routeKey: 'portal.messages', text: 'Announcements', icon: 'campaign', path: getLink('portal.announcements'), description: 'Team announcements and updates' },
             { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', path: getLink('portal.photos'), description: 'Team photos' },
             { routeKey: 'portal.videos', text: 'Videos', icon: 'smart_display', path: getLink('portal.videos'), description: 'Video library & feedback' },
             { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', path: getLink('portal.settings'), description: 'Preferences' },
@@ -244,7 +253,9 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Messages',
           items: [
-            { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', path: getLink('portal.messages'), description: 'Team chat and announcements' },
+            { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: getLink('portal.messages'), description: 'Direct user-to-user messages' },
+            { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', path: getLink('portal.huddles'), description: 'Team and organization chat channels' },
+            { routeKey: 'portal.messages', text: 'Announcements', icon: 'campaign', path: getLink('portal.announcements'), description: 'Team announcements and updates' },
           ],
         },
       ],
@@ -287,7 +298,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [logoError, setLogoError] = useState(false)
+  const [, setLogoError] = useState(false)
   const [logoVersion, setLogoVersion] = useState(0)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -306,6 +317,16 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   }, [forceRole, isOrgAdmin, hasAnyRole])
 
   const currentRole = determineRole()
+  const registrationHubPath = getLink('portal.registrationHub')
+
+  const resolvePathForRouteKey = useCallback((routeKey?: string): string | undefined => {
+    if (!routeKey) return undefined
+    try {
+      return getLink(routeKey as any)
+    } catch {
+      return undefined
+    }
+  }, [])
 
   // Select navigation based on role
   const rawNavSections = currentRole === 'org_admin' 
@@ -316,9 +337,56 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         ? athleteNavSections
         : parentNavSections
 
+  const navSectionsWithRegistration = useMemo(() => {
+    const sectionsWithPaths = rawNavSections.map((section) => ({
+      ...section,
+      groups: section.groups.map((group) => ({
+        ...group,
+        items: group.items.map((item) => ({
+          ...item,
+          path: (item as any).path ?? resolvePathForRouteKey(item.routeKey),
+        })),
+      })),
+    }))
+
+    const hasRegistrationHub = sectionsWithPaths.some((section) =>
+      section.groups.some((group) =>
+        group.items.some((item) =>
+          (item as any).path === registrationHubPath
+        )
+      )
+    )
+
+    if (hasRegistrationHub) {
+      return sectionsWithPaths
+    }
+
+    return [
+      ...sectionsWithPaths,
+      {
+        label: 'Portal Registration Hub',
+        route: registrationHubPath,
+        groups: [
+          {
+            label: '',
+            items: [
+              {
+                routeKey: 'portal.registrationHub',
+                text: 'Portal Registration Hub',
+                icon: 'app_registration',
+                path: registrationHubPath,
+                description: 'Open your role-based portal registration workspace',
+              },
+            ],
+          },
+        ],
+      },
+    ]
+  }, [rawNavSections, registrationHubPath, resolvePathForRouteKey])
+
   // Apply feature gate filtering - wait for org context to avoid warnings
   const { filteredSections: navSections } = useFilteredNavigation(
-    isOrgLoading ? [] : rawNavSections
+    isOrgLoading ? [] : navSectionsWithRegistration
   )
 
   // Logo based on theme
@@ -327,8 +395,6 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   const logoSrc = resolvedTheme === 'dark' 
     ? '/images/logo-dark.png' 
     : '/images/logo-light.png'
-
-  // Add cache-busting query parameter to force reload on theme change
   const logoSrcWithCacheBust = `${logoSrc}?theme=${resolvedTheme}&v=${logoVersion}`
 
   // Reset logo error and increment version when theme changes to force reload
@@ -435,9 +501,6 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
     }
   }, [])
 
-  const brandPath = '/portal/dashboard'
-  const brandIcon = 'sports'
-
   // Role label for display
   const roleLabels: Record<PortalRole, string> = {
     org_admin: 'Admin',
@@ -448,11 +511,11 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
 
   return (
     <>
-    <nav className="gn-root" role="navigation" aria-label="Main navigation">
+    <nav className="gn-root" role="navigation" aria-label="Main navigation" data-logo-src={logoSrcWithCacheBust}>
       {/* Left section */}
       <div className="gn-left">
-        {/* Brand */}
-        <Link to={brandPath} className="gn-brand">
+        {/* Brand - Logo removed but code kept for potential repurposing */}
+        {/* <Link to="/portal/dashboard" className="gn-brand">
           {!logoError ? (
             <img 
               key={logoSrc}
@@ -472,7 +535,7 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
               <span className="gn-brand-text">YOUTH SPORTS</span>
             </>
           )}
-        </Link>
+        </Link> */}
 
         {/* Mobile toggle - only show on mobile */}
         {isMobile && (
@@ -558,16 +621,29 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
 
       {/* Right section */}
       <div className="gn-right">
+        <PwaInstallCta
+          compactOnMobile={false}
+          buttonClassName="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-neutral-900 dark:text-gray-200 dark:hover:bg-neutral-800"
+        />
+
+        {/* Demo Mode Badge */}
+        <DemoModeBadge />
+
         {/* Role indicator */}
         {currentOrganization && (
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/50">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800/50">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
               {currentOrganization.name}
             </span>
             <span className="text-xs font-semibold text-primary-600 dark:text-primary-400">
               {roleLabels[currentRole]}
             </span>
           </div>
+        )}
+
+        {/* Team Switcher for coaches */}
+        {currentRole === 'coach' && context && (
+          <CoachTeamSwitcher context={context} />
         )}
 
         {/* Notifications */}
@@ -596,3 +672,27 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
     </>
   )
 }
+
+/**
+ * CoachTeamSwitcher - Wrapper component that loads teams and manages team selection
+ */
+function CoachTeamSwitcher({ context: _context }: { context: any }) {
+  const { selectedTeamId, teams, isLoading, updateTeamSelection, hasTeams } = useCoachTeamSelection()
+
+  if (isLoading) {
+    return null // Don't show anything while loading
+  }
+
+  if (!hasTeams) {
+    return null // Don't show switcher if no teams (empty state handled in pages)
+  }
+
+  return (
+    <TeamSwitcher
+      selectedTeamId={selectedTeamId}
+      onTeamChange={updateTeamSelection}
+      teams={teams}
+    />
+  )
+}
+

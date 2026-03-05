@@ -18,6 +18,7 @@ import { USE_FAKE_DATA } from '../data/config'
 
 interface UseLicenseResult {
   licenseStatus: LicenseStatus | null
+  /** @deprecated Use summary.tierId/tierName instead. Will be removed in Phase 8. */
   licensePlan: LicensePlan | null
   summary: LicenseSummary | null
   loading: boolean
@@ -58,7 +59,7 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
       // Create a fake active license for demo organizations
       const fakeSummary: LicenseSummary = {
         status: 'active',
-        plan: 'pro',
+        plan: 'standard',
         currentPeriodStart: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
         currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
         trialEndsAt: null,
@@ -67,7 +68,8 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
         stripeCustomerId: null,
         stripeSubscriptionId: null,
         stripePriceId: null,
-        tierName: 'Pro (Demo)',
+        tierId: 'fake-tier-2',
+        tierName: 'Growth',
         isTrial: false,
         isGracePeriod: false,
         isValid: true,
@@ -89,33 +91,52 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
     setError(null)
 
     try {
-      const { data, error: fetchError } = await supabase
+      // For sub-orgs, get effective license org_id (parent)
+      let effectiveOrgId = orgId
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('parent_org_id')
+        .eq('id', orgId)
+        .maybeSingle()
+      
+      if (orgData?.parent_org_id) {
+        // This is a sub-org, use parent's license
+        effectiveOrgId = orgData.parent_org_id
+      }
+
+      // Use typed assertion to avoid "excessively deep" inference (current_tier_id may exist before types are regenerated)
+      type OrgLicenseRow = {
+        license_status?: string | null
+        current_tier_id?: string | null
+        license_current_period_start?: string | null
+        license_current_period_end?: string | null
+        license_trial_start?: string | null
+        license_trial_ends_at?: string | null
+        license_grace_ends_at?: string | null
+        license_cancel_at_period_end?: boolean | null
+        stripe_customer_id?: string | null
+        stripe_subscription_id?: string | null
+        stripe_price_id?: string | null
+        license_tiers?: { tier_name: string; tier_key: string } | null
+      }
+      const { data, error: fetchError } = await (supabase as any)
         .from('organizations')
         .select(`
           license_status,
-          license_plan,
+          current_tier_id,
           license_current_period_start,
           license_current_period_end,
+          license_trial_start,
           license_trial_ends_at,
           license_grace_ends_at,
           license_cancel_at_period_end,
           stripe_customer_id,
           stripe_subscription_id,
-          stripe_price_id
+          stripe_price_id,
+          license_tiers:current_tier_id(tier_name, tier_key)
         `)
-        .eq('id', orgId)
-        .maybeSingle() as { data: {
-          license_status?: string | null
-          license_plan?: string | null
-          license_current_period_start?: string | null
-          license_current_period_end?: string | null
-          license_trial_ends_at?: string | null
-          license_grace_ends_at?: string | null
-          license_cancel_at_period_end?: boolean | null
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
-          stripe_price_id?: string | null
-        } | null; error: { message?: string } | null }
+        .eq('id', effectiveOrgId)
+        .maybeSingle() as { data: OrgLicenseRow | null; error: { message?: string } | null }
 
       if (fetchError) {
         setError(fetchError.message || 'Unknown error')
@@ -129,42 +150,114 @@ export function useLicense(organizationId?: string, options?: { requireOrganizat
         return
       }
 
-      // Map license_plan to tier_key
-      const planToTierKey = (plan: string | null | undefined): string | null => {
-        switch (plan) {
-          case 'starter': return 'basic'
-          case 'standard':
-          case 'pro': return 'power'
-          default: return null
+      // Debug: Log the raw data to help diagnose tier loading issues
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[useLicense] Raw data:', {
+          current_tier_id: data.current_tier_id,
+          license_tiers: data.license_tiers,
+          stripe_price_id: data.stripe_price_id,
+          license_status: data.license_status,
+        })
+      }
+
+      // Get tier name from JOIN (no mapping needed)
+      // If current_tier_id exists but license_tiers is null, the tier might have been archived
+      // In that case, we'll still have tierId but no tierName
+      let tierName = data.license_tiers?.tier_name ?? null
+      let tierId = data.current_tier_id ?? null
+
+      // Fallback 1: If JOIN returned tierId but no tierName, query tier directly by ID
+      // This handles cases where the JOIN failed or tier_name is NULL in the database
+      if (tierId && !tierName) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[useLicense] JOIN returned tierId but no tierName, querying tier directly:', tierId)
+        }
+        
+        try {
+          const { data: tierData, error: tierError } = await supabase
+            .from('license_tiers')
+            .select('id, tier_name, tier_key, status')
+            .eq('id', tierId)
+            .maybeSingle()
+
+          if (!tierError && tierData) {
+            // Use tier_name from database, fallback to empty string if NULL (matches platform admin behavior)
+            tierName = tierData.tier_name ?? ''
+            if (process.env.NODE_ENV === 'development') {
+              console.log('[useLicense] Direct tier query successful:', { tierId, tierName, status: tierData.status, tier_name_from_db: tierData.tier_name })
+            }
+            
+            // If tier is archived, log a warning
+            if (tierData.status !== 'active') {
+              console.warn('[useLicense] Tier is archived:', { tierId, tierName, status: tierData.status })
+            }
+          } else if (tierError) {
+            console.error('[useLicense] Failed to query tier directly:', tierError)
+          } else {
+            // tierData is null - tier doesn't exist
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('[useLicense] Tier not found in database:', tierId)
+            }
+          }
+        } catch (directQueryError) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[useLicense] Direct tier query failed:', directQueryError)
+          }
         }
       }
-      const tierKey = planToTierKey(data.license_plan)
 
-      // Fetch tier_name if tier_key exists
-      let tierName: string | null = null
-      if (tierKey) {
-        const { data: tierData, error: tierError } = await supabase
-          .from('license_tiers')
-          .select('tier_name')
-          .eq('tier_key', tierKey)
-          .maybeSingle()
-        if (!tierError && tierData) {
-          tierName = tierData.tier_name
+      // Fallback 2: If current_tier_id is not set but stripe_price_id exists, look up tier by stripe_price_id
+      // This handles cases where the organization hasn't been migrated yet or tier wasn't set during subscription creation
+      if (!tierId && data.stripe_price_id) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[useLicense] current_tier_id not set, attempting fallback lookup by stripe_price_id:', data.stripe_price_id)
         }
+        
+        try {
+          const { data: tierData, error: tierError } = await supabase
+            .from('license_tiers')
+            .select('id, tier_name, tier_key')
+            .eq('stripe_price_id', data.stripe_price_id)
+            .eq('status', 'active')
+            .maybeSingle()
+
+          if (!tierError && tierData) {
+            tierId = tierData.id
+            tierName = tierData.tier_name
+            if (process.env.NODE_ENV === 'development') {
+              console.log('[useLicense] Fallback lookup successful:', { tierId, tierName })
+            }
+          }
+        } catch (fallbackError) {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[useLicense] Fallback lookup failed:', fallbackError)
+          }
+        }
+      }
+
+      // Debug: Log if we still don't have tierName after all fallbacks
+      if (tierId && !tierName) {
+        console.warn('[useLicense] Organization has current_tier_id but tier_name could not be retrieved:', tierId)
+      }
+
+      // Debug: Log if we don't have tierId at all
+      if (!tierId && process.env.NODE_ENV === 'development') {
+        console.warn('[useLicense] Organization does not have current_tier_id set and fallback lookup failed. Organization ID:', effectiveOrgId)
       }
 
       const parsed: LicenseSummary = {
         status: (data.license_status as LicenseStatus | null) ?? null,
-        plan: (data.license_plan as LicensePlan | null) ?? null,
+        tierId,
+        tierName,
         currentPeriodStart: data.license_current_period_start ?? null,
         currentPeriodEnd: data.license_current_period_end ?? null,
+        trialStart: data.license_trial_start ?? null,
         trialEndsAt: data.license_trial_ends_at ?? null,
         graceEndsAt: data.license_grace_ends_at ?? null,
         cancelAtPeriodEnd: data.license_cancel_at_period_end ?? null,
         stripeCustomerId: data.stripe_customer_id ?? null,
         stripeSubscriptionId: data.stripe_subscription_id ?? null,
         stripePriceId: data.stripe_price_id ?? null,
-        tierName,
       }
 
       // Populate computed properties

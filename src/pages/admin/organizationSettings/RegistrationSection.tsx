@@ -14,6 +14,7 @@ import type { RegistrationSettings } from '../../../types/organizationSettings'
 import { Button, Checkbox } from '../../../components/platformAdmin'
 import { OrgAdminButton } from '../../../components/admin/OrgAdminButton'
 import { showSuccess, showError } from '../../../utils/toast'
+import { useFeatureGate } from '../../../lib/featureGate'
 
 const AVAILABLE_FIELDS = [
   { id: 'first_name', label: 'First Name', required: true },
@@ -53,6 +54,7 @@ export default function RegistrationSection({
   onDirtyChange,
 }: RegistrationSectionProps) {
   const { context } = useUserContext()
+  const medicalGate = useFeatureGate('medical_enabled')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -213,23 +215,25 @@ export default function RegistrationSection({
           />
         </div>
 
-        <div className="space-y-4 pt-4 border-t">
-          <h4 className="font-medium text-gray-900">Medical Forms</h4>
+        {medicalGate.allowed && !medicalGate.loading && (
+          <div className="space-y-4 pt-4 border-t">
+            <h4 className="font-medium text-gray-900">Medical Forms</h4>
 
-          <Controller
-            name="medical_form_required"
-            control={control}
-            render={({ field: { value, onChange, ...field } }) => (
-              <Checkbox
-                {...field}
-                checked={value}
-                onChange={(e) => onChange(e.target.checked)}
-                label="Require medical form before participation"
-                helperText="Players cannot be added to teams until medical form is submitted"
-              />
-            )}
-          />
-        </div>
+            <Controller
+              name="medical_form_required"
+              control={control}
+              render={({ field: { value, onChange, ...field } }) => (
+                <Checkbox
+                  {...field}
+                  checked={value}
+                  onChange={(e) => onChange(e.target.checked)}
+                  label="Require medical form before participation"
+                  helperText="Players cannot be added to teams until medical form is submitted"
+                />
+              )}
+            />
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 pt-4 border-t">
           <OrgAdminButton

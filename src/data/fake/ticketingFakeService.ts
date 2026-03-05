@@ -15,7 +15,7 @@ import type {
   ValidateScanResponse,
   Venue,
 } from '@/types/ticketing'
-import { DEMO_ORG_A_ID, DEMO_TRANSACTION_DELAY_MS } from '../config'
+import { DEMO_ORG_A_ID, DEMO_ORG_B_ID, DEMO_TRANSACTION_DELAY_MS, DEMO_USER_IDS } from '../config'
 import {
   adjustFakeTicketTypeCapacity,
   DEMO_SOCIAL_RESERVED_TICKETED_EVENT_ID,
@@ -28,6 +28,7 @@ import {
 import { DEMO_RESERVED_SEAT_MAP_ID } from './ticketingFakeConstants'
 import { createServiceResponse } from '../services/responseHelpers'
 import { getLink, RouteKeys } from '@/utils/routes'
+import { appendTicketCheckoutRole, resolveTicketCheckoutRole } from '@/utils/ticketCheckoutRole'
 import { fakeUsers } from './fakeUsers'
 import { generateOrderNumber } from './generators'
 import { loadTicketingState, saveTicketingState } from './demoStorage'
@@ -136,7 +137,10 @@ function ensureSeededOrderHistory() {
   }
 
   const purchasers = getDemoPurchasers()
-  const allEvents = getFakeTicketedEvents({ org_id: DEMO_ORG_A_ID })
+  const allEvents = [
+    ...getFakeTicketedEvents({ org_id: DEMO_ORG_A_ID }),
+    ...getFakeTicketedEvents({ org_id: DEMO_ORG_B_ID }),
+  ]
   const paidEvents = allEvents.filter((event) => event.status === 'published' || event.status === 'completed')
   const pendingEvents = allEvents.filter((event) => event.status === 'published' && new Date(event.starts_at) > new Date())
   const refundedEvents = allEvents.filter((event) => event.status === 'completed' || event.status === 'cancelled' || event.status === 'published')
@@ -404,7 +408,7 @@ function ensureFakeSeatMaps(orgId: string): FakeSeatMapRecord[] {
 }
 
 export function getFakeVenuesForOrg(orgId: string): Venue[] {
-  return getFakeVenues(orgId)
+  return getFakeVenues(orgId || DEMO_ORG_A_ID)
 }
 
 export function getFakeSeatMapsForOrgAdmin(orgId: string): FakeAdminSeatMapListItem[] {
@@ -484,7 +488,7 @@ export function getFakeSeatMapWithSeats(seatMapId: string): SeatMapWithSections 
     }
   }
 
-  for (const orgId of [DEMO_ORG_A_ID]) {
+  for (const orgId of [DEMO_ORG_A_ID, DEMO_ORG_B_ID]) {
     const seatMaps = ensureFakeSeatMaps(orgId)
     const seatMap = seatMaps.find((entry) => entry.id === seatMapId)
     if (seatMap) {
@@ -574,9 +578,35 @@ export function getFakeTicketsForOrder(orderId: string) {
   }))
 }
 
-export function getFakeMyTicketOrders() {
+export function getFakeMyTicketOrders(userId?: string | null) {
   ensureSeededOrderHistory()
-  return [...fakeOrders]
+  if (!userId) return [...fakeOrders]
+  const userOrders = fakeOrders.filter((o) => o.purchaser_user_id === userId)
+  const demoFanId = DEMO_USER_IDS['fan-only@example.com']
+  const requiredOrgIds = [DEMO_ORG_A_ID, DEMO_ORG_B_ID]
+
+  const withCrossOrgCoverage = (orders: TicketOrder[]): TicketOrder[] => {
+    const normalized = [...orders]
+    const existingOrgIds = new Set(normalized.map((order) => order.org_id))
+    for (const orgId of requiredOrgIds) {
+      if (existingOrgIds.has(orgId)) continue
+      const fallbackOrder = fakeOrders.find((order) => order.org_id === orgId)
+      if (!fallbackOrder) continue
+      normalized.push(fallbackOrder)
+      existingOrgIds.add(orgId)
+    }
+    return normalized
+  }
+
+  if (userId === demoFanId) {
+    return withCrossOrgCoverage(userOrders.length > 0 ? userOrders : fakeOrders.slice(0, 6))
+  }
+
+  if (userOrders.length === 0) {
+    return fakeOrders.slice(0, 3)
+  }
+
+  return userOrders
 }
 
 export function getFakeTicketOrdersWithRelations(orgId?: string): Array<TicketOrder & {
@@ -954,11 +984,21 @@ export async function createFakeCheckoutSession(
   fakeTickets.push(...tickets)
   persistTicketingState()
 
-  const baseUrl = request.return_base_url || (typeof window !== 'undefined' ? window.location.origin : '')
+  const baseUrlRaw = request.return_base_url || (typeof window !== 'undefined' ? window.location.origin : '')
+  const normalizedBaseUrl = baseUrlRaw.trim().replace(/\/$/, '')
+  const checkoutRole = resolveTicketCheckoutRole(request.purchaser_role, { fallbackRole: 'guardian' })
   const orderPath = request.org_slug
     ? getLink(RouteKeys.PORTAL_ORG_TICKET_ORDER, { orgSlug: request.org_slug, orderId })
     : getLink(RouteKeys.PORTAL_TICKET_ORDER_SUCCESS, { orderId })
-  const checkoutUrl = baseUrl ? `${baseUrl}${orderPath}` : orderPath
+  const cancelPath = request.org_slug
+    ? getLink(RouteKeys.PORTAL_ORG_TICKET_EVENT, { orgSlug: request.org_slug, eventId: event.id })
+    : getLink(RouteKeys.PORTAL_TICKET_EVENT_DETAIL, { eventId: event.id })
+  const successPathWithRole = appendTicketCheckoutRole(orderPath, checkoutRole)
+  const cancelPathWithRole = appendTicketCheckoutRole(cancelPath, checkoutRole)
+  const successTarget = normalizedBaseUrl ? `${normalizedBaseUrl}${successPathWithRole}` : successPathWithRole
+  const cancelTarget = normalizedBaseUrl ? `${normalizedBaseUrl}${cancelPathWithRole}` : cancelPathWithRole
+  const demoCheckoutPath = `/portal/tickets/checkout/demo?success=${encodeURIComponent(successTarget)}&cancel=${encodeURIComponent(cancelTarget)}`
+  const checkoutUrl = normalizedBaseUrl ? `${normalizedBaseUrl}${demoCheckoutPath}` : demoCheckoutPath
 
   return createServiceResponse({ checkout_url: checkoutUrl, order_id: orderId }, null)
 }

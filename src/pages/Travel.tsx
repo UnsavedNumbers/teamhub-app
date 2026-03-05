@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { 
@@ -13,6 +13,7 @@ import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Icon from '../components/portal/Icon'
 import Button from '../components/portal/Button'
+import EmptyState from '../components/portal/EmptyState'
 import { cn } from '../utils/cn'
 import { useT } from '../i18n/useI18n'
 
@@ -94,7 +95,7 @@ export default function Travel() {
         const todayStr = getTodayLocalDateOnly()
 
         if (endDate < todayStr) {
-            return { label: t('portal.travel.badges.completed'), color: 'bg-slate-500' }
+            return { label: t('portal.travel.badges.completed'), color: 'bg-gray-500' }
         }
 
         // If the trip starts today, call it out.
@@ -407,7 +408,7 @@ export default function Travel() {
                    <Card className="text-center py-12 max-w-lg w-full">
                        <Icon name="error" size="text-6xl" className="text-red-400 mb-4 mx-auto" />
                        <CardTitle className="mb-2">Error loading plans</CardTitle>
-                       <p className="text-slate-500 mb-6">{error.message}</p>
+                       <p className="text-gray-500 mb-6">{error.message}</p>
                        <Button onClick={() => {
                            setError(null)
                            setRetryCount(c => c + 1)
@@ -424,7 +425,7 @@ export default function Travel() {
             {/* Header */}
             <div className="mb-8">
                 <PageTitle>Travel</PageTitle>
-                <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
+                <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide mt-2">
                     Manage upcoming trips and view past travel history.
                 </p>
             </div>
@@ -433,7 +434,7 @@ export default function Travel() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 
                 {/* Tabs */}
-                <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl self-start">
+                <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl self-start">
                     {(['upcoming', 'past', 'all'] as TabType[]).map(tab => (
                         <button
                             key={tab}
@@ -441,8 +442,8 @@ export default function Travel() {
                             className={cn(
                                 "px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wide transition-all",
                                 activeTab === tab 
-                                    ? "bg-white dark:bg-slate-700 text-[var(--org-btn-primary-bg)] shadow-sm"
-                                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                                    ? "bg-white dark:bg-gray-700 text-[var(--org-btn-primary-bg)] shadow-sm"
+                                    : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                             )}
                         >
                             {tab === 'upcoming'
@@ -464,12 +465,12 @@ export default function Travel() {
                           onChange={e => setSearchQuery(e.target.value)}
                           className="form-input pl-9 pr-4 w-40 sm:w-64"
                        />
-                       <Icon name="search" className="absolute left-3 top-2.5 text-slate-400 text-sm" />
+                       <Icon name="search" className="absolute left-3 top-2.5 text-gray-400 text-sm" />
                    </div>
                    <Button 
                        variant="secondary" 
                        onClick={() => setFiltersOpen(!filtersOpen)}
-                       className={cn(filtersOpen && "bg-slate-100 dark:bg-slate-800")}
+                       className={cn(filtersOpen && "bg-gray-100 dark:bg-gray-800")}
                    >
                        <Icon name="filter_list" />
                    </Button>
@@ -479,8 +480,8 @@ export default function Travel() {
             {/* Filters Bar */}
             {filtersOpen && (
                 <Card className="mb-6 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="flex flex-wrap gap-4">
-                        <div className="flex-1 min-w-[200px]">
+                    <div className="mobile-stack-controls">
+                        <div className="flex-1 min-w-0 sm:min-w-[200px]">
                             <label className="form-label">Season</label>
                             <select 
                                 value={seasonFilter} 
@@ -491,7 +492,7 @@ export default function Travel() {
                                 {seasonOptions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         </div>
-                        <div className="flex-1 min-w-[200px]">
+                        <div className="flex-1 min-w-0 sm:min-w-[200px]">
                             <label className="form-label">Team</label>
                             <select 
                                 value={teamFilter} 
@@ -529,11 +530,11 @@ export default function Travel() {
                     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[var(--org-btn-primary-bg)]"></div>
                  </div>
             ) : filteredPlans.length === 0 ? (
-                 <div className="text-center py-20 opacity-60">
-                     <Icon name="flight_takeoff" size="text-6xl" className="mb-4 mx-auto text-slate-300" />
-                     <h3 className="text-xl font-bold text-slate-500">No travel plans found</h3>
-                     <p className="text-slate-400">Try adjusting your filters or check back later.</p>
-                 </div>
+                 <EmptyState
+                   icon="flight_takeoff"
+                   title="No travel plans found"
+                   description="Try adjusting your filters or check back later."
+                 />
             ) : (
                 <div className="space-y-8">
                     {groupedPlans.map(group => (
@@ -543,14 +544,14 @@ export default function Travel() {
                                 className="flex items-center gap-4 cursor-pointer group select-none"
                                 onClick={() => toggleGroup(group.key)}
                             >
-                                <button className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                                    <Icon name={expandedGroups.has(group.key) ? "expand_less" : "expand_more"} className="text-slate-400" />
+                                <button className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                    <Icon name={expandedGroups.has(group.key) ? "expand_less" : "expand_more"} className="text-gray-400" />
                                 </button>
-                                <h2 className="text-xl font-black uppercase text-slate-700 dark:text-slate-200 tracking-wide">
+                                <h2 className="text-xl font-black uppercase text-gray-700 dark:text-gray-200 tracking-wide">
                                     {group.label}
                                 </h2>
-                                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700"></div>
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                                     {group.items.length} {group.items.length === 1 ? 'Trip' : 'Trips'}
                                 </span>
                             </div>
@@ -566,7 +567,7 @@ export default function Travel() {
                                             <div 
                                                 key={plan.id}
                                                 onClick={() => navigate(`/portal/travel/${plan.id}`)}
-                                                className="group relative bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl shadow-sm hover:shadow-lg hover:border-[var(--org-btn-primary-bg)]/30 transition-all duration-200 cursor-pointer overflow-hidden p-4 sm:p-5 flex flex-col gap-3"
+                                                className="group relative bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-lg hover:border-[var(--org-btn-primary-bg)]/30 transition-all duration-200 cursor-pointer overflow-hidden p-4 sm:p-5 flex flex-col gap-3"
                                             >
                                                 {/* Top Row: Team + Status */}
                                                 <div className="flex justify-between items-start gap-2">
@@ -578,10 +579,10 @@ export default function Travel() {
                                                             ></div>
                                                         )}
                                                         <div>
-                                                            <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-0.5">
+                                                            <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-0.5">
                                                                 {plan.team?.name || 'Team Event'}
                                                             </div>
-                                                            <h3 className="font-bold text-slate-800 dark:text-white leading-tight">
+                                                            <h3 className="font-bold text-gray-800 dark:text-white leading-tight">
                                                                 {plan.title}
                                                             </h3>
                                                         </div>
@@ -592,20 +593,20 @@ export default function Travel() {
                                                 </div>
 
                                                 {/* Middle: Details */}
-                                                <div className="mt-1 space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                                                <div className="mt-1 space-y-2 text-sm text-gray-600 dark:text-gray-400">
                                                     <div className="flex items-center gap-2">
-                                                        <Icon name="calendar_today" size="text-sm" className="text-slate-400" />
+                                                        <Icon name="calendar_today" size="text-sm" className="text-gray-400" />
                                                         <span className="font-medium">{formatDateRange(plan.start_date, plan.end_date)}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <Icon name="place" size="text-sm" className="text-slate-400" />
+                                                        <Icon name="place" size="text-sm" className="text-gray-400" />
                                                         <span className="font-medium">
                                                             {[plan.destination_city, plan.destination_state].filter(Boolean).join(', ') || plan.location}
                                                         </span>
                                                     </div>
                                                     {plan.venue_name && (
                                                         <div className="flex items-center gap-2 text-xs">
-                                                            <Icon name="stadium" size="text-sm" className="text-slate-400 opacity-70" />
+                                                            <Icon name="stadium" size="text-sm" className="text-gray-400 opacity-70" />
                                                             <span className="opacity-80 line-clamp-1">{plan.venue_name}</span>
                                                         </div>
                                                     )}
@@ -629,3 +630,4 @@ export default function Travel() {
         </PortalLayout>
     )
 }
+

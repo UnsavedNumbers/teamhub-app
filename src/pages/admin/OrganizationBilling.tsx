@@ -34,8 +34,47 @@ export default function OrganizationBilling() {
   const { currentOrganization } = useOrganization()
   const orgId = currentOrganization?.id
   const isMounted = useIsMounted()
+  
+  // Check if this is a sub-org (they don't have billing)
+  const { data: orgData } = useQuery({
+    queryKey: ['org-parent-check', orgId],
+    queryFn: async () => {
+      if (!orgId) return null
+      const { data } = await supabase
+        .from('organizations')
+        .select('parent_org_id')
+        .eq('id', orgId)
+        .maybeSingle()
+      return data
+    },
+    enabled: !!orgId,
+  })
+  
+  const isSubOrg = orgData?.parent_org_id != null
+  
+  useEffect(() => {
+    if (isSubOrg && isMounted) {
+      navigate('/admin/organization', { replace: true })
+    }
+  }, [isSubOrg, isMounted, navigate])
+  
+  if (isSubOrg) {
+    return null // Will redirect
+  }
 
   const { summary, loading, error } = useLicense(orgId)
+
+  // Debug: Log summary to help diagnose tier loading
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && summary) {
+      console.log('[OrganizationBilling] License summary:', {
+        tierId: summary.tierId,
+        tierName: summary.tierName,
+        status: summary.status,
+        stripePriceId: summary.stripePriceId,
+      })
+    }
+  }, [summary])
 
   const [history, setHistory] = useState<BillingEvent[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
@@ -209,9 +248,8 @@ export default function OrganizationBilling() {
     }
   }, [orgId, loadHistory])
 
-  const currentPlanLabel = useMemo(() => {
-    return summary?.tierName ?? t('license.planLabel')
-  }, [summary?.tierName])
+  // Tier name is now directly available from summary.tierName (data-driven)
+  // No need for currentPlanLabel - use summary?.tierName directly
 
   const statusMessage = useMemo(() => {
     return getStatusMessage(summary)
@@ -316,16 +354,26 @@ export default function OrganizationBilling() {
             <div>
               <div className="oa-flex oa-items-center oa-gap-3 oa-mb-2">
                 <span className="oa-body-s oa-text-slate-500 oa-font-medium">
-                  Organization Subscription
+                  {t('billing.organizationSubscription')}
                 </span>
                 <Badge variant={statusBadgeVariant}>{statusBadgeText}</Badge>
               </div>
               <h1 className="oa-h1 oa-mb-4 oa-uppercase">
-                Annual Organization License
+                {t('billing.annualOrganizationLicense')}
               </h1>
-              <p className="oa-body-s oa-text-slate-600 oa-mb-1">
-                <span className="oa-font-semibold">Tier:</span> {currentPlanLabel}
-              </p>
+              <div className="oa-flex oa-items-center oa-gap-2 oa-mb-1">
+                <span className="oa-body-s oa-text-slate-600 oa-font-semibold">
+                  {t('billing.tierLabel')}
+                </span>
+                <span className="oa-body-s oa-text-slate-900 oa-font-semibold">
+                  {summary?.tierName || (summary?.tierId ? t('billing.tierArchivedOrNotFound') : t('billing.noTierAssigned'))}
+                  {process.env.NODE_ENV === 'development' && summary?.tierId && !summary?.tierName && (
+                    <span className="oa-body-xs oa-text-slate-400 oa-ml-2">
+                      (ID: {summary.tierId.substring(0, 8)}...)
+                    </span>
+                  )}
+                </span>
+              </div>
             </div>
             <div className="oa-shrink-0">
               <Button
@@ -345,7 +393,7 @@ export default function OrganizationBilling() {
         <Card className="oa-card oa-mb-6">
           <div className="oa-flex oa-items-center oa-justify-between oa-mb-4">
             <h2 className="oa-h3 oa-font-semibold">
-              Billing Summary
+              {t('billing.billingSummary')}
             </h2>
             <Button
               variant="ghost"
@@ -353,26 +401,36 @@ export default function OrganizationBilling() {
               icon="download"
               onClick={handleDownloadStatement}
             >
-              Download Statement
+              {t('billing.downloadStatement')}
             </Button>
           </div>
           <div className="oa-flex oa-flex-wrap oa-gap-6">
             <div>
               <p className="oa-body-xs oa-text-slate-500 oa-mb-1">
-                Base Plan
+                {t('billing.basePlan')}
               </p>
               <p className="oa-body-s oa-font-medium">
-                {summary?.plan ? `${currentPlanLabel} / yr` : '—'}
+                {summary?.tierName ? `${summary.tierName} / yr` : '—'}
               </p>
             </div>
             <div>
               <p className="oa-body-xs oa-text-slate-500 oa-mb-1">
-                Next Payment Due
+                {t('billing.nextPaymentDue')}
               </p>
               <p className="oa-body-s oa-font-medium">
                 {summary?.currentPeriodEnd ? formatDate(summary.currentPeriodEnd) : '—'}
               </p>
             </div>
+            {summary?.trialStart && summary?.status === 'trial' && (
+              <div>
+                <p className="oa-body-xs oa-text-slate-500 oa-mb-1">
+                  {t('billing.trialStartedLabel')}
+                </p>
+                <p className="oa-body-s oa-font-medium">
+                  {formatDate(summary.trialStart)}
+                </p>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -430,33 +488,33 @@ export default function OrganizationBilling() {
         {/* Renewal & Payment */}
         <Card className="oa-card oa-mb-6">
           <h2 className="oa-h3 oa-font-semibold oa-mb-4">
-            Renewal & Payment
+            {t('billing.renewalAndPayment')}
           </h2>
           <div className="oa-flex oa-flex-col oa-gap-4">
             <div className="oa-flex oa-items-center oa-justify-between">
               <div>
                 <p className="oa-body-s oa-font-semibold oa-mb-0">
-                  Payment method managed in Stripe
+                  {t('billing.paymentMethodManagedInStripe')}
                 </p>
                 <p className="oa-body-xs oa-text-slate-500">
-                  Update payment method in customer portal
+                  {t('billing.updatePaymentMethodInCustomerPortal')}
                 </p>
               </div>
               <Button variant="secondary" onClick={handleOpenPortal} disabled={portalLoading || loading}>
-                Update
+                {t('billing.update')}
               </Button>
             </div>
             <div className="oa-flex oa-items-center oa-justify-between">
               <div>
                 <p className="oa-body-s oa-font-semibold oa-mb-0">
-                  {isAutoRenewing ? 'Auto-Renewal is On' : 'Auto-Renewal is Off'}
+                  {isAutoRenewing ? t('billing.autoRenewalIsOn') : t('billing.autoRenewalIsOff')}
                 </p>
                 <p className="oa-body-xs oa-text-slate-500">
                   {isAutoRenewing
                     ? summary?.currentPeriodEnd
-                      ? `Renews on ${formatDate(summary.currentPeriodEnd)}.`
-                      : 'Your license will automatically renew.'
-                    : `Cancels on ${summary?.currentPeriodEnd ? formatDate(summary.currentPeriodEnd) : 'renewal date'}.`}
+                      ? t('billing.renewsOn', { date: formatDate(summary.currentPeriodEnd) })
+                      : t('billing.yourLicenseWillAutomaticallyRenew')
+                    : t('billing.cancelsOn', { date: summary?.currentPeriodEnd ? formatDate(summary.currentPeriodEnd) : 'renewal date' })}
                 </p>
               </div>
               <Badge variant={isAutoRenewing ? 'info' : 'neutral'}>
@@ -470,7 +528,7 @@ export default function OrganizationBilling() {
                 onClick={handleOpenPortal}
                 className="oa-text-danger oa-self-start"
               >
-                Cancel Subscription
+                {t('billing.cancelSubscription')}
               </Button>
             )}
           </div>
@@ -547,10 +605,10 @@ function TicketRevenueReporting({ orgId }: { orgId: string | undefined }) {
       {/* Revenue by Event */}
       {revenueByEvent && revenueByEvent.length > 0 && (
         <Card className="oa-card oa-mb-6">
-          <h3 className="oa-h3 oa-font-semibold oa-mb-4">Revenue by Event</h3>
+          <h3 className="oa-h3 oa-font-semibold oa-mb-4">{t('billing.revenueByEvent')}</h3>
           {eventsLoading ? (
             <div className="oa-text-center oa-py-4">
-              <p className="oa-body-s oa-text-slate-500">Loading event revenue...</p>
+              <p className="oa-body-s oa-text-slate-500">{t('billing.loadingEventRevenue')}</p>
             </div>
           ) : (
             <div className="oa-space-y-3">
@@ -559,18 +617,18 @@ function TicketRevenueReporting({ orgId }: { orgId: string | undefined }) {
                   <div>
                     <p className="oa-body-s oa-font-semibold">{event.event_title}</p>
                     <p className="oa-body-xs oa-text-slate-500">
-                      {event.order_count} order{event.order_count !== 1 ? 's' : ''} • {event.ticket_count} ticket{event.ticket_count !== 1 ? 's' : ''}
+                      {event.order_count} {event.order_count !== 1 ? t('billing.orders') : 'order'} • {event.ticket_count} {event.ticket_count !== 1 ? t('billing.tickets') : 'ticket'}
                     </p>
                   </div>
                   <div className="oa-text-right">
                     <p className="oa-body-s oa-font-semibold oa-text-green-600">{formatCurrency(event.org_revenue_cents)}</p>
-                    <p className="oa-body-xs oa-text-slate-400">-{formatCurrency(event.platform_fee_cents)} fees</p>
+                    <p className="oa-body-xs oa-text-slate-400">-{formatCurrency(event.platform_fee_cents)} {t('billing.fees')}</p>
                   </div>
                 </div>
               ))}
               {revenueByEvent.length > 5 && (
                 <p className="oa-body-xs oa-text-slate-400 oa-text-center oa-pt-2">
-                  Showing top 5 events. {revenueByEvent.length - 5} more events.
+                  {t('billing.showingTopEvents', { count: 5, remaining: revenueByEvent.length - 5 })}
                 </p>
               )}
             </div>
@@ -581,42 +639,53 @@ function TicketRevenueReporting({ orgId }: { orgId: string | undefined }) {
       {/* Monthly Summary */}
       {monthlyRevenue && monthlyRevenue.length > 0 && (
         <Card className="oa-card oa-mb-6">
-          <h3 className="oa-h3 oa-font-semibold oa-mb-4">Monthly Summary</h3>
+          <h3 className="oa-h3 oa-font-semibold oa-mb-4">{t('billing.monthlySummary')}</h3>
           {monthlyLoading ? (
             <div className="oa-text-center oa-py-4">
-              <p className="oa-body-s oa-text-slate-500">Loading monthly data...</p>
+              <p className="oa-body-s oa-text-slate-500">{t('billing.loadingMonthlyData')}</p>
             </div>
           ) : (
             <div className="oa-space-y-4">
               {currentMonth && (
-                <div className="oa-p-4 oa-bg-slate-50 dark:oa-bg-slate-800 oa-rounded-lg">
+                <div 
+                  className="oa-p-4 oa-rounded-lg"
+                  style={{
+                    background: 'var(--pa-surface-panel)'
+                  }}
+                >
                   <p className="oa-body-xs oa-text-slate-500 oa-mb-2">
                     {new Date(`${currentMonth.month}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                   </p>
                   <div className="oa-flex oa-items-center oa-justify-between oa-mb-2">
-                    <span className="oa-body-s oa-text-slate-600">Your Revenue</span>
+                    <span className="oa-body-s oa-text-slate-600">{t('billing.yourRevenue')}</span>
                     <span className="oa-body-s oa-font-semibold oa-text-green-600">{formatCurrency(currentMonth.org_revenue_cents)}</span>
                   </div>
                   <div className="oa-flex oa-items-center oa-justify-between oa-text-xs oa-text-slate-500">
-                    <span>{currentMonth.order_count} orders</span>
-                    <span>Platform fees: {formatCurrency(currentMonth.platform_fee_cents)}</span>
+                    <span>{currentMonth.order_count} {t('billing.orders', { plural: currentMonth.order_count !== 1 ? 's' : '' })}</span>
+                    <span>{t('billing.platformFees')}: {formatCurrency(currentMonth.platform_fee_cents)}</span>
                   </div>
                 </div>
               )}
               {lastMonth && (
-                <div className="oa-p-4 oa-bg-white dark:oa-bg-slate-900 oa-rounded-lg oa-border oa-border-slate-200 dark:oa-border-slate-700">
+                <div 
+                  className="oa-p-4 oa-rounded-lg oa-border"
+                  style={{
+                    background: 'var(--pa-surface)',
+                    borderColor: 'var(--pa-border-default)'
+                  }}
+                >
                   <p className="oa-body-xs oa-text-slate-500 oa-mb-2">
                     {new Date(`${lastMonth.month}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                   </p>
                   <div className="oa-flex oa-items-center oa-justify-between">
-                    <span className="oa-body-s oa-text-slate-600">Your Revenue</span>
+                    <span className="oa-body-s oa-text-slate-600">{t('billing.yourRevenue')}</span>
                     <span className="oa-body-s oa-font-semibold">{formatCurrency(lastMonth.org_revenue_cents)}</span>
                   </div>
                 </div>
               )}
               {currentMonth && (
                 <p className="oa-body-xs oa-text-slate-400 oa-text-center oa-pt-2">
-                  Platform fees collected: {formatCurrency(currentMonth.platform_fee_cents)} this month from {currentMonth.ticket_count} tickets sold
+                  {t('billing.platformFeesCollected', { amount: formatCurrency(currentMonth.platform_fee_cents), count: currentMonth.ticket_count })}
                 </p>
               )}
             </div>

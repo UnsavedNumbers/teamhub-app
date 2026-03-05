@@ -22,6 +22,7 @@ export type EventCategory =
   | 'ADMIN'
   | 'SYSTEM'
   | 'SPORT'
+  | 'SUB_ORG'
 
 export type EventActorRole =
   | 'platform_admin'
@@ -203,6 +204,9 @@ export type SportEventType =
   | 'SPORT_ICON_UPLOADED'
   | 'SPORT_ICON_DELETED'
 
+export type SubOrgEventType =
+  | 'SEND_SETUP_INSTRUCTIONS'
+
 // Discriminated union for type-safe event logging
 export type EventTypeMap = {
   AUTH: AuthEventType
@@ -221,6 +225,7 @@ export type EventTypeMap = {
   ADMIN: AdminEventType
   SYSTEM: SystemEventType
   SPORT: SportEventType
+  SUB_ORG: SubOrgEventType
 }
 
 // Base event log parameters

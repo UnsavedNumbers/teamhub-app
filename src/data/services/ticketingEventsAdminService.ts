@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
-import { USE_FAKE_DATA } from '../config'
+import { USE_FAKE_DATA, DEMO_ORG_A_ID } from '../config'
 import { debug } from '../../lib/debug'
 import {
   getFakeTicketingEvents,
@@ -118,6 +118,7 @@ function mapParams(params: Partial<TicketingEventsQuery>) {
     date_from: params.dateFrom ?? undefined,
     date_to: params.dateTo ?? undefined,
     date_preset: params.datePreset ?? undefined,
+    hide_past: params.hidePast !== false ? 'true' : undefined,
     page: params.page ?? undefined,
     per_page: params.perPage ?? undefined,
     program_id: params.programIds ?? [],
@@ -160,7 +161,8 @@ export async function fetchTicketingEvents(orgId: string, params: Partial<Ticket
 
   try {
     if (USE_FAKE_DATA || !isSupabaseConfigured) {
-      const result = getFakeTicketingEvents(orgId, params)
+      const fakeOrgId = USE_FAKE_DATA ? DEMO_ORG_A_ID : orgId
+      const result = getFakeTicketingEvents(fakeOrgId, params)
       debug.perf.end('ticketingEventsAdminService.fetchTicketingEvents')
       debug.data('TicketingEventsAdminService.fetchTicketingEvents', 'Response (fake)', { orgId, eventCount: result.data.length })
       console.groupEnd()

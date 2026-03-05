@@ -1,0 +1,51 @@
+{
+  "version": "1.0",
+  "description": "Template for bulk importing/updating features. Match features by feature_key. Use the exported CSV as reference for feature_key values.",
+  "features": [
+    {
+      "feature_key": "example.feature.key",
+      "display_name": "Example Feature Name",
+      "category": "Scheduling & Calendar",
+      "feature_type": "module",
+      "description": "Optional description of the feature",
+      "rollout_status": "Live",
+      "tier_keys": ["free", "pro", "enterprise"],
+      "role_visibility": {
+        "admin": true,
+        "coach": true,
+        "parent": false
+      },
+      "is_system_feature": false,
+      "platform_admin_only": false,
+      "parent_feature_key": null,
+      "excluded_from_discovery": false
+    }
+  ],
+  "field_descriptions": {
+    "feature_key": "Required. Unique identifier for the feature (matches exported CSV). Used to identify which feature to update.",
+    "display_name": "Optional. Human-readable name for the feature.",
+    "category": "Optional. Must be one of: Scheduling & Calendar, Teams & Rosters, Messaging & Communication, Payments, Registration & Forms, Tryouts, Travel, Uniforms & Gear, Photo Galleries, Video Library, Reporting & Analytics, Admin & Permissions, Integrations, Security & Compliance, Support Tools, Uncategorized",
+    "feature_type": "Optional. Must be one of: module, permission, limit, visibility, integration",
+    "description": "Optional. Description of the feature.",
+    "rollout_status": "Optional. Must be one of: Live, Disabled, Draft, Deprecated, Review",
+    "tier_keys": "Optional. Array of license tier keys (e.g., ['free', 'pro', 'enterprise']). Features will be assigned to these tiers. Empty array removes all tier assignments.",
+    "role_visibility": {
+      "admin": "Optional boolean. Whether visible to org admins.",
+      "coach": "Optional boolean. Whether visible to coaches.",
+      "parent": "Optional boolean. Whether visible to parents/guardians."
+    },
+    "is_system_feature": "Optional boolean. If true, feature is available to all tiers automatically.",
+    "platform_admin_only": "Optional boolean. If true, feature is only available to platform admins.",
+    "parent_feature_key": "Optional. Feature key of parent feature for hierarchy. Set to null for top-level features.",
+    "excluded_from_discovery": "Optional boolean. If true, marks the feature as 'Not a feature' and excludes it from feature discovery. When set to true, the feature will be hidden from the feature catalog list and will not reappear even after running 'Sync DB'. Set to false to re-include a previously excluded feature."
+  },
+  "notes": [
+    "Only include fields you want to update. Omit fields to leave them unchanged.",
+    "Features are matched by feature_key. If a feature_key doesn't exist, that feature will be skipped.",
+    "Locked features (is_toggleable=false) cannot have their status changed or be removed from tiers.",
+    "Setting is_system_feature=true will remove all tier assignments.",
+    "Setting platform_admin_only=true will remove all tier assignments.",
+    "Use the exported CSV to find feature_key values for existing features."
+  ],
+  "marking_features_as_not_a_feature": "To mark a feature as 'Not a feature' during import, set the 'excluded_from_discovery' field to true for that feature in the JSON file. This will permanently exclude the feature from the feature catalog list and prevent it from being rediscovered when running the 'Sync DB' operation. For example, to mark a feature with feature_key 'example.feature.key' as not a feature, include 'excluded_from_discovery': true in that feature's object. To re-include a previously excluded feature, set 'excluded_from_discovery': false. This is useful for cleaning up the feature catalog by removing features that were incorrectly discovered or are no longer relevant to your organization."
+}

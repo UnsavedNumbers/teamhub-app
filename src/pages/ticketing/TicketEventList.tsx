@@ -1,14 +1,21 @@
-/**
+﻿/**
  * Ticketed Events List Page
  * 
- * Public page showing available ticketed events
- * Design: public_ticket_events_grid
+ * Portal page showing upcoming ticketed events from:
+ * - Current organization
+ * - All organizations followed by the guardian/athlete
  */
 
-import { useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { getTicketedEvents, getTicketTypesForEvent } from '@/data/services'
+import { useQuery } from '@tanstack/react-query'
+import { getTicketedEvents, getTicketTypesForEvent, getFollowedOrgs } from '@/data/services'
 import { useRouteLink } from '@/utils/routes'
+import { useUserContext } from '@/hooks/useUserContext'
+import { PageTitle } from '@/components/portal/Typography'
+import PortalLayout from '@/components/portal/PortalLayout'
+import EmptyState from '@/components/portal/EmptyState'
+import { useI18n } from '@/i18n/useI18n'
 import type { TicketedEvent, TicketType } from '@/types/ticketing'
 import { formatCurrency } from '@/types/ticketing'
 
@@ -16,49 +23,106 @@ import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
 
 export default function TicketEventList() {
   useDebugLifecycle('TicketEventList')
-  const { data: eventsResponse } = useQuery({
-    queryKey: ['ticketed-events', 'published', 'fan-visible', 'upcoming'],
-    queryFn: () => getTicketedEvents({ status: 'published', upcoming_only: true, fan_visible_only: true }),
+  const { context, isReady } = useUserContext()
+  const { t } = useI18n()
+
+  // Get followed organizations
+  const { data: followedOrgs } = useQuery({
+    queryKey: ['followed-orgs'],
+    queryFn: async () => {
+      const { data, error } = await getFollowedOrgs()
+      if (error) throw error
+      return data || []
+    },
+    enabled: isReady,
   })
 
-  const eventsResponseAny = eventsResponse as any
-  const events = (Array.isArray(eventsResponseAny) ? eventsResponseAny : eventsResponseAny?.data || []) as TicketedEvent[]
+  // Collect all org IDs: current org + followed orgs
+  const orgIds = useMemo(() => {
+    const ids: string[] = []
+    if (context.orgId) {
+      ids.push(context.orgId)
+    }
+    if (followedOrgs) {
+      followedOrgs.forEach((follow) => {
+        if (follow.org_id && !ids.includes(follow.org_id)) {
+          ids.push(follow.org_id)
+        }
+      })
+    }
+    return ids
+  }, [context.orgId, followedOrgs])
+
+  // Fetch events for all orgs
+  const { data: eventsResponse, isLoading } = useQuery({
+    queryKey: ['ticketed-events', 'portal', 'published', 'fan-visible', 'upcoming', orgIds.join(',')],
+    queryFn: async () => {
+      // Fetch events for each org and combine
+      const allEvents: TicketedEvent[] = []
+      
+      for (const orgId of orgIds) {
+        const response = await getTicketedEvents({ 
+          org_id: orgId,
+          status: 'published', 
+          upcoming_only: true, 
+          fan_visible_only: true 
+        })
+        const responseAny = response as any
+        const events = (Array.isArray(responseAny) ? responseAny : responseAny?.data || []) as TicketedEvent[]
+        allEvents.push(...events)
+      }
+      
+      // Sort by start date
+      return allEvents.sort((a, b) => 
+        new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
+      )
+    },
+    enabled: isReady && orgIds.length > 0,
+  })
+
+  const events = (eventsResponse || []) as TicketedEvent[]
 
   return (
-    <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white transition-colors">
-      {/* Header */}
-      <header className="flex items-center justify-between border-b border-[#f0f2f4] dark:border-[#2a3038] px-10 py-3 bg-white dark:bg-[#111418]">
-        <div className="flex items-center gap-4 text-[#137fec]">
-          <div className="size-6">
-            <svg fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-              <path clipRule="evenodd" d="M24 4H6V17.3333V30.6667H24V44H42V30.6667V17.3333H24V4Z" fillRule="evenodd" />
-            </svg>
-          </div>
-          <h2 className="text-[#111418] dark:text-white text-lg font-black leading-tight tracking-tight">YouthSports.team</h2>
-        </div>
-      </header>
+    <PortalLayout
+      breadcrumbs={[
+        { label: 'Home', path: '/portal/dashboard' },
+        { label: t('nav.tickets') },
+      ]}
+    >
+      {/* Header Section */}
+      <div className="mb-6 sm:mb-8">
+        <PageTitle>{t('nav.tickets')}</PageTitle>
+        <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide mt-1">
+          {t('portal.fan.tickets.subtitle')}
+        </p>
+      </div>
 
-      <main className="flex-1 max-w-[1200px] mx-auto w-full px-6 py-10">
-        {/* Headline */}
-        <div className="mb-10 text-center">
-          <h1 className="text-[#111418] dark:text-white tracking-tighter text-[56px] font-[900] leading-none uppercase">
-            Upcoming Events
-          </h1>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden animate-pulse">
+              <div className="w-full h-48 bg-gray-200 dark:bg-gray-700"></div>
+              <div className="p-5">
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+              </div>
+            </div>
+          ))}
         </div>
-
-        {events.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No upcoming events available</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {events.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
+      ) : events.length === 0 ? (
+        <EmptyState
+          icon="confirmation_number"
+          title={t('portal.fan.tickets.noEvents')}
+          description={t('portal.fan.tickets.noEventsDescription')}
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {events.map((event) => (
+            <EventCard key={event.id} event={event} />
+          ))}
+        </div>
+      )}
+    </PortalLayout>
   )
 }
 
@@ -119,7 +183,7 @@ function EventCard({ event }: { event: TicketedEvent }) {
           : 'bg-white dark:bg-[#1c2630] hover:shadow-md'
       }`}
     >
-      {/* Image — 4:3 ratio enforced via padding-bottom */}
+      {/* Image - 4:3 ratio enforced via padding-bottom */}
       <div className="relative w-full flex-shrink-0" style={{ paddingBottom: '75%' }}>
         <div className="absolute inset-0 bg-center bg-no-repeat bg-cover">
           {event.cover_image_path ? (
@@ -146,18 +210,18 @@ function EventCard({ event }: { event: TicketedEvent }) {
         </h3>
         <div className="flex items-center gap-2 text-[#617589] dark:text-gray-400 text-sm font-medium mb-6">
           <span className="material-symbols-outlined text-[16px]">schedule</span>
-          <p>{dayName}, {dateStr} • {timeStr}</p>
+          <p>{dayName}, {dateStr} - {timeStr}</p>
         </div>
         <div className="mt-auto flex items-center justify-between gap-4 border-t border-gray-100 dark:border-gray-800 pt-5">
           {minPrice !== null && !ticketStateLabel ? (
-            <p className="text-[#111418] dark:text-gray-200 text-sm font-semibold leading-normal whitespace-nowrap">
+            <p className="text-[#111418] dark:text-gray-200 text-sm font-semibold leading-normal">
               Starting from <span className="text-lg font-bold text-[#137fec]">{formatCurrency(minPrice)}</span>
             </p>
           ) : (
             <p className="text-[#111418] dark:text-gray-200 text-sm font-semibold">{ticketStateLabel || 'Tickets Available'}</p>
           )}
           <button
-            className={`flex-1 flex min-w-[120px] items-center justify-center overflow-hidden rounded-lg h-12 px-4 text-sm font-black leading-normal tracking-[0.05em] transition-all uppercase ${
+            className={`flex-1 flex min-w-0 sm:min-w-[120px] items-center justify-center overflow-hidden rounded-lg h-12 px-4 text-sm font-black leading-normal tracking-[0.05em] transition-all uppercase ${
               ctaDisabled
                 ? 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed'
                 : 'cursor-pointer bg-[#137fec] text-white shadow-[0_8px_15px_-3px_rgba(19,127,236,0.3),0_4px_6px_-2px_rgba(19,127,236,0.05)] hover:brightness-110 active:scale-[0.98]'
@@ -172,3 +236,4 @@ function EventCard({ event }: { event: TicketedEvent }) {
     </Link>
   )
 }
+

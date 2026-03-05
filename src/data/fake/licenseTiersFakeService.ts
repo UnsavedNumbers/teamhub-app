@@ -118,12 +118,11 @@ export async function getAssignments(tierId: string): Promise<Record<string, Tie
 
 export async function getOrganizationsUsingTier(tierKey: string): Promise<OrgUsingTier[]> {
   await delay()
-  // license_plan enum values are: 'starter', 'standard', 'pro'
-  const plans = tierKey === 'basic' ? ['starter'] : tierKey === 'power' ? ['standard', 'pro'] : []
-  if (plans.length === 0) return []
+  const tierName = tierKey === 'basic' ? 'Basic License' : tierKey === 'power' ? 'Power License' : null
+  if (!tierName) return []
   return [
-    { id: 'org-fake-1', name: 'Demo Org A', license_plan: plans[0] },
-    { id: 'org-fake-2', name: 'Demo Org B', license_plan: plans[0] },
+    { id: 'org-fake-1', name: 'Demo Org A', tier_name: tierName, tier_key: tierKey },
+    { id: 'org-fake-2', name: 'Demo Org B', tier_name: tierName, tier_key: tierKey },
   ]
 }
 

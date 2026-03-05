@@ -344,6 +344,7 @@ export interface CreateCheckoutRequest {
     quantity: number
   }>
   purchaser_email: string
+  purchaser_role?: 'fan' | 'guardian' | 'parent'
   seat_selections?: Array<{
     ticket_type_id: string
     seat_map_section_ids: string[]

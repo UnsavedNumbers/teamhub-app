@@ -1,5 +1,23 @@
 import { useState, useEffect, useCallback, type CSSProperties, type ReactNode } from 'react'
 import { useNavigate, type NavigateFunction } from 'react-router-dom'
+import {
+  DollarSign,
+  AlertTriangle,
+  Users,
+  UserPlus,
+  UserCheck,
+  UserMinus,
+  Calendar,
+  CalendarX,
+  Megaphone,
+  MessageSquare,
+  ShieldAlert,
+  Settings,
+  Trophy,
+  Ticket,
+  Mail,
+  type LucideIcon,
+} from 'lucide-react'
 
 import { useUserContext } from '../../hooks/useUserContext'
 import { useOrganization } from '../../contexts/OrganizationContext'
@@ -11,7 +29,10 @@ import { getAthletes } from '../../data/services/familyService'
 import { getUnpaidFeeAssignmentsForOrg } from '../../data/services/paymentsService'
 import { getUpcomingEventsForUser } from '../../data/services/eventsService'
 import { getSeasons } from '../../data/services/seasonsService'
+import { getNotifications } from '../../data/services/userNotificationsService'
+import type { NotificationRecord } from '../../types/notifications'
 import { USE_FAKE_DATA } from '../../data/config'
+import { getOrgDashboardKpis } from '../../services/reportingService'
 import { STORAGE_KEYS } from '../../constants/storage'
 import {
   AdminPageHeader,
@@ -27,12 +48,12 @@ const REMOTE_IMG = {
   heroStadium: 'https://images.unsplash.com/photo-1521412644187-c49fa049e84d?auto=format&fit=crop&w=1600&q=80',
   heroTrack: 'https://images.unsplash.com/photo-1461896836934-bd45ba8fcde5?auto=format&fit=crop&w=1600&q=80',
   heroBasketball: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1600&q=80',
-  cardSchedule: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=800&q=80',
-  cardPlayers: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=800&q=80',
-  cardPayments: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=800&q=80',
-  cardTraining: 'https://images.unsplash.com/photo-1526232761682-d26e03ac148e?auto=format&fit=crop&w=800&q=80',
-  cardField: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80',
-  cardUniforms: 'https://images.unsplash.com/photo-1580087256394-dc596e1c8f4f?auto=format&fit=crop&w=800&q=80',
+  cardSchedule: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=1800&q=90',
+  cardPlayers: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1800&q=90',
+  cardPayments: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1800&q=90',
+  cardTraining: 'https://images.unsplash.com/photo-1526232761682-d26e03ac148e?auto=format&fit=crop&w=1800&q=90',
+  cardField: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1800&q=90',
+  cardUniforms: 'https://images.unsplash.com/photo-1580087256394-dc596e1c8f4f?auto=format&fit=crop&w=1800&q=90',
 }
 
 const LOCAL_FAKE_IMG = DEMO_PAGE_IMAGES.adminDashboard
@@ -57,6 +78,177 @@ interface RecentActivity {
   type: string
   message: string
   timestamp: string
+  icon?: LucideIcon
+  actionState?: string
+  actionStateTone?: 'default' | 'warning' | 'urgent' | 'success'
+  href?: string
+}
+
+// ─── Org-admin notification helpers ────────────────────────────────────
+
+function getOrgAdminNotificationIcon(action: NotificationRecord['action']): LucideIcon {
+  switch (action) {
+    // Payments
+    case 'fee_payment_completed':
+    case 'fee_payment_partial':
+    case 'payout_processed':
+      return DollarSign
+    case 'fee_payment_failed':
+    case 'fee_overdue':
+    case 'payout_account_issue':
+      return AlertTriangle
+    case 'fee_assigned':
+    case 'fee_created':
+      return DollarSign
+    // Athletes & roster
+    case 'athlete_created':
+    case 'guardian_attached':
+      return UserPlus
+    case 'athlete_removed':
+    case 'guardian_detached':
+    case 'athlete_removed_from_team':
+      return UserMinus
+    case 'athlete_added_to_team':
+      return UserCheck
+    // Teams / Programs
+    case 'team_created':
+    case 'team_updated':
+    case 'team_archived':
+    case 'program_created':
+    case 'program_updated':
+    case 'program_removed':
+      return Trophy
+    // Events
+    case 'event_created':
+    case 'event_updated':
+    case 'event_rescheduled':
+    case 'event_time_changed':
+    case 'event_location_updated':
+    case 'event_rsvp_required':
+    case 'event_rsvp_updated':
+    case 'event_attendance_updated':
+    case 'travel_created':
+    case 'travel_updated':
+    case 'travel_dates_changed':
+    case 'travel_location_changed':
+      return Calendar
+    case 'event_canceled':
+    case 'travel_canceled':
+    case 'event_weather_alert':
+      return CalendarX
+    // Announcements
+    case 'announcement_created':
+    case 'announcement_updated':
+    case 'announcement_urgent':
+      return Megaphone
+    // Messages
+    case 'message_sent':
+    case 'message_pinned':
+    case 'huddle_created':
+    case 'user_mentioned':
+      return MessageSquare
+    case 'message_reported':
+      return ShieldAlert
+    // Invitations & Access
+    case 'invite_sent':
+    case 'invite_accepted':
+    case 'invite_expired':
+    case 'role_assigned':
+    case 'role_removed':
+    case 'access_revoked':
+      return Mail
+    // Uniforms
+    case 'uniform_order_opened':
+    case 'uniform_order_updated':
+    case 'uniform_order_closed':
+    case 'uniform_size_requested':
+    case 'uniform_size_submitted':
+    case 'uniform_missing_info':
+      return Ticket
+    // Roster counts
+    case 'athlete_updated':
+      return Users
+    // System / Licenses
+    case 'license_activated':
+    case 'license_expiring':
+    case 'license_expired':
+    case 'license_upgraded':
+    case 'feature_enabled':
+    case 'feature_disabled':
+    case 'system_generated_notice':
+      return Settings
+    default:
+      return Settings
+  }
+}
+
+function getOrgAdminActionState(
+  notification: NotificationRecord,
+): { label: string; tone: RecentActivity['actionStateTone'] } | null {
+  const { action, presentation_type } = notification
+  switch (action) {
+    case 'fee_payment_failed':
+      return { label: 'Payment failed', tone: 'urgent' }
+    case 'fee_overdue':
+      return { label: 'Overdue', tone: 'urgent' }
+    case 'payout_account_issue':
+      return { label: 'Payout issue', tone: 'urgent' }
+    case 'fee_payment_completed':
+      return { label: 'Paid', tone: 'success' }
+    case 'payout_processed':
+      return { label: 'Paid out', tone: 'success' }
+    case 'event_canceled':
+    case 'travel_canceled':
+      return { label: 'Canceled', tone: 'warning' }
+    case 'event_weather_alert':
+      return { label: 'Weather alert', tone: 'urgent' }
+    case 'announcement_urgent':
+      return { label: 'Urgent', tone: 'urgent' }
+    case 'message_reported':
+      return { label: 'Reported', tone: 'urgent' }
+    case 'invite_expired':
+      return { label: 'Expired', tone: 'warning' }
+    case 'access_revoked':
+    case 'role_removed':
+      return { label: 'Revoked', tone: 'warning' }
+    case 'license_expiring':
+      return { label: 'Expiring soon', tone: 'warning' }
+    case 'license_expired':
+      return { label: 'Expired', tone: 'urgent' }
+    case 'invite_accepted':
+    case 'role_assigned':
+      return { label: 'Accepted', tone: 'success' }
+    case 'team_created':
+    case 'athlete_created':
+    case 'program_created':
+      return { label: 'New', tone: 'success' }
+    default:
+      if (presentation_type === 'urgent') return { label: 'Urgent', tone: 'urgent' }
+      if (presentation_type === 'warning') return { label: 'Attention', tone: 'warning' }
+      return null
+  }
+}
+
+function resolveOrgAdminNotificationHref(notification: NotificationRecord): string {
+  const paymentActions: NotificationRecord['action'][] = [
+    'fee_created',
+    'fee_assigned',
+    'fee_updated',
+    'fee_removed',
+    'fee_payment_partial',
+    'fee_payment_completed',
+    'fee_payment_failed',
+    'fee_overdue',
+  ]
+
+  if (paymentActions.includes(notification.action)) {
+    if (notification.entity_id) {
+      return getLink('admin.payments.detail', { id: notification.entity_id })
+    }
+    return getLink('admin.payments.list')
+  }
+
+  return notification.link_url ?? getLink('admin.notifications')
 }
 
 interface UpcomingEvent {
@@ -106,6 +298,77 @@ function fmtDate(iso: string) {
     time: d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }),
     relative: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }),
   }
+}
+
+// ─── Shared activity row primitive ─────────────────────────────────────
+
+const ACTIVITY_TONE_CLASSES: Record<
+  NonNullable<RecentActivity['actionStateTone']>,
+  string
+> = {
+  default: 'bg-slate-200/80 text-slate-700',
+  warning: 'bg-amber-100 text-amber-800',
+  urgent: 'bg-rose-100 text-rose-800',
+  success: 'bg-emerald-100 text-emerald-800',
+}
+
+function ActivityRow({ item }: { item: RecentActivity }) {
+  const Icon = item.icon
+  const inner = (
+    <div className="dash-activity-row" style={{ alignItems: 'flex-start', gap: 10, cursor: item.href ? 'pointer' : 'default' }}>
+      {/* Icon circle — falls back to the existing dot style */}
+      <div
+        style={{
+          flexShrink: 0,
+          width: 30,
+          height: 30,
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--dash-activity-dot-bg, rgba(100,116,139,0.15))',
+          marginTop: 2,
+        }}
+      >
+        {Icon ? (
+          <Icon style={{ width: 15, height: 15, color: 'var(--dash-activity-dot-color, #64748b)' }} />
+        ) : (
+          <div className="dash-activity-dot" />
+        )}
+      </div>
+      <div className="dash-activity-body" style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px 8px' }}>
+          <span className="dash-activity-msg">{item.message}</span>
+          {item.actionState && item.actionStateTone && (
+            <span
+              className={`${ACTIVITY_TONE_CLASSES[item.actionStateTone]} dark:opacity-90`}
+              style={{
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                padding: '2px 6px',
+                borderRadius: 4,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {item.actionState}
+            </span>
+          )}
+        </div>
+        <span className="dash-activity-time">{fmtDate(item.timestamp).relative}</span>
+      </div>
+    </div>
+  )
+
+  if (item.href) {
+    return (
+      <a href={item.href} className="dash-activity-anchor" style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
+        {inner}
+      </a>
+    )
+  }
+  return inner
 }
 
 // ─── Shared Primitives ─────────────────────────────────────────────────
@@ -293,19 +556,18 @@ function StadiumDashboard({ stats, recentActivity, upcomingEvents, t, navigate, 
           </div>
 
           <div className="dash-panel">
-            <h2 className="dash-section-title">{t('admin.dashboard.recentActivity')}</h2>
+            <div className="dash-panel-header">
+              <h2 className="dash-section-title" style={{ margin: 0 }}>{t('admin.dashboard.recentActivity')}</h2>
+              <Button variant="ghost" size="dense" onClick={() => navigate(getLink('admin.notifications'))}>
+                {t('admin.dashboard.viewAll')}
+              </Button>
+            </div>
             {recentActivity.length === 0 ? (
               <p className="dash-empty">{t('admin.dashboard.noRecentActivity')}</p>
             ) : (
               <div className="dash-activity-list">
                 {recentActivity.map(a => (
-                  <div key={a.id} className="dash-activity-row">
-                    <div className="dash-activity-dot" />
-                    <div className="dash-activity-body">
-                      <span className="dash-activity-msg">{a.message}</span>
-                      <span className="dash-activity-time">{fmtDate(a.timestamp).relative}</span>
-                    </div>
-                  </div>
+                  <ActivityRow key={a.id} item={a} />
                 ))}
               </div>
             )}
@@ -432,16 +694,15 @@ function EditorialDashboard({ stats, recentActivity, upcomingEvents, t, navigate
       {/* ── RECENT ACTIVITY BAR ──────────────────────── */}
       {recentActivity.length > 0 && (
         <div className="dash-editorial-activity-bar">
-          <h2 className="dash-section-title" style={{ margin: '0 0 20px' }}>{t('admin.dashboard.recentActivity')}</h2>
+          <div className="dash-panel-header" style={{ marginBottom: 20 }}>
+            <h2 className="dash-section-title" style={{ margin: 0 }}>{t('admin.dashboard.recentActivity')}</h2>
+            <Button variant="ghost" size="dense" onClick={() => navigate(getLink('admin.notifications'))}>
+              {t('admin.dashboard.viewAll')}
+            </Button>
+          </div>
           <div className="dash-activity-list">
             {recentActivity.map(a => (
-              <div key={a.id} className="dash-activity-row">
-                <div className="dash-activity-dot" />
-                <div className="dash-activity-body">
-                  <span className="dash-activity-msg">{a.message}</span>
-                  <span className="dash-activity-time">{fmtDate(a.timestamp).relative}</span>
-                </div>
-              </div>
+              <ActivityRow key={a.id} item={a} />
             ))}
           </div>
         </div>
@@ -557,19 +818,18 @@ function AthleteDashboard({ stats, recentActivity, upcomingEvents, t, navigate, 
 
         {/* Activity feed */}
         <div className="dash-panel">
-          <h2 className="dash-section-title">{t('admin.dashboard.recentActivity')}</h2>
+          <div className="dash-panel-header">
+            <h2 className="dash-section-title" style={{ margin: 0 }}>{t('admin.dashboard.recentActivity')}</h2>
+            <Button variant="ghost" size="dense" onClick={() => navigate(getLink('admin.notifications'))}>
+              {t('admin.dashboard.viewAll')}
+            </Button>
+          </div>
           {recentActivity.length === 0 ? (
             <p className="dash-empty">{t('admin.dashboard.noRecentActivity')}</p>
           ) : (
             <div className="dash-activity-list">
               {recentActivity.map(a => (
-                <div key={a.id} className="dash-activity-row">
-                  <div className="dash-activity-dot" />
-                  <div className="dash-activity-body">
-                    <span className="dash-activity-msg">{a.message}</span>
-                    <span className="dash-activity-time">{fmtDate(a.timestamp).relative}</span>
-                  </div>
-                </div>
+                <ActivityRow key={a.id} item={a} />
               ))}
             </div>
           )}
@@ -603,12 +863,13 @@ export default function AdminDashboard() {
   const fetchDashboardData = useCallback(async () => {
     if (!isReady) { setLoading(false); return }
     try {
-      const [teamsR, childrenR, unpaidR, eventsR, seasonsR] = await Promise.all([
+      const [teamsR, childrenR, unpaidR, eventsR, seasonsR, kpisR] = await Promise.all([
         getTeams(context, { activeOnly: false }),
         getAthletes(context),
         getUnpaidFeeAssignmentsForOrg(context),
         getUpcomingEventsForUser(context, 100),
         getSeasons(context, { activeOnly: true }),
+        getOrgDashboardKpis(context.orgId),
       ])
       
       if (unpaidR.error) {
@@ -629,28 +890,54 @@ export default function AdminDashboard() {
         const amountPaid = assignment.amount_paid_cents || 0
         return sum + (amountDue - amountPaid)
       }, 0) / 100
-      
+
       console.log('[Dashboard] Total unpaid amount:', totalUnpaidAmount)
-      
-      setStats({
+
+      const fallbackStats: DashboardStats = {
         totalTeams: teamsR.data.length,
         totalPlayers: childrenR.data.length,
         activeSeasons: seasonsR.data.length,
         outstandingPayments: totalUnpaidAmount,
         upcomingEvents: eventsR.data.length,
         pendingUniformOrders: 0,
-      })
+      }
+
+      const unifiedStats: DashboardStats = kpisR.data
+        ? {
+            totalTeams: kpisR.data.totalTeams,
+            totalPlayers: kpisR.data.totalAthletes,
+            activeSeasons: kpisR.data.activeSeasons,
+            outstandingPayments: kpisR.data.outstandingBalanceCents / 100,
+            upcomingEvents: kpisR.data.upcomingEvents,
+            pendingUniformOrders: kpisR.data.pendingUniformOrders,
+          }
+        : fallbackStats
+
+      setStats(unifiedStats)
       setUpcomingEvents(
         eventsR.data.slice(0, 10).map((e: { id: string; title?: string; name?: string; start_time?: string; start_date?: string; event_type?: string }) => ({
           id: e.id, title: e.title || e.name || '', start_time: e.start_time || e.start_date || '', event_type: e.event_type,
         })),
       )
-      const activities: RecentActivity[] = unpaidR.data.slice(0, 5).map((a: { id: string; fee?: { title?: string }; created_at: string }) => ({
-        id: a.id, type: 'fee_assignment',
-        message: `${t('admin.dashboard.newFeeAssignment')}: ${a.fee?.title || t('admin.dashboard.fee')}`,
-        timestamp: a.created_at,
-      }))
-      setRecentActivity(activities)
+
+      // ── Recent activity: pull notifications for org_admin role ──
+      const notificationsR = await getNotifications(context, { limit: 20 })
+      const activities: RecentActivity[] = (notificationsR.data ?? []).map(
+        (n: NotificationRecord) => {
+          const state = getOrgAdminActionState(n)
+          return {
+            id: n.id,
+            type: n.action,
+            message: n.title || n.body || n.action,
+            timestamp: n.created_at,
+            icon: getOrgAdminNotificationIcon(n.action),
+            actionState: state?.label,
+            actionStateTone: state?.tone,
+            href: resolveOrgAdminNotificationHref(n),
+          }
+        },
+      )
+      setRecentActivity(activities.slice(0, 10))
     } finally { setLoading(false) }
   }, [context, isReady, t])
 
@@ -667,22 +954,24 @@ export default function AdminDashboard() {
   const props: VariantProps = { stats, recentActivity, upcomingEvents, t, navigate, orgName }
 
   return (
-    <div className="oa-root">
+    <div className="oa-root" data-testid="dashboard">
       <AdminPageHeader
         title={t('admin.dashboard.title')}
         subtitle={orgName || t('admin.dashboard.subtitle')}
         actions={
           <div className="oa-flex oa-items-center oa-gap-3" style={{ flexWrap: 'wrap' }}>
-            <Select
-              options={layoutOptions}
-              value={layout}
-              onChange={e => handleLayoutChange(e.target.value as DashboardLayout)}
-              aria-label={t('admin.dashboard.layoutLabel')}
-              style={{ minWidth: 180 }}
-            />
-            <Button variant="secondary" onClick={fetchDashboardData} icon="refresh">
-              {t('admin.dashboard.refresh')}
-            </Button>
+            <div className="oa-flex oa-flex-col oa-gap-1">
+              <span className="oa-text-xs oa-font-semibold oa-uppercase oa-tracking-wide oa-text-muted">
+                {t('admin.dashboard.layoutLabel')}
+              </span>
+              <Select
+                options={layoutOptions}
+                value={layout}
+                onChange={e => handleLayoutChange(e.target.value as DashboardLayout)}
+                aria-label={t('admin.dashboard.layoutLabel')}
+                style={{ minWidth: 180 }}
+              />
+            </div>
           </div>
         }
       />

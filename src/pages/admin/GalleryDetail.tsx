@@ -19,8 +19,6 @@ import {
   type GalleryAlbum,
   type KeysetCursor,
 } from '@/data/services/galleryService'
-import { getMockGalleryById, getMockPhotosForGallery } from '@/data/fake/mockGalleries'
-import { FAKE_DATA_DELAY_MS } from '@/data/config'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '@/i18n/useI18n'
 import { usePhotoFilters } from '@/hooks/usePhotoFilters'
@@ -138,26 +136,6 @@ export default function GalleryDetail() {
       if (mountedRef.current) setGalleryFetched(true)
       return
     }
-    if (USE_FAKE_DATA) {
-      const mockGalleryDb = getMockGalleryById(id)
-      const mockPhotosDb = getMockPhotosForGallery(id)
-      if (mountedRef.current) {
-        setGallery(
-          mockGalleryDb
-            ? ({ ...mockGalleryDb, can_download: mockGalleryDb.can_download ?? undefined } as unknown as Gallery)
-            : null,
-        )
-        const status = (p: typeof mockPhotosDb[0]) => ((p as GalleryPhoto).approval_status ?? (p as { status?: string }).status) as string
-        setPhotoCounts({
-          total: mockPhotosDb.length,
-          pending: mockPhotosDb.filter((p) => status(p) === 'pending').length,
-          approved: mockPhotosDb.filter((p) => status(p) === 'approved').length,
-          rejected: mockPhotosDb.filter((p) => status(p) === 'rejected').length,
-        })
-        setGalleryFetched(true)
-      }
-      return
-    }
 
     const { data, error } = await getGalleryById(context, id)
     if (!mountedRef.current) return
@@ -176,7 +154,7 @@ export default function GalleryDetail() {
   }, [id, context])
 
   const loadAlbums = useCallback(async () => {
-    if (!id || !context || USE_FAKE_DATA) return
+    if (!id || !context) return
     const { data, error } = await getAlbumsForGallery(context, id)
     if (!mountedRef.current) return
     if (error) {
@@ -198,24 +176,6 @@ export default function GalleryDetail() {
     } else {
       loadingMoreRef.current = true
       setLoadingMore(true)
-    }
-
-    if (USE_FAKE_DATA) {
-      if (FAKE_DATA_DELAY_MS > 0) {
-        await new Promise((resolve) => setTimeout(resolve, FAKE_DATA_DELAY_MS))
-      }
-      const mockPhotosDb = getMockPhotosForGallery(id)
-      const mockPhotos = mockPhotosDb.map(
-        (p) => ({ ...p, can_download: p.can_download ?? undefined }) as unknown as GalleryPhoto,
-      )
-      if (mountedRef.current) {
-        setPhotos(mockPhotos)
-        setHasMore(false)
-        setLoading(false)
-        loadingMoreRef.current = false
-        setLoadingMore(false)
-      }
-      return mockPhotos
     }
 
     const albumId = filters.album && filters.album !== 'favorites' ? filters.album : undefined
@@ -759,7 +719,7 @@ export default function GalleryDetail() {
                     />
                     {viewMode === 'list' && (
                       <div className="oa-flex oa-justify-between oa-items-center oa-mt-6">
-                        <div className="oa-flex oa-items-center oa-gap-2 whitespace-nowrap">
+                        <div className="oa-flex oa-items-center oa-gap-2 sm:whitespace-nowrap">
                           <span className="oa-text-sm oa-text-muted mr-2">{t('common.table.rowsPerPage')}</span>
                           <select
                             className="oa-input oa-w-28"

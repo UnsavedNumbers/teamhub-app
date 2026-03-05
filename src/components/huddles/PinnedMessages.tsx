@@ -61,18 +61,18 @@ export default function PinnedMessages({ channel, userRole, onJumpToMessage }: P
             {pinnedMessages.map(message => (
               <div
                 key={message.id}
-                className="bg-white dark:bg-slate-800 rounded p-2 text-sm"
+                className="bg-white dark:bg-neutral-900 rounded p-2 text-sm"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-slate-900 dark:text-white mb-1">
+                    <div className="font-medium text-gray-900 dark:text-white mb-1">
                       {message.user?.name || 'Unknown User'}
                     </div>
-                    <div className="text-slate-600 dark:text-slate-300 break-words">
+                    <div className="text-gray-600 dark:text-gray-300 break-words">
                       {message.text}
                     </div>
                     {message.created_at && (
-                      <div className="text-xs text-slate-400 mt-1">
+                      <div className="text-xs text-gray-400 mt-1">
                         {new Date(message.created_at).toLocaleDateString()}
                       </div>
                     )}
@@ -81,7 +81,7 @@ export default function PinnedMessages({ channel, userRole, onJumpToMessage }: P
                     {onJumpToMessage && (
                       <button
                         onClick={() => onJumpToMessage(message.id)}
-                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
                         title="Jump to message"
                       >
                         <Icon name="arrow_downward" size="text-sm" />

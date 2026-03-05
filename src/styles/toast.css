@@ -13,6 +13,7 @@
   border-radius: var(--pa-radius-md, 8px);
   box-shadow: var(--pa-shadow-2, 0 4px 12px rgba(0, 0, 0, 0.15));
   backdrop-filter: var(--pa-glass-blur, blur(20px));
+  border: 1px solid var(--pa-border-default, #E9ECEF);
 }
 
 /* Success Toast */
@@ -95,23 +96,89 @@
   color: var(--pa-n900, #0B0F14);
 }
 
-/* Dark Mode Support */
-.dark .react-hot-toast > div {
-  background: var(--pa-n800, #1A202C);
-  color: var(--pa-n0, #FFFFFF);
-  border-color: var(--pa-n600, #4A5568);
+/* Dark Mode Support - Following Platform Admin Design System */
+html.dark .react-hot-toast > div {
+  background: var(--pa-surface-panel, #111111);
+  color: var(--pa-text-primary, #ffffff);
+  border: 1px solid var(--pa-border-default, #1a1a1a);
+  box-shadow: var(--pa-shadow-2, 0 8px 24px rgba(0, 0, 0, 0.5));
 }
 
-.dark .react-hot-toast-message {
-  color: var(--pa-n0, #FFFFFF);
+/* Dark Mode - Success Toast */
+html.dark .react-hot-toast > div[data-type="success"] {
+  background: rgba(110, 231, 183, 0.15);
+  border-left: 3px solid #6ee7b7;
+  color: var(--pa-text-primary, #ffffff);
 }
 
-.dark .react-hot-toast-close {
-  color: var(--pa-n400, #9AA5B1);
+html.dark .react-hot-toast > div[data-type="success"] .react-hot-toast-icon {
+  color: #6ee7b7;
 }
 
-.dark .react-hot-toast-close:hover {
-  color: var(--pa-n0, #FFFFFF);
+/* Dark Mode - Error Toast */
+html.dark .react-hot-toast > div[data-type="error"] {
+  background: rgba(252, 165, 165, 0.15);
+  border-left: 3px solid #fca5a5;
+  color: var(--pa-text-primary, #ffffff);
+}
+
+html.dark .react-hot-toast > div[data-type="error"] .react-hot-toast-icon {
+  color: #fca5a5;
+}
+
+/* Dark Mode - Warning Toast */
+html.dark .react-hot-toast > div[data-type="warning"],
+html.dark .react-hot-toast > div[data-type="warn"] {
+  background: rgba(251, 191, 36, 0.15);
+  border-left: 3px solid #fbbf24;
+  color: var(--pa-text-primary, #ffffff);
+}
+
+html.dark .react-hot-toast > div[data-type="warning"] .react-hot-toast-icon,
+html.dark .react-hot-toast > div[data-type="warn"] .react-hot-toast-icon {
+  color: #fbbf24;
+}
+
+/* Dark Mode - Loading Toast */
+html.dark .react-hot-toast > div[data-type="loading"] {
+  background: rgba(147, 197, 253, 0.15);
+  border-left: 3px solid #93c5fd;
+  color: var(--pa-text-primary, #ffffff);
+}
+
+html.dark .react-hot-toast > div[data-type="loading"] .react-hot-toast-icon {
+  color: #93c5fd;
+}
+
+/* Dark Mode - Blank/Default Toast */
+html.dark .react-hot-toast > div[data-type="blank"] {
+  background: var(--pa-surface-panel, #111111);
+  border-left: 3px solid var(--pa-border-emphasis, #222222);
+  color: var(--pa-text-primary, #ffffff);
+}
+
+/* Dark Mode - Custom Toast */
+html.dark .react-hot-toast > div[data-type="custom"] {
+  background: var(--pa-surface-panel, #111111);
+  border-left: 3px solid var(--pa-border-emphasis, #222222);
+  color: var(--pa-text-primary, #ffffff);
+}
+
+/* Dark Mode - Toast Message */
+html.dark .react-hot-toast-message {
+  color: var(--pa-text-primary, #ffffff);
+}
+
+/* Dark Mode - Toast Close Button */
+html.dark .react-hot-toast-close {
+  color: var(--pa-text-muted, #9ca3af);
+  opacity: 0.8;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+html.dark .react-hot-toast-close:hover {
+  opacity: 1;
+  color: var(--pa-text-primary, #ffffff);
 }
 
 /* Regular App Theme Support (non-platform-admin) */

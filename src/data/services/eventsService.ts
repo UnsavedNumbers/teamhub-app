@@ -8,11 +8,11 @@
  * Each method includes a TODO comment showing the equivalent Supabase query pattern.
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import type { UserContext, PermissionSet } from '../fake/userContext'
-import { calculatePermissions, filterEventsByRole } from '../fake/userContext'
+import { calculatePermissions, filterEventsByRole, getGuardianCanonicalUserId } from '../fake/userContext'
 import type { CalendarEvent, EventRSVP, EventLocation, RSVPStatus, EventType, EventFormData, TicketedEventStatus } from '../../types/calendar'
 import {
     getEventById as getFakeEventById,
@@ -30,13 +30,16 @@ import {
     getFakeTicketedEventById,
     getFakeTicketingEvents,
 } from '../fake/fakeTicketingEvents'
-import { getChildrenForUserId, getAssignedTeamsForCoach, getChildTeamMemberships } from '../fake/relationships'
+import { getChildrenForUserId, getChildTeamMemberships, getFamiliesForUserId } from '../fake/relationships'
+import { getCoachTeamIds } from '../fake/userContext'
 import { t } from '@/i18n'
 import { buildEventQuery, buildCalendarEventQuery } from './queryHelpers'
 import { normalizeSupabaseResponse, createServiceResponse } from './responseHelpers'
 import { classifySupabaseError } from '../../utils/supabaseErrorHandler'
 import { validateDeleteEvent, EVENT_ERRORS } from '../../utils/eventValidation'
 import { debug } from '../../lib/debug'
+import { captureEvent } from '../../lib/analytics/analytics'
+import { getFacilityById, getResourceById, createReservation, updateReservation, getReservations, deleteReservation } from './facilitiesService'
 
 // ============================================================================
 // Helper Functions
@@ -48,13 +51,17 @@ async function simulateDelay(): Promise<void> {
     }
 }
 
-function buildPermissions(context: UserContext): PermissionSet {
-    const childIds = getChildrenForUserId(context.userId)
+async function buildPermissions(context: UserContext): Promise<PermissionSet> {
+    // In demo mode the Supabase auth user ID may not match the canonical fake data IDs.
+    // Use guardian canonical mapping so parents/guardians keep seeing their demo children.
+    const guardianUserId = getGuardianCanonicalUserId(context)
+    const childIds = getChildrenForUserId(guardianUserId)
+    const familyIds = getFamiliesForUserId(guardianUserId)
     const assignedTeamIds = context.roles.includes('coach')
-        ? getAssignedTeamsForCoach(context.userId)
+        ? await getCoachTeamIds(context)
         : []
 
-    return calculatePermissions(context, assignedTeamIds, childIds, [])
+    return calculatePermissions(context, assignedTeamIds, childIds, familyIds)
 }
 
 // ============================================================================
@@ -83,6 +90,9 @@ function mapSupabaseEventToCalendarEvent(event: any): CalendarEvent {
 
     return {
         ...event,
+        location_mode: event.location_mode || 'external',
+        facility_id: event.facility_id || null,
+        facility_resource_id: event.facility_resource_id || null,
         rsvp_config: rsvpConfig,
         rsvps,
         general_rsvps: generalRsvps,
@@ -570,7 +580,7 @@ export async function getCalendarEvents(
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             const childTeamMemberships = getChildTeamMemberships()
             let events: CalendarEvent[]
             if (params.startDate && params.endDate) {
@@ -692,10 +702,11 @@ export async function getEvents(
         if (USE_FAKE_DATA) {
             await simulateDelay()
 
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             const childTeamMemberships = getChildTeamMemberships()
-            const baseEvents = getBaseFakeEvents(params).map((event) => withFakeEventRelations(event, context.orgId))
-            const visibleEvents = filterEventsByRole(baseEvents, permissions, childTeamMemberships, context.orgId)
+            const fakeOrgId = DEMO_ORG_A_ID
+            const baseEvents = getBaseFakeEvents(params).map((event) => withFakeEventRelations(event, fakeOrgId))
+            const visibleEvents = filterEventsByRole(baseEvents, permissions, childTeamMemberships, fakeOrgId)
             const filteredEvents = applyFakeEventFilters(visibleEvents, params, true)
 
             return { data: filteredEvents, error: null }
@@ -762,10 +773,14 @@ export async function getEvents(
             query = query.eq('visibility', 'public')
         }
 
-        // Apply search (title, notes, venue_name)
+        // Apply search (title, notes, location, and related fields)
+        // Note: Supabase's or() doesn't support searching joined table fields directly,
+        // so we search the main event fields. For more comprehensive search including
+        // team/season names, we'd need a PostgreSQL function or client-side filtering.
         if (params.search && params.search.trim() !== '') {
-            const searchTerm = `%${params.search.trim()}%`
-            query = query.or(`title.ilike.${searchTerm},notes.ilike.${searchTerm}`)
+            const searchTerm = params.search.trim()
+            // Search title, notes, and location fields (case-insensitive)
+            query = query.or(`title.ilike.%${searchTerm}%,notes.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%`)
         }
 
         // Apply sorting
@@ -813,7 +828,7 @@ export async function getEventsCount(
     if (USE_FAKE_DATA) {
         try {
             await simulateDelay()
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             const childTeamMemberships = getChildTeamMemberships()
             const baseEvents = getBaseFakeEvents(params).map((event) => withFakeEventRelations(event, context.orgId))
             const visibleEvents = filterEventsByRole(baseEvents, permissions, childTeamMemberships, context.orgId)
@@ -904,22 +919,28 @@ export async function getEventDetails(
         try {
             await simulateDelay()
 
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             const childTeamMemberships = getChildTeamMemberships()
             const event = getFakeEventById(eventId)
 
             if (event) {
-                const enrichedEvent = withFakeEventRelations(event, context.orgId)
-                const filtered = filterEventsByRole([enrichedEvent], permissions, childTeamMemberships, context.orgId)
+                const enrichedEvent = withFakeEventRelations(event, DEMO_ORG_A_ID)
+                const filtered = filterEventsByRole([enrichedEvent], permissions, childTeamMemberships, DEMO_ORG_A_ID)
                 return { data: filtered[0] ?? null, error: null }
             }
 
-            const ticketedDirect = getFakeTicketedEventById(eventId, context.orgId)
-            const ticketedByCalendarId = getFakeTicketedEventByCalendarEventId(eventId, context.orgId)
+            // Try to find ticketed event - use getFakeTicketingEvents first to ensure consistency with list page
+            const ticketingEventsResult = getFakeTicketingEvents(DEMO_ORG_A_ID, { page: 1, perPage: 300 })
+            const ticketedFromList = ticketingEventsResult.data.find((candidate) => candidate.event_id === eventId)
+
+            // Also try direct lookups as fallback
+            const ticketedDirect = getFakeTicketedEventById(eventId, DEMO_ORG_A_ID)
+            const ticketedByCalendarId = getFakeTicketedEventByCalendarEventId(eventId, DEMO_ORG_A_ID)
+
             const ticketedFallback =
+                ticketedFromList ??
                 ticketedDirect ??
                 ticketedByCalendarId ??
-                getFakeTicketingEvents(context.orgId, { page: 1, perPage: 300 }).data.find((candidate) => candidate.event_id === eventId) ??
                 null
 
             if (!ticketedFallback) {
@@ -931,7 +952,31 @@ export async function getEventDetails(
                     ? eventId
                     : ticketedFallback.event_id || eventId || `event-${ticketedFallback.id}`
             const syntheticEvent = createSyntheticCalendarEventFromTicketing(syntheticEventId, ticketedFallback)
-            const filtered = filterEventsByRole([syntheticEvent], permissions, childTeamMemberships, context.orgId)
+            
+            // In demo mode, allow org members (admins, coaches, staff) to view ticketed events in their org
+            // This matches RLS policy: "Coaches can view team ticketed events" (coaches can view org ticketed events)
+            if (ticketedFallback.org_id === DEMO_ORG_A_ID) {
+                // Org admins can always see all events
+                if (permissions.canViewAllOrgData) {
+                    return { data: syntheticEvent, error: null }
+                }
+                
+                // Coaches and staff can see org-wide ticketed events (even without team_id)
+                // This matches the RLS policy that allows coaches to view ticketed events in their org
+                if (permissions.canViewAssignedTeams || permissions.canViewOwnChildrenData) {
+                    // If event has no team_id, it's org-wide and coaches/staff can see it
+                    if (!syntheticEvent.team_id) {
+                        return { data: syntheticEvent, error: null }
+                    }
+                    // If event has team_id, check if coach is assigned to that team
+                    if (syntheticEvent.team_id && permissions.assignedTeamIds.includes(syntheticEvent.team_id)) {
+                        return { data: syntheticEvent, error: null }
+                    }
+                }
+            }
+            
+            // Fallback to standard role-based filtering
+            const filtered = filterEventsByRole([syntheticEvent], permissions, childTeamMemberships, DEMO_ORG_A_ID)
 
             if (filtered.length === 0) {
                 return { data: null, error: null }
@@ -1020,7 +1065,7 @@ export async function getEventRSVPs(
             const rsvps = getFakeRSVPsForEvent(eventId)
 
             // Filter by permissions - parents only see their children's RSVPs
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             if (!permissions.canViewAllOrgData && permissions.canViewOwnChildrenData) {
                 return {
                     data: rsvps.filter((r) => permissions.ownedChildIds.includes(r.athlete_id)),
@@ -1072,7 +1117,7 @@ export async function getAthleteEventRSVP(
             await simulateDelay()
 
             // Check permissions - parents can only see their own children's RSVPs
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             if (!permissions.canViewAllOrgData && !permissions.ownedChildIds.includes(childId)) {
                 return { data: null, error: null }
             }
@@ -1124,7 +1169,7 @@ export async function updateRSVP(
             await simulateDelay()
 
             // Check permissions - parents can only update their own children's RSVPs
-            const permissions = buildPermissions(context)
+            const permissions = await buildPermissions(context)
             if (!permissions.canViewAllOrgData && !permissions.ownedChildIds.includes(childId)) {
                 return { data: null, error: new Error(t('errors.cannotUpdateRsvp')) }
             }
@@ -1280,8 +1325,9 @@ export async function createEvent(
         if (arrival && arrival >= start) throw new Error('Arrival time must be before start time')
 
         // 1. Insert Event
+        const locationMode = formData.location_mode || 'external'
         type EventInsert = Database['public']['Tables']['events']['Insert']
-        const eventInsertData: EventInsert = {
+        const eventInsertData: EventInsert & { location_mode?: string; facility_id?: string | null; facility_resource_id?: string | null } = {
             title: formData.title,
             type: formData.type,
             org_id: context.orgId,
@@ -1298,39 +1344,105 @@ export async function createEvent(
             external_link: formData.external_link,
             rsvp_enabled: formData.rsvp_enabled,
             rsvp_type: formData.rsvp_enabled ? formData.rsvp_type : null,
-            created_by_user_id: context.userId
+            created_by_user_id: context.userId,
+            location_mode: locationMode,
+            facility_id: locationMode === 'internal' && formData.facility_id ? formData.facility_id : null,
+            facility_resource_id: locationMode === 'internal' && formData.facility_resource_id ? formData.facility_resource_id : null
         }
 
         const { data: eventData, error: insertError } = await supabase
             .from('events')
-            .insert(eventInsertData)
+            .insert(eventInsertData as EventInsert)
             .select()
             .single()
 
         if (insertError) throw insertError
         if (!eventData) throw new Error('No data returned from event creation')
 
-        // 2. Insert Location
-        type LocationInsert = Database['public']['Tables']['event_locations']['Insert']
-        const locationData: LocationInsert = {
-            event_id: eventData.id,
-            venue_name: formData.location.venue_name || null,
-            address_line1: formData.location.address_line1 || null,
-            city: formData.location.city || null,
-            state: formData.location.state || null,
-            postal_code: formData.location.postal_code || null,
-            place_id: formData.location.place_id || null,
-            latitude: formData.location.latitude ? parseFloat(formData.location.latitude) : null,
-            longitude: formData.location.longitude ? parseFloat(formData.location.longitude) : null,
-            is_tbd: formData.location.is_tbd,
-            is_virtual: formData.location.is_virtual,
-            virtual_link: formData.location.virtual_link || null
-        }
+        // 2. Handle Internal Venue (create reservation and sync facility data)
+        if (locationMode === 'internal' && formData.facility_id && formData.facility_resource_id) {
+            // Validate facility and resource belong to org
+            const { data: facility } = await getFacilityById(formData.facility_id)
+            if (!facility || facility.org_id !== context.orgId) {
+                throw new Error('Facility does not belong to organization')
+            }
 
-        const { error: locError } = await supabase.from('event_locations').insert(locationData)
-        if (locError) {
-            console.error('Location save error', locError)
-            // Continue even if location fails, but log it
+            const { data: resource } = await getResourceById(formData.facility_resource_id)
+            if (!resource || resource.org_id !== context.orgId || resource.facility_id !== formData.facility_id) {
+                throw new Error('Resource does not belong to facility or organization')
+            }
+
+            // Create facility reservation linked to event
+            const reservationResult = await createReservation(
+                context.orgId,
+                {
+                    facility_id: formData.facility_id,
+                    resource_id: formData.facility_resource_id,
+                    reservation_type: formData.type === 'game' ? 'game' : formData.type === 'tournament' ? 'tournament' : 'practice',
+                    status: 'confirmed',
+                    start_at: start.toISOString(),
+                    end_at: end.toISOString(),
+                    title: formData.title,
+                    event_id: eventData.id,
+                    team_id: formData.team_id || null,
+                    program_id: formData.program_id || null,
+                    sport_id: formData.sport_id || null,
+                    customer_id: null,
+                    notes: formData.notes || null,
+                    cancellation_reason: null,
+                }
+            )
+
+            if (reservationResult.error) {
+                throw new Error(`Failed to create facility reservation: ${reservationResult.error.message}`)
+            }
+
+            // Sync facility address into event_locations for display
+            type LocationInsert = Database['public']['Tables']['event_locations']['Insert']
+            const locationData: LocationInsert = {
+                event_id: eventData.id,
+                venue_name: `${facility.name} - ${resource.name}`,
+                address_line1: facility.formatted_address || null,
+                address_line2: null,
+                city: facility.city || null,
+                state: facility.state || null,
+                postal_code: facility.postal_code || null,
+                place_id: facility.place_id || null,
+                latitude: facility.latitude || null,
+                longitude: facility.longitude || null,
+                is_tbd: false,
+                is_virtual: false,
+                virtual_link: null
+            }
+
+            const { error: locError } = await supabase.from('event_locations').insert(locationData)
+            if (locError) {
+                console.error('Location sync error for internal venue', locError)
+                // Continue even if location sync fails
+            }
+        } else {
+            // 2. Insert Location (external venue)
+            type LocationInsert = Database['public']['Tables']['event_locations']['Insert']
+            const locationData: LocationInsert = {
+                event_id: eventData.id,
+                venue_name: formData.location.venue_name || null,
+                address_line1: formData.location.address_line1 || null,
+                city: formData.location.city || null,
+                state: formData.location.state || null,
+                postal_code: formData.location.postal_code || null,
+                place_id: formData.location.place_id || null,
+                latitude: formData.location.latitude ? parseFloat(formData.location.latitude) : null,
+                longitude: formData.location.longitude ? parseFloat(formData.location.longitude) : null,
+                is_tbd: formData.location.is_tbd,
+                is_virtual: formData.location.is_virtual,
+                virtual_link: formData.location.virtual_link || null
+            }
+
+            const { error: locError } = await supabase.from('event_locations').insert(locationData)
+            if (locError) {
+                console.error('Location save error', locError)
+                // Continue even if location fails, but log it
+            }
         }
 
         // 3. Handle Recurring
@@ -1411,7 +1523,12 @@ export async function createEvent(
             }
         }
 
-            // Return the full event
+            captureEvent('event_created', {
+              event_id: eventData.id,
+              organization_id: context.orgId,
+              user_id: context.userId,
+              team_id: formData.team_id ?? undefined,
+            })
             debug.perf.end('eventsService.createEvent')
             debug.flow('EventsService.createEvent', 'Created successfully', { eventId: eventData.id })
             console.groupEnd()
@@ -1454,9 +1571,21 @@ export async function updateEvent(
         const arrival = formData.arrival_time ? new Date(formData.arrival_time) : null
         if (arrival && arrival >= start) throw new Error('Arrival time must be before start time')
 
+        // Get existing event to check location_mode (columns may not be in generated types yet)
+        const { data: existingEventRaw } = await supabase
+            .from('events')
+            .select('location_mode, facility_id, facility_resource_id')
+            .eq('id', eventId)
+            .single()
+        const existingEvent = existingEventRaw as { location_mode?: string; facility_id?: string | null; facility_resource_id?: string | null } | null
+
+        const newLocationMode = formData.location_mode || existingEvent?.location_mode || 'external'
+        const wasInternal = existingEvent?.location_mode === 'internal'
+        const isNowInternal = newLocationMode === 'internal'
+
         // 1. Update Event
         type EventUpdate = Database['public']['Tables']['events']['Update']
-        const eventUpdateData: EventUpdate = {
+        const eventUpdateData: EventUpdate & { location_mode?: string; facility_id?: string | null; facility_resource_id?: string | null } = {
             title: formData.title,
             type: formData.type,
             team_id: (formData.team_id || null) as unknown as EventUpdate['team_id'],
@@ -1472,40 +1601,164 @@ export async function updateEvent(
             external_link: formData.external_link,
             rsvp_enabled: formData.rsvp_enabled,
             rsvp_type: formData.rsvp_enabled ? formData.rsvp_type : null,
+            location_mode: newLocationMode,
+            facility_id: isNowInternal && formData.facility_id ? formData.facility_id : null,
+            facility_resource_id: isNowInternal && formData.facility_resource_id ? formData.facility_resource_id : null
         }
 
         const { error: updateError } = await supabase
             .from('events')
-            .update(eventUpdateData)
+            .update(eventUpdateData as EventUpdate)
             .eq('id', eventId)
 
         if (updateError) throw updateError
 
-        // 2. Update Location
-        // First check if location exists
-        const { data: existingLoc } = await supabase.from('event_locations').select('id').eq('event_id', eventId).maybeSingle()
+        // 2. Handle Internal Venue (create/update reservation and sync facility data)
+        if (isNowInternal && formData.facility_id && formData.facility_resource_id) {
+            // Validate facility and resource belong to org
+            const { data: facility } = await getFacilityById(formData.facility_id)
+            if (!facility || facility.org_id !== context.orgId) {
+                throw new Error('Facility does not belong to organization')
+            }
 
-        type LocationUpdate = Database['public']['Tables']['event_locations']['Update']
-        const locationData: LocationUpdate = {
-            venue_name: formData.location.venue_name || null,
-            address_line1: formData.location.address_line1 || null,
-            city: formData.location.city || null,
-            state: formData.location.state || null,
-            postal_code: formData.location.postal_code || null,
-            place_id: formData.location.place_id || null,
-            latitude: formData.location.latitude ? parseFloat(formData.location.latitude) : null,
-            longitude: formData.location.longitude ? parseFloat(formData.location.longitude) : null,
-            is_tbd: formData.location.is_tbd,
-            is_virtual: formData.location.is_virtual,
-            virtual_link: formData.location.virtual_link || null
-        }
+            const { data: resource } = await getResourceById(formData.facility_resource_id)
+            if (!resource || resource.org_id !== context.orgId || resource.facility_id !== formData.facility_id) {
+                throw new Error('Resource does not belong to facility or organization')
+            }
 
-        if (existingLoc) {
-            const { error: locError } = await supabase.from('event_locations').update(locationData).eq('event_id', eventId)
-            if (locError) console.error('Location update error', locError)
+            // Find existing reservation for this event
+            const { data: existingReservations } = await getReservations({
+                org_id: context.orgId,
+                start: start.toISOString(),
+                end: end.toISOString(),
+            })
+
+            const existingReservation = existingReservations?.find(r => r.event_id === eventId)
+
+            if (existingReservation) {
+                // Update existing reservation
+                const reservationResult = await updateReservation(
+                    existingReservation.id,
+                    {
+                        facility_id: formData.facility_id,
+                        resource_id: formData.facility_resource_id,
+                        reservation_type: formData.type === 'game' ? 'game' : formData.type === 'tournament' ? 'tournament' : 'practice',
+                        status: 'confirmed',
+                        start_at: start.toISOString(),
+                        end_at: end.toISOString(),
+                        title: formData.title,
+                        notes: formData.notes || null,
+                    }
+                )
+
+                if (reservationResult.error) {
+                    throw new Error(`Failed to update facility reservation: ${reservationResult.error.message}`)
+                }
+            } else {
+                // Create new reservation
+                const reservationResult = await createReservation(
+                    context.orgId,
+                    {
+                        facility_id: formData.facility_id,
+                        resource_id: formData.facility_resource_id,
+                        reservation_type: formData.type === 'game' ? 'game' : formData.type === 'tournament' ? 'tournament' : 'practice',
+                        status: 'confirmed',
+                        start_at: start.toISOString(),
+                        end_at: end.toISOString(),
+                        title: formData.title,
+                        event_id: eventId,
+                        team_id: formData.team_id || null,
+                        program_id: formData.program_id || null,
+                        sport_id: formData.sport_id || null,
+                        customer_id: null,
+                        notes: formData.notes || null,
+                        cancellation_reason: null,
+                    }
+                )
+
+                if (reservationResult.error) {
+                    throw new Error(`Failed to create facility reservation: ${reservationResult.error.message}`)
+                }
+            }
+
+            // Sync facility address into event_locations for display
+            const { data: existingLoc } = await supabase.from('event_locations').select('id').eq('event_id', eventId).maybeSingle()
+
+            type LocationUpdate = Database['public']['Tables']['event_locations']['Update']
+            const locationData: LocationUpdate = {
+                venue_name: `${facility.name} - ${resource.name}`,
+                address_line1: facility.formatted_address || null,
+                address_line2: null,
+                city: facility.city || null,
+                state: facility.state || null,
+                postal_code: facility.postal_code || null,
+                place_id: facility.place_id || null,
+                latitude: facility.latitude || null,
+                longitude: facility.longitude || null,
+                is_tbd: false,
+                is_virtual: false,
+                virtual_link: null
+            }
+
+            if (existingLoc) {
+                const { error: locError } = await supabase.from('event_locations').update(locationData).eq('event_id', eventId)
+                if (locError) console.error('Location sync error for internal venue', locError)
+            } else {
+                const { error: locInsertError } = await supabase.from('event_locations').insert({ ...locationData, event_id: eventId })
+                if (locInsertError) console.error('Location insert error for internal venue', locInsertError)
+            }
+
+            // If switching from internal to external, delete old reservation
+            if (wasInternal && !isNowInternal && existingEvent?.facility_resource_id) {
+                const { data: oldReservations } = await getReservations({
+                    org_id: context.orgId,
+                    start: start.toISOString(),
+                    end: end.toISOString(),
+                })
+                const oldReservation = oldReservations?.find(r => r.event_id === eventId)
+                if (oldReservation) {
+                    await deleteReservation(oldReservation.id)
+                }
+            }
         } else {
-            const { error: locInsertError } = await supabase.from('event_locations').insert({ ...locationData, event_id: eventId })
-            if (locInsertError) console.error('Location insert error', locInsertError)
+            // 2. Update Location (external venue)
+            const { data: existingLoc } = await supabase.from('event_locations').select('id').eq('event_id', eventId).maybeSingle()
+
+            type LocationUpdate = Database['public']['Tables']['event_locations']['Update']
+            const locationData: LocationUpdate = {
+                venue_name: formData.location.venue_name || null,
+                address_line1: formData.location.address_line1 || null,
+                city: formData.location.city || null,
+                state: formData.location.state || null,
+                postal_code: formData.location.postal_code || null,
+                place_id: formData.location.place_id || null,
+                latitude: formData.location.latitude ? parseFloat(formData.location.latitude) : null,
+                longitude: formData.location.longitude ? parseFloat(formData.location.longitude) : null,
+                is_tbd: formData.location.is_tbd,
+                is_virtual: formData.location.is_virtual,
+                virtual_link: formData.location.virtual_link || null
+            }
+
+            if (existingLoc) {
+                const { error: locError } = await supabase.from('event_locations').update(locationData).eq('event_id', eventId)
+                if (locError) console.error('Location update error', locError)
+            } else {
+                const { error: locInsertError } = await supabase.from('event_locations').insert({ ...locationData, event_id: eventId })
+                if (locInsertError) console.error('Location insert error', locInsertError)
+            }
+
+            // If switching from internal to external, delete old reservation
+            if (wasInternal && !isNowInternal && existingEvent?.facility_resource_id) {
+                const { data: oldReservations } = await getReservations({
+                    org_id: context.orgId,
+                    start: start.toISOString(),
+                    end: end.toISOString(),
+                })
+                const oldReservation = oldReservations?.find(r => r.event_id === eventId)
+                if (oldReservation) {
+                    await deleteReservation(oldReservation.id)
+                }
+            }
         }
 
         // 3. Update Ticketing
@@ -1552,6 +1805,11 @@ export async function updateEvent(
         }
 
             debug.perf.end('eventsService.updateEvent')
+            captureEvent('event_updated', {
+              event_id: eventId,
+              organization_id: context.orgId,
+              user_id: context.userId,
+            })
             debug.flow('EventsService.updateEvent', 'Updated successfully', { eventId })
             console.groupEnd()
             return getEventDetails(context, eventId)

@@ -5,12 +5,71 @@
  */
 
 import { USE_FAKE_DATA } from '../data/config'
+import { getCurrentDemoSessionSnapshot } from '../data/services/demoSessionService'
+
+const DEMO_WELCOME_COMPLETED_KEY = 'ys_demo_welcome_completed'
 
 /**
  * Check if we're in demo mode (Supabase not configured)
  */
 export function isDemoMode(): boolean {
   return USE_FAKE_DATA
+}
+
+/**
+ * Check if user is in an active demo session
+ */
+export function isInDemoSession(): boolean {
+  const snapshot = getCurrentDemoSessionSnapshot()
+  return snapshot.is_demo_session === true && Boolean(snapshot.demo_org_id)
+}
+
+/**
+ * Check if this is the user's first demo login (welcome page not yet shown)
+ */
+export function isFirstDemoLogin(): boolean {
+  if (!isInDemoSession()) {
+    return false
+  }
+
+  if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') {
+    return false
+  }
+
+  const welcomeCompleted = sessionStorage.getItem(DEMO_WELCOME_COMPLETED_KEY)
+  return welcomeCompleted !== 'true'
+}
+
+/**
+ * Mark demo welcome as completed
+ */
+export function markDemoWelcomeCompleted(): void {
+  if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') {
+    return
+  }
+
+  try {
+    sessionStorage.setItem(DEMO_WELCOME_COMPLETED_KEY, 'true')
+  } catch (error) {
+    // Ignore storage errors (e.g., private browsing mode)
+    console.warn('[demoMode] Failed to mark welcome as completed:', error)
+  }
+}
+
+/**
+ * Clear demo welcome completion flag (useful for testing or re-showing welcome)
+ */
+export function clearDemoWelcomeCompleted(): void {
+  if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') {
+    return
+  }
+
+  try {
+    sessionStorage.removeItem(DEMO_WELCOME_COMPLETED_KEY)
+  } catch (error) {
+    // Ignore storage errors
+    console.warn('[demoMode] Failed to clear welcome completion:', error)
+  }
 }
 
 /**

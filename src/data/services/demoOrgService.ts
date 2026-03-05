@@ -3,10 +3,12 @@ import { isValidSportCode, type SportCode } from '@/types/sports'
 import type {
   CreateDemoOrgInput,
   CreateDemoPOCInput,
+  DemoAllowedRole,
   DemoCode,
   DemoOrgFilters,
   DemoOrgPOC,
   DemoOrganization,
+  DemoOrganizationStatus,
   DemoSession,
   UpdateDemoOrgInput,
   UpdateDemoPOCInput,
@@ -121,7 +123,19 @@ export function writeDemoManagementStore(store: DemoManagementStore): void {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(store))
 }
 
+function normalizeAllowedRoles(value: unknown): DemoAllowedRole[] {
+  if (!Array.isArray(value)) return ['org_admin', 'coach', 'parent', 'athlete', 'staff', 'fan']
+  const validRoles: DemoAllowedRole[] = ['org_admin', 'coach', 'parent', 'athlete', 'staff', 'fan']
+  return value.filter((role): role is DemoAllowedRole => typeof role === 'string' && validRoles.includes(role as DemoAllowedRole))
+}
+
 function mapDemoOrganizationRow(row: Record<string, unknown>): DemoOrganization {
+  const statusValue = row.status
+  let status: DemoOrganizationStatus = 'active'
+  if (statusValue === 'pending' || statusValue === 'active' || statusValue === 'inactive' || statusValue === 'rejected') {
+    status = statusValue
+  }
+
   return {
     id: String(row.id),
     name: String(row.name ?? ''),
@@ -138,10 +152,12 @@ function mapDemoOrganizationRow(row: Record<string, unknown>): DemoOrganization 
     payment_enabled: Boolean(row.payment_enabled),
     ticketing_enabled: Boolean(row.ticketing_enabled),
     notes: toStringOrNull(row.notes),
-    status: row.status === 'inactive' ? 'inactive' : 'active',
+    status,
     created_by: toStringOrNull(row.created_by),
     created_at: typeof row.created_at === 'string' ? row.created_at : nowIso(),
     updated_at: typeof row.updated_at === 'string' ? row.updated_at : nowIso(),
+    organization_id: typeof row.organization_id === 'string' ? row.organization_id : null,
+    allowed_roles: normalizeAllowedRoles(row.allowed_roles),
   }
 }
 
@@ -201,17 +217,20 @@ export async function getDemoOrg(id: string): Promise<DemoOrganization> {
     throw new Error('Demo organization ID is required.')
   }
 
-  if (USE_FAKE_DATA) {
-    const store = readDemoManagementStore()
-    const found = store.organizations.find((org) => org.id === id)
-    if (!found) {
-      throw new Error('Demo organization not found.')
-    }
-    return found
-  }
-
+  // IMPORTANT: When fetching demo org for code validation, always use real Supabase
+  // This ensures demo codes work even in fake data mode
+  // However, if USE_FAKE_DATA is true and we're in admin UI, use fake data for consistency
+  // For demo entry flow, always use real DB
   const { data, error } = await supabaseAny.from('demo_organizations').select('*').eq('id', id).single()
   if (error || !data) {
+    // Fallback to fake data if real DB fails and we're in fake mode
+    if (USE_FAKE_DATA) {
+      const store = readDemoManagementStore()
+      const found = store.organizations.find((org) => org.id === id)
+      if (found) {
+        return found
+      }
+    }
     throw new Error('Demo organization not found.')
   }
   return mapDemoOrganizationRow(data as Record<string, unknown>)
@@ -223,7 +242,9 @@ export async function createDemoOrg(input: CreateDemoOrgInput): Promise<DemoOrga
   const sports = ensureSports(input.sports_sponsored)
   const now = nowIso()
   const { data: authUser } = await supabase.auth.getUser()
-  const createdBy = authUser.user?.id ?? null
+  // For public demo requests (status='pending'), always set created_by to null
+  // This allows anonymous users to create demo orgs via the public form
+  const createdBy = input.status === 'pending' ? null : (authUser.user?.id ?? null)
 
   const payload: DemoOrganization = {
     id: createId('demo-org'),
@@ -312,6 +333,7 @@ export async function updateDemoOrg(id: string, input: UpdateDemoOrgInput): Prom
           : existing.ticketing_enabled,
       notes: input.notes !== undefined ? toStringOrNull(input.notes) : existing.notes,
       status: input.status ?? existing.status,
+      allowed_roles: input.allowed_roles !== undefined ? normalizeAllowedRoles(input.allowed_roles) : (existing.allowed_roles ?? ['org_admin', 'coach', 'parent', 'athlete', 'staff', 'fan']),
       updated_at: nowIso(),
     }
 
@@ -336,6 +358,10 @@ export async function updateDemoOrg(id: string, input: UpdateDemoOrgInput): Prom
   if (input.ticketing_enabled !== undefined) updates.ticketing_enabled = Boolean(input.ticketing_enabled)
   if (input.notes !== undefined) updates.notes = toStringOrNull(input.notes)
   if (input.status !== undefined) updates.status = input.status
+  // Handle allowed_roles update (from UpdateDemoOrgInput which extends CreateDemoOrgInput)
+  if ('allowed_roles' in input && input.allowed_roles !== undefined) {
+    updates.allowed_roles = normalizeAllowedRoles(input.allowed_roles)
+  }
 
   const { data, error } = await supabaseAny
     .from('demo_organizations')
@@ -620,4 +646,121 @@ export async function setPrimaryPOC(orgId: string, pocId: string): Promise<void>
   if (error) {
     throw new Error(`Failed to set primary POC: ${error.message}`)
   }
+}
+
+/**
+ * Create organization row for approved demo org and link it
+ * This is called when a demo org is approved
+ */
+export async function createOrganizationForDemoOrg(demoOrgId: string): Promise<{ organizationId: string }> {
+  if (!demoOrgId.trim()) {
+    throw new Error('Demo organization ID is required.')
+  }
+
+  // Get the demo org
+  const demoOrg = await getDemoOrg(demoOrgId)
+  
+  if (demoOrg.organization_id) {
+    // Already has an organization linked
+    return { organizationId: demoOrg.organization_id }
+  }
+
+  if (USE_FAKE_DATA) {
+    // In fake mode, just create a fake org ID
+    const fakeOrgId = createId('org')
+    const store = readDemoManagementStore()
+    const index = store.organizations.findIndex((org) => org.id === demoOrgId)
+    if (index >= 0) {
+      store.organizations[index] = {
+        ...store.organizations[index],
+        organization_id: fakeOrgId,
+      }
+      writeDemoManagementStore(store)
+    }
+    return { organizationId: fakeOrgId }
+  }
+
+  // Create organization row
+  const { data: orgData, error: orgError } = await supabaseAny
+    .from('organizations')
+    .insert({
+      name: demoOrg.name,
+      org_type: demoOrg.org_type,
+      primary_city: demoOrg.city,
+      primary_state: demoOrg.state,
+      is_demo_org: true,
+      status: 'active',
+      ticketing_enabled: demoOrg.ticketing_enabled,
+      // Set privacy to public so demo orgs are visible
+      privacy_level: 'public',
+    })
+    .select('id')
+    .single()
+
+  if (orgError || !orgData) {
+    throw new Error(`Failed to create organization: ${orgError?.message ?? 'Unknown error'}`)
+  }
+
+  const organizationId = String(orgData.id)
+
+  // Link bidirectionally: set organization_id on demo_org and demo_org_id on org
+  const { error: linkError } = await supabaseAny
+    .from('demo_organizations')
+    .update({ organization_id: organizationId })
+    .eq('id', demoOrgId)
+
+  if (linkError) {
+    // Try to clean up the org if linking fails
+    await supabaseAny.from('organizations').delete().eq('id', organizationId)
+    throw new Error(`Failed to link demo organization: ${linkError.message}`)
+  }
+
+  // Set demo_org_id on the organization
+  const { error: orgLinkError } = await supabaseAny
+    .from('organizations')
+    .update({ demo_org_id: demoOrgId })
+    .eq('id', organizationId)
+
+  if (orgLinkError) {
+    // Non-fatal, but log it
+    console.warn(`Failed to set demo_org_id on organization: ${orgLinkError.message}`)
+  }
+
+  // Set allowed_roles default if not already set
+  const defaultAllowedRoles: DemoAllowedRole[] = ['org_admin', 'coach', 'parent', 'athlete', 'staff', 'fan']
+  const { error: rolesError } = await supabaseAny
+    .from('demo_organizations')
+    .update({ allowed_roles: defaultAllowedRoles })
+    .eq('id', demoOrgId)
+    .is('allowed_roles', null)
+
+  if (rolesError) {
+    console.warn(`Failed to set default allowed_roles: ${rolesError.message}`)
+  }
+
+  // Create organization_sports entries from sports_sponsored
+  if (demoOrg.sports_sponsored.length > 0) {
+    // First, get sport IDs for the sport codes
+    const { data: sportsData } = await supabaseAny
+      .from('sports')
+      .select('id, code')
+      .in('code', demoOrg.sports_sponsored)
+
+    if (sportsData && sportsData.length > 0) {
+      const sportInserts = sportsData.map((sport: { id: string; code: string }) => ({
+        org_id: organizationId,
+        sport_id: sport.id,
+      }))
+
+      const { error: sportsError } = await supabaseAny
+        .from('organization_sports')
+        .insert(sportInserts)
+
+      if (sportsError) {
+        console.warn(`Failed to create organization_sports: ${sportsError.message}`)
+      }
+    }
+  }
+
+  return { organizationId }
 }

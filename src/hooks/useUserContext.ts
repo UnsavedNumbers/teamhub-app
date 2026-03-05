@@ -23,7 +23,7 @@
  */
 
 import { useMemo } from 'react'
-import { useAuth } from './useAuth'
+import { useOptionalAuth } from './useAuth'
 import { useOrganization } from '../contexts/OrganizationContext'
 import type { UserContext } from '../data/fake/userContext'
 
@@ -45,7 +45,9 @@ export interface UseUserContextResult {
 }
 
 export function useUserContext(): UseUserContextResult {
-    const { user, profile, loading: authLoading } = useAuth()
+    // Use useOptionalAuth to handle cases where AuthProvider might not be ready yet
+    const authContext = useOptionalAuth()
+    const { user, profile, loading: authLoading } = authContext || { user: null, profile: null, loading: true }
     const { currentOrganization, isLoading: orgLoading } = useOrganization()
 
     const context = useMemo<UserContext>(() => ({

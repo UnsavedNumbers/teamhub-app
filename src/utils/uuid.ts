@@ -1,34 +1,37 @@
 /**
  * UUID Validation Utilities
  * 
- * Helper functions for validating UUIDs and handling UUID-related errors.
+ * Provides type-safe UUID validation functions.
  */
 
 /**
- * UUID v4 regex pattern
+ * Validates if a string is a valid UUID v4 format
+ * @param value - String to validate
+ * @returns True if value is a valid UUID
  */
-const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-
-/**
- * Check if a string is a valid UUID v4
- */
-export function isValidUUID(value: string | null | undefined): boolean {
-  if (!value || typeof value !== 'string') return false
-  return UUID_V4_REGEX.test(value)
+export function isUuid(value: string | null | undefined): boolean {
+  if (!value || typeof value !== 'string') {
+    return false
+  }
+  // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx where y is 8, 9, a, or b
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
 
 /**
- * Validate UUID and throw if invalid
+ * Validates UUID and throws if invalid
+ * @param value - String to validate
+ * @param fieldName - Name of field for error message
+ * @throws Error if value is not a valid UUID
  */
-export function validateUUID(value: string | null | undefined, fieldName = 'ID'): asserts value is string {
-  if (!isValidUUID(value)) {
-    throw new Error(`Invalid ${fieldName}: must be a valid UUID`)
+export function requireUuid(value: string | null | undefined, fieldName: string = 'id'): asserts value is string {
+  if (!isUuid(value)) {
+    throw new Error(`Invalid ${fieldName}: expected UUID format, got ${value}`)
   }
 }
 
 /**
- * Check if a value is a valid UUID, returning a type guard
+ * Type guard for UUID strings
  */
-export function isUUID(value: unknown): value is string {
-  return typeof value === 'string' && isValidUUID(value)
+export function isValidUuid(value: unknown): value is string {
+  return typeof value === 'string' && isUuid(value)
 }

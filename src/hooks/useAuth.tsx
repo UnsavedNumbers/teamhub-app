@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-import { useOrganization, Organization } from '../contexts/OrganizationContext'
+import { OrganizationContext, Organization } from '../contexts/OrganizationContext'
 import { useDemoSession } from '../contexts/DemoSessionContext'
 import type { PlatformAdminRole } from '../types/platformAdmin.types'
 import type { HomeLocation } from '../types/location'
@@ -27,9 +27,10 @@ import {
   getStoredDemoCode,
 } from '../data/services/demoSessionService'
 import { debug } from '../lib/debug'
+import { captureEvent, identifyUser, resetAnalytics } from '../lib/analytics/analytics'
 
 // Role types - now per organization (must match OrganizationContext.OrgMemberRole)
-type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff' | 'athlete'
+type OrgMemberRole = 'parent' | 'guardian' | 'coach' | 'org_admin' | 'staff' | 'athlete' | 'fan'
 type LegacyUserRole = 'parent' | 'coach' | 'admin'
 
 interface UserProfile {
@@ -101,7 +102,13 @@ function readFakeAuthState(): FakeAuthState | null {
     const roles = Array.isArray(parsed.roles)
       ? parsed.roles.filter(
           (role): role is OrgMemberRole =>
-            role === 'parent' || role === 'coach' || role === 'org_admin' || role === 'staff' || role === 'athlete',
+            role === 'parent' ||
+            role === 'guardian' ||
+            role === 'coach' ||
+            role === 'org_admin' ||
+            role === 'staff' ||
+            role === 'athlete' ||
+            role === 'fan',
         )
       : []
 
@@ -146,8 +153,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const latestUserRef = useRef<User | null>(null)
+  const latestProfileRef = useRef<UserProfile | null>(null)
+  const latestLoadingRef = useRef(true)
+  const lastAuthSnapshotRef = useRef<string>('')
+  const sessionRecoveryInFlightRef = useRef(false)
+  const lastSessionRecoveryAttemptRef = useRef(0)
 
-  const { setOrganizations, currentOrganization } = useOrganization()
+  const orgContext = useContext(OrganizationContext)
+  const setOrganizations = orgContext?.setOrganizations ?? (() => {})
+  const currentOrganization = orgContext?.currentOrganization ?? null
   const { refreshSession } = useDemoSession()
 
   // Prevent duplicate profile fetches (Bug Prevention #1 & #7)
@@ -158,6 +173,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Mounted flag for cleanup (Bug Prevention #2)
   const mountedRef = useRef(true)
+
+  // Keep latest identity in refs for auth event handlers without re-subscribing.
+  useEffect(() => {
+    latestUserRef.current = user
+  }, [user])
+
+  useEffect(() => {
+    latestProfileRef.current = profile
+  }, [profile])
+
+  useEffect(() => {
+    latestLoadingRef.current = loading
+  }, [loading])
+
+  const getAuthRouteContext = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return { route: 'n/a', traceId: null as string | null }
+    }
+    const route = `${window.location.pathname}${window.location.search}${window.location.hash}`
+    const traceId = window.sessionStorage.getItem('auth_debug_trace_id')
+    return { route, traceId }
+  }, [])
+
+  // Snapshot log for auth state transitions to diagnose redirect races.
+  useEffect(() => {
+    const snapshot = {
+      userId: user?.id ?? null,
+      profileId: profile?.id ?? null,
+      sessionUserId: session?.user?.id ?? null,
+      loading,
+      orgCount: profile?.organizations.length ?? 0,
+      ...getAuthRouteContext(),
+    }
+    const serialized = JSON.stringify(snapshot)
+    if (lastAuthSnapshotRef.current === serialized) return
+    lastAuthSnapshotRef.current = serialized
+    debug.data('Auth.state', 'Snapshot', snapshot)
+  }, [user, profile, session, loading, getAuthRouteContext])
 
   /* ===================== FETCH PROFILE ===================== */
 
@@ -301,7 +354,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const roles = Array.isArray(o.roles)
                 ? o.roles.filter(
                   (r: unknown): r is OrgMemberRole =>
-                    r === 'parent' || r === 'coach' || r === 'org_admin' || r === 'staff' || r === 'athlete'
+                    r === 'parent' || r === 'guardian' || r === 'coach' || r === 'org_admin' || r === 'staff' || r === 'athlete' || r === 'fan'
                 )
                 : []
 
@@ -415,6 +468,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [setOrganizations]
   )
 
+  // Recover auth state if session exists in Supabase but local user/profile were never hydrated.
+  // This covers callback flows where setSession() does not emit a usable auth event.
+  useEffect(() => {
+    if (loading) return
+    if (user) return
+    if (sessionRecoveryInFlightRef.current) return
+
+    const now = Date.now()
+    if (now - lastSessionRecoveryAttemptRef.current < 1500) return
+    lastSessionRecoveryAttemptRef.current = now
+    sessionRecoveryInFlightRef.current = true
+
+    debug.flow('Auth', 'Session recovery check start', {
+      ...getAuthRouteContext(),
+    })
+
+    supabase.auth.getSession()
+      .then(({ data, error }) => {
+        if (!mountedRef.current) return
+        if (error) {
+          debug.error('Auth', 'Session recovery check failed', {
+            error: error.message,
+            ...getAuthRouteContext(),
+          })
+          return
+        }
+
+        const recoveredSession = data.session
+        if (!recoveredSession?.user) {
+          debug.flow('Auth', 'Session recovery check: no session', {
+            ...getAuthRouteContext(),
+          })
+          return
+        }
+
+        debug.flow('Auth', 'Session recovery found session, hydrating auth state', {
+          recoveredUserId: recoveredSession.user.id,
+          ...getAuthRouteContext(),
+        })
+        setSession(recoveredSession)
+        setUser(recoveredSession.user)
+        fetchProfile(recoveredSession.user.id)
+      })
+      .finally(() => {
+        sessionRecoveryInFlightRef.current = false
+      })
+  }, [loading, user, fetchProfile, getAuthRouteContext])
+
   /* ===================== AUTH BOOTSTRAP ===================== */
 
   useEffect(() => {
@@ -486,21 +587,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(demoProfile)
           setOrganizations(organizations)
         }
+        setLoading(false)
+        return () => {
+          mountedRef.current = false
+        }
       } else {
+        // No fake auth state, but check for real Supabase session (from demo entry flow)
         clearFakeAuthState()
-      }
-
-      setLoading(false)
-      return () => {
-        mountedRef.current = false
+        // Fall through to check real Supabase session
       }
     }
 
-    supabase.auth.getSession().then(({ data }) => {
+    debug.flow('Auth', 'Bootstrap: getSession() start', getAuthRouteContext())
+
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!mountedRef.current) return
 
       // Handle session/user mismatch (Bug Prevention #10)
       const session = data.session
+      debug.flow('Auth', 'Bootstrap: getSession() result', {
+        hasSession: !!session,
+        sessionUserId: session?.user?.id ?? null,
+        ...getAuthRouteContext(),
+      })
       if (!mountedRef.current) return
       setSession(session)
       setUser(session?.user ?? null)
@@ -517,6 +626,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (session?.user) {
+        // When USE_FAKE_DATA is true and we have a real Supabase session (from demo entry),
+        // write fake auth state to sessionStorage so it persists across refreshes
+        if (USE_FAKE_DATA && session.user.email) {
+          try {
+            // Fetch organizations to get roles
+            const { data: orgData } = await supabase.rpc('get_user_organizations', {
+              check_user_id: session.user.id
+            } as any)
+            
+            const organizations = (orgData || []).map((org: any) => ({
+              id: org.org_id,
+              name: org.org_name || '',
+              roles: Array.isArray(org.roles)
+                ? org.roles.filter(
+                    (r: unknown): r is OrgMemberRole =>
+                      r === 'parent' || r === 'guardian' || r === 'coach' || r === 'org_admin' || r === 'staff' || r === 'athlete' || r === 'fan'
+                  )
+                : [],
+            }))
+
+            const firstOrg = organizations[0]
+            const roles = firstOrg?.roles || []
+            const orgId = firstOrg?.id || DEMO_ORG_A_ID
+            const orgName = firstOrg?.name || 'Demo Organization'
+
+            // Check if platform admin
+            const { data: adminData } = await supabase
+              .from('platform_admins')
+              .select('user_id')
+              .eq('user_id', session.user.id)
+              .maybeSingle()
+
+            writeFakeAuthState({
+              userId: session.user.id,
+              email: session.user.email,
+              orgId,
+              orgName,
+              roles,
+              isPlatformAdmin: !!adminData,
+            })
+          } catch (err) {
+            console.error('[useAuth] Failed to write fake auth state:', err)
+          }
+        }
         fetchProfile(session.user.id)
       } else {
         if (!mountedRef.current) return
@@ -529,14 +682,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mountedRef.current) return
 
-      // Ignore TOKEN_REFRESHED events - they fire on tab focus and cause unnecessary re-renders
-      // The session is still valid, no need to trigger loading states or re-fetch profile
+      if (USE_FAKE_DATA) {
+        const persistedFakeAuth = readFakeAuthState()
+        if (persistedFakeAuth && event !== 'SIGNED_OUT') {
+          debug.flow('Auth', 'Ignoring Supabase auth event because fake auth is authoritative', {
+            event,
+            persistedEmail: persistedFakeAuth.email,
+            eventUserId: session?.user?.id ?? null,
+            currentUserId: latestUserRef.current?.id ?? null,
+            ...getAuthRouteContext(),
+          })
+          return
+        }
+      }
+
+      const currentUser = latestUserRef.current
+      const currentProfile = latestProfileRef.current
+      debug.flow('Auth', `Auth event received: ${event}`, {
+        event,
+        eventUserId: session?.user?.id ?? null,
+        currentUserId: currentUser?.id ?? null,
+        currentProfileId: currentProfile?.id ?? null,
+        loading: latestLoadingRef.current,
+        ...getAuthRouteContext(),
+      })
+
+      // TOKEN_REFRESHED fires on tab focus when Supabase auto-refreshes the JWT.
+      // Only hydrate profile if the user isn't already loaded — never re-fetch an
+      // existing profile, because that causes setState calls that unmount the
+      // current page and wipe form state.
       if (event === 'TOKEN_REFRESHED') {
-        // Silently update session without triggering loading states
         if (session) {
           setSession(session)
-          // Don't update user or trigger profile fetch - nothing meaningful changed
-          debug.flow('Auth', 'Token refreshed', { userId: session.user.id })
+
+          const needsUserHydration = !currentUser || currentUser.id !== session.user.id
+
+          if (needsUserHydration) {
+            setUser(session.user)
+            debug.flow('Auth', 'Token refreshed with missing identity, hydrating', {
+              userId: session.user.id,
+              ...getAuthRouteContext(),
+            })
+            fetchProfile(session.user.id)
+          } else {
+            debug.flow('Auth', 'Token refreshed (session updated only)', { userId: session.user.id, ...getAuthRouteContext() })
+          }
         }
         return
       }
@@ -546,7 +736,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         event,
         userId: session?.user?.id,
         hasSession: !!session,
-        email: session?.user?.email
+        email: session?.user?.email,
+        currentUserId: currentUser?.id ?? null,
+        currentProfileId: currentProfile?.id ?? null,
+        ...getAuthRouteContext(),
       })
 
       // Event debouncing (Bug Prevention #3)
@@ -557,6 +750,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastEvent.event === event &&
         now - lastEvent.timestamp < 100
       ) {
+        debug.data('Auth', 'Debounced duplicate auth event', {
+          event,
+          deltaMs: now - lastEvent.timestamp,
+          ...getAuthRouteContext(),
+        })
         return // Skip duplicate event within 100ms
       }
       lastAuthEventRef.current = { event, timestamp: now }
@@ -573,22 +771,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!mountedRef.current) return
-      setSession(session)
-      setUser(session?.user ?? null)
+
+      // #region agent log
+      if (event === 'SIGNED_IN' && session?.user) {
+        const alreadyLoaded = currentProfile && currentProfile.id === session.user.id
+        // Skip setSession/setUser if user already loaded — prevents unnecessary re-renders
+        // that cause form state loss. Session token refresh happens in Supabase client.
+        if (alreadyLoaded) {
+        } else {
+          setSession(session)
+          setUser(session.user)
+        }
+      } else {
+        setSession(session)
+        setUser(session?.user ?? null)
+      }
+      // #endregion
 
       if (event === 'SIGNED_IN') {
         debug.flow('Auth', 'User signed in', { userId: session?.user?.id, email: session?.user?.email })
+        if (session?.user) {
+          captureEvent('login_success', {
+            user_id: session.user.id,
+            email: session.user.email ?? undefined,
+          })
+
+          // Only fetch profile if user isn't already loaded — Supabase can
+          // re-emit SIGNED_IN on tab focus / token refresh, and re-fetching
+          // the profile sets loading=true which unmounts the current page.
+          const alreadyLoaded = currentProfile && currentProfile.id === session.user.id
+          if (!alreadyLoaded) {
+            fetchProfile(session.user.id)
+          } else {
+            debug.flow('Auth', 'SIGNED_IN skipped profile fetch (already loaded)', {
+              userId: session.user.id,
+              ...getAuthRouteContext(),
+            })
+          }
+        }
       } else if (event === 'SIGNED_OUT') {
-        debug.flow('Auth', 'User signed out', { previousUserId: user?.id })
+        debug.flow('Auth', 'User signed out', { previousUserId: currentUser?.id ?? null })
+        resetAnalytics()
         if (!mountedRef.current) return
         setProfile(null)
         setOrganizations([])
         setLoading(false)
         return
-      }
-
-      if (event === 'SIGNED_IN' && session?.user) {
-        fetchProfile(session.user.id)
       }
     })
 
@@ -596,7 +824,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mountedRef.current = false
       subscription.unsubscribe()
     }
-  }, [fetchProfile, setOrganizations])
+  }, [fetchProfile, setOrganizations, getAuthRouteContext])
+
+  // Identify user in PostHog when we have both user and profile (after login or reload)
+  const lastIdentifiedRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!user?.id) {
+      lastIdentifiedRef.current = null
+      return
+    }
+    if (!profile) return
+    if (lastIdentifiedRef.current === user.id) return
+    lastIdentifiedRef.current = user.id
+    const name =
+      profile.display_name?.trim() ||
+      [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim() ||
+      null
+    const organizationId =
+      profile.organizations?.[0]?.id ?? profile.org_id ?? null
+    identifyUser(user.id, {
+      email: profile.email ?? user.email ?? null,
+      name: name || null,
+      organization_id: organizationId,
+    })
+  }, [user?.id, user?.email, profile])
 
   /* ===================== LOADING STATE TIMEOUT FALLBACK ===================== */
 
@@ -729,6 +980,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             debug.perf.end('auth.signInWithEmail')
             if (error) {
                 debug.error('Auth', 'Login failed', { email, error: error.message })
+                captureEvent('login_failed', {
+                  email,
+                  reason: error.message,
+                  method: 'email',
+                })
             } else {
                 debug.flow('Auth', 'Login initiated', { email })
             }
@@ -736,6 +992,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (err) {
             debug.perf.end('auth.signInWithEmail')
             debug.error('Auth', 'Login exception', { email, error: err })
+            captureEvent('login_failed', {
+              email,
+              reason: err instanceof Error ? err.message : 'Unknown error',
+              method: 'email',
+            })
             return { error: err as AuthError }
         }
     })
@@ -855,12 +1116,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             clearStoredDemoCode()
             refreshSession()
           }
+          try {
+            await supabase.auth.signOut()
+          } catch (err) {
+            debug.error('Auth', 'Underlying Supabase signOut failed in demo mode', {
+              userId: user?.id,
+              error: err,
+            })
+          }
           clearFakeAuthState()
           setUser(null)
           setProfile(null)
           setSession(null)
           setOrganizations([])
-          setLoading(false)
+          resetAnalytics()
           debug.perf.end('auth.signOut')
           debug.flow('Auth', 'Logout completed (demo)', { userId: user?.id })
           return
@@ -872,6 +1141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null)
           setSession(null)
           setOrganizations([])
+          resetAnalytics()
           debug.perf.end('auth.signOut')
           debug.flow('Auth', 'Logout completed', { userId: user?.id })
         } catch (err) {
@@ -909,10 +1179,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ? `${baseUrl}${redirectTo}` 
       : `${baseUrl}${window.location.pathname}`
     
-    const { error } = await supabase.auth.updateUser(
+    debug.flow('Auth', 'Email change request initiated', { newEmail, redirectTo: emailRedirectTo })
+    
+    const { data, error } = await supabase.auth.updateUser(
       { email: newEmail },
       { emailRedirectTo }
     )
+    
+    if (error) {
+      debug.error('Auth', 'Email change failed', { 
+        error: error.message, 
+        errorCode: error.status,
+        newEmail,
+        // Log full error object for debugging
+        fullError: JSON.stringify(error, null, 2)
+      })
+      console.error('[Auth] Email change error details:', {
+        message: error.message,
+        status: error.status,
+        name: error.name,
+        fullError: error
+      })
+    } else {
+      debug.flow('Auth', 'Email change request sent successfully', { 
+        newEmail,
+        userId: data?.user?.id 
+      })
+      console.log('[Auth] Email change request sent:', { newEmail })
+    }
+    
     return { error }
   }
 

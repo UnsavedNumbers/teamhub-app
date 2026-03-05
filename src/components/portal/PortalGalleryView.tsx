@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Gallery, LazyImage } from '@/components/shared/Gallery';
 import { useGallerySelection } from '@/components/shared/Gallery/hooks';
 import { GalleryItem } from '@/components/shared/Gallery/types';
@@ -57,7 +57,7 @@ export function PortalGalleryView({
 
   const renderItem = (item: PortalGalleryItem, isSelected: boolean) => {
     return (
-      <div className="group relative aspect-[4/5] overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/50 hover:shadow-xl transition-all duration-300">
+      <div className="group relative aspect-[4/5] overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-200/50 hover:shadow-xl transition-all duration-300">
         <LazyImage
           src={item.thumbnailUrl} 
           alt={item.title}
@@ -85,7 +85,7 @@ export function PortalGalleryView({
           }}
         >
              <div className={`size-6 rounded-full border-2 border-white flex items-center justify-center ${isSelected ? 'bg-blue-600' : 'bg-white/20 backdrop-blur-md'}`}>
-               {isSelected && <span className="text-white text-xs font-bold">✓</span>}
+               {isSelected && <span className="text-white text-xs font-bold">&#10003;</span>}
              </div>
         </div>
 
@@ -126,3 +126,4 @@ export function PortalGalleryView({
     />
   );
 }
+

@@ -1,0 +1,172 @@
+{
+  "version": "1.0",
+  "features": [
+    {
+      "feature_key": "ticketing",
+      "available_as_addon": true,
+      "addon_stripe_price_id": "price_ticketing_annual_750",
+      "addon_external_name": "Ticketing Suite",
+      "addon_external_description": "Sell tickets for games, tournaments, and special events directly through your organization portal. Manage pricing, track sales in real time, and streamline entry with QR-based ticket validation.",
+      "addon_external_short_label": "Ticketing",
+      "addon_external_bullets": [
+        "Online ticket sales for games and events",
+        "Multiple ticket types (Adult, Student, VIP)",
+        "QR code ticket validation and entry scanning",
+        "Real-time sales and revenue dashboard",
+        "Refund and cancellation controls",
+        "Automatic Stripe payment processing"
+      ],
+      "addon_external_cta_label": "Add Ticketing Suite",
+      "addon_display_order": 1,
+      "addon_is_public": true,
+      "tier_keys": [
+        "tier2",
+        "tier3"
+      ],
+      "unavailable_gate_action": "paywall",
+      "rollout_status": "Live"
+    },
+    {
+      "feature_key": "registration_forms",
+      "available_as_addon": true,
+      "addon_stripe_price_id": "price_registration_annual_600",
+      "addon_external_name": "Online Registration & Payments",
+      "addon_external_description": "Collect player registrations, fees, and digital waivers in one streamlined workflow. Reduce admin work with online payments, installment options, and clear tracking.",
+      "addon_external_short_label": "Registration",
+      "addon_external_bullets": [
+        "Custom registration forms",
+        "Online payment collection",
+        "Installment payment options",
+        "Digital waivers and signatures",
+        "Payment tracking dashboard",
+        "Refund and adjustment tools"
+      ],
+      "addon_external_cta_label": "Add Registration & Payments",
+      "addon_display_order": 2,
+      "addon_is_public": true,
+      "tier_keys": [
+        "tier2",
+        "tier3"
+      ],
+      "unavailable_gate_action": "paywall",
+      "rollout_status": "Live"
+    },
+    {
+      "feature_key": "reporting",
+      "available_as_addon": true,
+      "addon_stripe_price_id": "price_reporting_annual_400",
+      "addon_external_name": "Advanced Reporting & Financial Analytics",
+      "addon_external_description": "Unlock deeper insights across your organization with advanced dashboards, exports, and season-level reporting for participation and finances.",
+      "addon_external_short_label": "Reporting",
+      "addon_external_bullets": [
+        "Revenue breakdown by team and season",
+        "Participation and attendance trends",
+        "Exportable summaries for admins",
+        "Saved and scheduled reports",
+        "Operational and scheduling reports",
+        "Ticketing and payments reporting (when enabled)"
+      ],
+      "addon_external_cta_label": "Add Advanced Reporting",
+      "addon_display_order": 3,
+      "addon_is_public": true,
+      "tier_keys": [
+        "tier2",
+        "tier3"
+      ],
+      "unavailable_gate_action": "paywall",
+      "rollout_status": "Live"
+    },
+    {
+      "feature_key": "messaging",
+      "available_as_addon": true,
+      "addon_stripe_price_id": "price_communication_annual_350",
+      "addon_external_name": "Advanced Communication Suite",
+      "addon_external_description": "Improve communication with scheduled announcements, improved delivery, and a clearer communication history across teams and seasons.",
+      "addon_external_short_label": "Messaging+",
+      "addon_external_bullets": [
+        "Announcements and organization-wide posts",
+        "Improved messaging workflows for admins/coaches",
+        "Communication history and audit trail",
+        "Email notification enhancements (when enabled)",
+        "Fewer missed updates for families",
+        "Designed for high-volume seasons"
+      ],
+      "addon_external_cta_label": "Add Advanced Communication",
+      "addon_display_order": 4,
+      "addon_is_public": true,
+      "tier_keys": [
+        "tier2",
+        "tier3"
+      ],
+      "unavailable_gate_action": "paywall",
+      "rollout_status": "Live"
+    },
+    {
+      "feature_key": "facilities_detail",
+      "available_as_addon": true,
+      "addon_stripe_price_id": "price_multilocation_annual_900",
+      "addon_external_name": "Multi-Location Management",
+      "addon_external_description": "Manage multiple facilities with cleaner scheduling and operations. Ideal for organizations coordinating games and practices across multiple venues.",
+      "addon_external_short_label": "Multi-Location",
+      "addon_external_bullets": [
+        "Facility dashboard and details management",
+        "Facility scheduling tools",
+        "Cleaner venue coordination across teams",
+        "Support for complex scheduling environments",
+        "Better operational visibility for admins"
+      ],
+      "addon_external_cta_label": "Add Multi-Location Management",
+      "addon_display_order": 10,
+      "addon_is_public": true,
+      "tier_keys": [
+        "tier3"
+      ],
+      "unavailable_gate_action": "paywall",
+      "rollout_status": "Live"
+    },
+    {
+      "feature_key": "payment_allocations",
+      "available_as_addon": true,
+      "addon_stripe_price_id": "price_financials_annual_800",
+      "addon_external_name": "Financial Reconciliation Suite",
+      "addon_external_description": "Keep finances clean with allocation tools and structured tracking across payments. Built for organizations that need clearer records and oversight.",
+      "addon_external_short_label": "Finance",
+      "addon_external_bullets": [
+        "Payment allocation tracking",
+        "Support for more complex financial workflows",
+        "Better visibility across teams and seasons",
+        "Foundation for accounting exports and audits"
+      ],
+      "addon_external_cta_label": "Add Financial Reconciliation",
+      "addon_display_order": 11,
+      "addon_is_public": true,
+      "tier_keys": [
+        "tier3"
+      ],
+      "unavailable_gate_action": "paywall",
+      "rollout_status": "Live"
+    },
+    {
+      "feature_key": "analytics_dashboard",
+      "available_as_addon": true,
+      "addon_stripe_price_id": "price_ai_insights_annual_600",
+      "addon_external_name": "AI Insights & Forecasting",
+      "addon_external_description": "Get higher-level insights into engagement and operations with enhanced analytics. Ideal for organizations looking to improve planning and participation outcomes.",
+      "addon_external_short_label": "AI Insights",
+      "addon_external_bullets": [
+        "Enhanced analytics dashboard",
+        "Engagement and participation insights",
+        "Trend visibility across seasons",
+        "Planning support for admins"
+      ],
+      "addon_external_cta_label": "Add AI Insights",
+      "addon_display_order": 12,
+      "addon_is_public": true,
+      "tier_keys": [
+        "tier3"
+      ],
+      "unavailable_gate_action": "paywall",
+      "rollout_status": "Live"
+    }
+  ]
+}

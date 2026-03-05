@@ -143,7 +143,7 @@ export async function bulkUpdateCategory(
     return { success: false, error: 'No features selected' }
   }
 
-  const CHUNK_SIZE = 100
+  const CHUNK_SIZE = 50 // Limit bulk operations to 50 features per operation
   const chunks = chunkArray(featureIds, CHUNK_SIZE)
   let totalUpdated = 0
   let failedChunk = -1
@@ -405,7 +405,7 @@ export async function bulkUpdateRoleVisibility(
     return { success: false, error: 'No features selected' }
   }
 
-  const CHUNK_SIZE = 100
+  const CHUNK_SIZE = 50 // Limit bulk operations to 50 features per operation
   const chunks = chunkArray(featureIds, CHUNK_SIZE)
   let totalUpdated = 0
   let failedChunk = -1
@@ -461,6 +461,49 @@ export async function bulkUpdateRoleVisibility(
       error: err instanceof Error ? err.message : 'Unknown error',
       failedChunk,
       message: `Failed at chunk ${failedChunk + 1} of ${chunks.length}. ${totalUpdated} features updated before failure.`,
+    }
+  }
+}
+
+/**
+ * Bulk mark features as "not a feature" (exclude from discovery)
+ */
+export async function bulkExcludeFromDiscovery(
+  featureIds: string[],
+  excluded: boolean = true,
+  _onProgress?: (processed: number, total: number) => void
+): Promise<BulkOperationResult> {
+  const action = excluded ? 'excluding' : 're-including'
+  console.groupCollapsed(`%cbulkExcludeFromDiscovery: ${action} ${featureIds.length} features`, 'color: #666; font-weight: bold;');
+  debug.flow('FeatureBulkOperationsService.bulkExcludeFromDiscovery', `Bulk ${action} from discovery`, { featureCount: featureIds.length, excluded })
+  debug.perf.start('featureBulkOperationsService.bulkExcludeFromDiscovery')
+
+  if (featureIds.length === 0) {
+    debug.perf.end('featureBulkOperationsService.bulkExcludeFromDiscovery')
+    debug.error('FeatureBulkOperationsService.bulkExcludeFromDiscovery', 'No features selected')
+    console.groupEnd()
+    return { success: false, error: 'No features selected' }
+  }
+
+  try {
+    const { error: updateError } = await (supabase
+      .from('feature_entitlements')
+      .update({ excluded_from_discovery: excluded } as any)
+      .in('id', featureIds))
+
+    if (updateError) throw updateError
+
+    debug.perf.end('featureBulkOperationsService.bulkExcludeFromDiscovery')
+    debug.flow('FeatureBulkOperationsService.bulkExcludeFromDiscovery', `Features ${action} successfully`, { featureCount: featureIds.length })
+    console.groupEnd()
+    return { success: true, updated: featureIds.length }
+  } catch (err) {
+    debug.perf.end('featureBulkOperationsService.bulkExcludeFromDiscovery')
+    debug.error('FeatureBulkOperationsService.bulkExcludeFromDiscovery', `Failed to ${action} features`, { error: err })
+    console.groupEnd()
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Unknown error',
     }
   }
 }

@@ -44,11 +44,13 @@ export interface AdminOrganization {
     city: string | null
     state: string | null
     zip: string | null
-    logo_path: string | null
     
     // License information
     license_status: string | null
-    license_plan: string | null
+    /** @deprecated Use current_tier_id/tier_name instead. Will be removed in Phase 8. */
+    license_plan?: string | null
+    current_tier_id?: string | null
+    tier_name?: string | null
     license_trial_ends_at: string | null
     license_current_period_start: string | null
     license_current_period_end: string | null

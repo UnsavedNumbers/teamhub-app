@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+﻿import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useQueryClient } from '@tanstack/react-query'
@@ -25,6 +25,7 @@ interface OrganizationFormData {
 }
 
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
+import '../../styles/orgAdmin.css'
 
 export default function OrganizationOnboarding() {
   useDebugLifecycle('OrganizationOnboarding')

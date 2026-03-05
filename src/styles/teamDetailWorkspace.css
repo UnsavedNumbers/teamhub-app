@@ -1,0 +1,555 @@
+.team-detail-page {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+  display: grid;
+  gap: 24px;
+}
+
+.team-detail-loading-shell {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+  display: grid;
+  gap: 24px;
+}
+
+.team-detail-hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+  padding: 28px;
+  border-radius: 32px;
+  border: 1px solid color-mix(in srgb, var(--pa-border-default) 92%, white);
+  background: color-mix(in srgb, var(--pa-surface-panel) 96%, white);
+}
+
+.team-detail-hero::after {
+  content: '';
+  position: absolute;
+  inset: auto -10% -40% 55%;
+  height: 320px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--oa-theme-action-primary, #137fec) 10%, transparent);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.team-detail-hero-copy,
+.team-detail-hero-actions {
+  position: relative;
+  z-index: 1;
+}
+
+.team-detail-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--pa-text-muted);
+}
+
+.team-detail-breadcrumbs button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+
+.team-detail-kicker {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--oa-theme-action-primary, #137fec);
+}
+
+.team-detail-title {
+  margin: 8px 0 0;
+  font-size: clamp(2rem, 4vw, 3.6rem);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  color: var(--pa-text-primary);
+}
+
+.team-detail-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.team-detail-hero-summary {
+  max-width: 64ch;
+  margin: 16px 0 0;
+  color: var(--pa-text-secondary);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.team-detail-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.team-detail-stat-grid,
+.team-detail-summary-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.team-detail-top-metrics {
+  margin-bottom: 0;
+}
+
+.team-detail-stat-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.team-detail-stat-grid--compact {
+  margin-top: 18px;
+}
+
+.team-detail-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.team-detail-summary-grid--narrow {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.team-detail-metric-card,
+.team-detail-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--pa-border-default) 94%, white);
+  border-left: 8px solid var(--org-btn-primary-bg, var(--oa-theme-action-primary, #137fec));
+  border-radius: 0;
+  background: color-mix(in srgb, var(--pa-surface-panel) 94%, white);
+  box-shadow: 0 18px 40px -22px rgba(15, 23, 42, 0.25);
+}
+
+.team-detail-metric-card.is-success,
+.team-detail-stat-card.is-success {
+  background: color-mix(in srgb, rgb(16, 185, 129) 8%, var(--pa-surface-panel));
+}
+
+.team-detail-metric-card.is-warning,
+.team-detail-stat-card.is-warning {
+  background: color-mix(in srgb, rgb(251, 191, 36) 10%, var(--pa-surface-panel));
+}
+
+.team-detail-metric-value,
+.team-detail-stat-value {
+  font-size: 1.9rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: var(--pa-text-primary);
+}
+
+.team-detail-metric-label,
+.team-detail-stat-label {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pa-text-muted);
+}
+
+.team-detail-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.team-detail-sport-switcher,
+.team-detail-scope-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.team-detail-sport-pill,
+.team-detail-scope-pill,
+.team-detail-inline-pill {
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--pa-border-default) 95%, white);
+  background: color-mix(in srgb, var(--pa-surface-panel) 94%, white);
+  color: var(--pa-text-secondary);
+  font-weight: 800;
+}
+
+.team-detail-sport-pill.is-active {
+  background: var(--oa-theme-action-primary, #137fec);
+  color: white;
+}
+
+.team-detail-primary-tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.team-detail-athlete-tabs {
+  margin-bottom: 24px;
+}
+
+.team-detail-scope-pill,
+.team-detail-inline-pill {
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+.team-detail-focus-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.team-detail-focus-label,
+.team-detail-field-label {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pa-text-muted);
+}
+
+.team-detail-split-layout {
+  display: grid;
+  grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.team-detail-single-column,
+.team-detail-left-column,
+.team-detail-right-column,
+.team-detail-workspace-panel,
+.team-detail-tab-panel,
+.team-detail-workspace-loading,
+.team-detail-list,
+.team-detail-roster-loading {
+  display: grid;
+  gap: 16px;
+}
+
+.team-detail-card {
+  border-radius: 28px;
+}
+
+.team-detail-card--roster,
+.team-detail-card--workspace,
+.team-detail-card--empty,
+.team-detail-card--roster-empty {
+  padding: 22px;
+}
+
+.team-detail-section-header,
+.team-detail-athlete-header,
+.team-detail-list-row,
+.team-detail-action-row,
+.team-detail-mobile-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.team-detail-section-header,
+.team-detail-athlete-header {
+  align-items: flex-start;
+}
+
+.team-detail-section-title,
+.team-detail-athlete-name,
+.team-detail-list-title {
+  margin: 0;
+  color: var(--pa-text-primary);
+}
+
+.team-detail-section-title {
+  font-size: 1.45rem;
+}
+
+.team-detail-athlete-name {
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  line-height: 1;
+}
+
+.team-detail-section-copy,
+.team-detail-muted-copy,
+.team-detail-list-meta,
+.team-detail-athlete-meta,
+.team-detail-roster-subline,
+.team-detail-roster-row-bottomline,
+.team-detail-inline-error,
+.team-detail-field-value {
+  color: var(--pa-text-secondary);
+}
+
+.team-detail-athlete-meta,
+.team-detail-list-meta,
+.team-detail-roster-row-bottomline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.team-detail-header-actions,
+.team-detail-header-actions--stacked,
+.team-detail-action-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.team-detail-header-actions--stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.team-detail-grid-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.team-detail-readonly-field {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--pa-surface-panel) 96%, white);
+  border: 1px solid color-mix(in srgb, var(--pa-border-default) 95%, white);
+}
+
+.team-detail-field-value {
+  font-size: 14px;
+}
+
+.team-detail-athlete-identity {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.team-detail-athlete-avatar {
+  width: 92px;
+  height: 92px;
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px color-mix(in srgb, var(--oa-theme-action-primary, #137fec) 18%, transparent);
+}
+
+.team-detail-athlete-avatar-image,
+.team-detail-roster-avatar-image {
+  border-radius: inherit;
+}
+
+.team-detail-roster-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.team-detail-roster-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.team-detail-roster-list--virtualized {
+  height: 560px;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.team-detail-roster-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr);
+  gap: 14px;
+  width: 100%;
+  padding: 14px;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--pa-border-default) 95%, white);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--pa-surface-panel) 96%, white);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.team-detail-roster-list--virtualized .team-detail-roster-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.team-detail-roster-row:hover,
+.team-detail-roster-row.is-selected {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 40px color-mix(in srgb, var(--oa-theme-action-primary, #137fec) 10%, transparent);
+  border-color: color-mix(in srgb, var(--oa-theme-action-primary, #137fec) 35%, var(--pa-border-default));
+}
+
+.team-detail-roster-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.team-detail-roster-main {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.team-detail-roster-row-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.team-detail-roster-name {
+  color: var(--pa-text-primary);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.team-detail-roster-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.team-detail-roster-jersey {
+  font-weight: 900;
+  font-size: 1rem;
+  color: var(--oa-theme-action-primary, #137fec);
+}
+
+.team-detail-subcard {
+  padding: 20px;
+}
+
+.team-detail-inline-error {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.team-detail-list-row {
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--pa-border-default) 94%, white);
+  background: color-mix(in srgb, var(--pa-surface-panel) 96%, white);
+}
+
+.team-detail-mobile-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+
+.team-detail-mobile-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.team-detail-mobile-sheet-panel {
+  position: absolute;
+  inset: auto 0 0;
+  max-height: 92vh;
+  overflow: auto;
+  padding: 18px;
+  border-radius: 28px 28px 0 0;
+  background: var(--pa-surface-panel);
+  box-shadow: 0 -24px 50px rgba(15, 23, 42, 0.28);
+}
+
+.team-detail-mobile-sheet-header {
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 1180px) {
+  .team-detail-summary-grid,
+  .team-detail-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .team-detail-hero {
+    flex-direction: column;
+  }
+
+  .team-detail-hero-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 1023px) {
+  .team-detail-page,
+  .team-detail-loading-shell {
+    padding: 20px 14px 36px;
+  }
+
+  .team-detail-split-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .team-detail-roster-controls,
+  .team-detail-grid-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .team-detail-header-actions--stacked {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 720px) {
+  .team-detail-summary-grid,
+  .team-detail-stat-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .team-detail-athlete-identity,
+  .team-detail-section-header,
+  .team-detail-athlete-header,
+  .team-detail-list-row,
+  .team-detail-toolbar {
+    flex-direction: column;
+  }
+
+  .team-detail-roster-row-topline {
+    flex-direction: column;
+  }
+
+  .team-detail-roster-meta {
+    align-items: flex-start;
+  }
+}
+

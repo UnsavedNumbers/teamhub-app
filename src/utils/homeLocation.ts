@@ -1,5 +1,6 @@
 import { REGEX_PATTERNS } from '../constants/validation'
 import type { HomeLocation } from '../types/location'
+import { invokeApiOperation } from '../services/apiManagerService'
 
 type UserWithHomeLocation = {
   home_location?: HomeLocation | null
@@ -40,19 +41,17 @@ export async function geocodeZipToHomeLocation(zip: string): Promise<HomeLocatio
     return null
   }
 
-  const apiKey = import.meta.env.VITE_GOOGLE_GEOCODING_API_KEY || import.meta.env.VITE_GOOGLE_PLACES_API_KEY
-  if (!apiKey) return null
-
-  const url = new URL('https://maps.googleapis.com/maps/api/geocode/json')
-  url.searchParams.set('address', trimmed)
-  url.searchParams.set('components', `country:US|postal_code:${trimmed}`)
-  url.searchParams.set('key', apiKey)
-
   try {
-    const resp = await fetch(url.toString())
-    if (!resp.ok) return null
+    const response = await invokeApiOperation<{ providerResponse: GeocodeResponse }>({
+      operation: 'geo.geocodeZip',
+      input: { zip: trimmed },
+    })
 
-    const data = (await resp.json()) as GeocodeResponse
+    if (!response.ok || !response.data?.providerResponse) {
+      return null
+    }
+
+    const data = response.data.providerResponse
     if (data.status !== 'OK' || !data.results?.length) {
       return null
     }

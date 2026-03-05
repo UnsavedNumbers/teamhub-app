@@ -113,7 +113,8 @@ export async function getOrganizationDetails(orgId: string): Promise<{ data: Org
                 license_trial_ends_at,
                 license_current_period_end,
                 stripe_customer_id,
-                payout_account_id
+                payout_account_id,
+                parent_org_id
             `)
             .eq('id', orgId)
             .maybeSingle()

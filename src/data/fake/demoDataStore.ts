@@ -6,6 +6,7 @@ const generatedDataByOrg = new Map<string, DemoGeneratedData>()
 const emptySnapshot: DemoSessionSnapshot = {
   is_demo_session: false,
   demo_org_id: null,
+  organization_id: null,
   demo_code: null,
   expires_at: null,
 }
@@ -17,6 +18,7 @@ function parseSnapshot(raw: string | null): DemoSessionSnapshot {
     const parsed = JSON.parse(raw) as Partial<DemoSessionSnapshot>
     const isDemoSession = parsed.is_demo_session === true
     const demoOrgId = typeof parsed.demo_org_id === 'string' ? parsed.demo_org_id : null
+    const organizationId = typeof parsed.organization_id === 'string' ? parsed.organization_id : null
     const demoCode = typeof parsed.demo_code === 'string' ? parsed.demo_code : null
     const expiresAt = typeof parsed.expires_at === 'string' ? parsed.expires_at : null
 
@@ -27,6 +29,7 @@ function parseSnapshot(raw: string | null): DemoSessionSnapshot {
     return {
       is_demo_session: true,
       demo_org_id: demoOrgId,
+      organization_id: organizationId,
       demo_code: demoCode,
       expires_at: expiresAt,
     }

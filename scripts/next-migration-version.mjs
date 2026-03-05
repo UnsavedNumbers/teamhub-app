@@ -1,48 +1,30 @@
 #!/usr/bin/env node
 /**
- * Prints the next unique 14-digit migration version prefix for supabase/migrations.
+ * Prints the next unique 14-digit migration version for supabase/migrations.
+ * Scans existing migration filenames, takes max(14-digit prefix)+1 so multiple
+ * runs in the same second never collide. Ensures Supabase migration uniqueness.
  * Use: node scripts/next-migration-version.mjs
- * Output: single line, e.g. 20260216120001
- * Ensures no two migration files share the same version prefix.
+ * Output: single line, e.g. 20260220100004 (YYYYMMDDHHmmss, at least 1 greater than max existing).
  */
-import { readdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import fs from "fs";
+import path from "path";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const projectRoot = join(__dirname, '..');
-const migrationsDir = join(projectRoot, 'supabase', 'migrations');
+const migrationsDir = path.join(process.cwd(), "supabase", "migrations");
+const PREFIX_REGEX = /^(\d{14})_/;
 
-const prefixRe = /^(\d{14})_/;
-let maxVersion = 0;
-
-try {
-  const files = readdirSync(migrationsDir);
-  for (const name of files) {
-    if (!name.endsWith('.sql') || name.startsWith('_TEMPLATE')) continue;
-    const m = name.match(prefixRe);
+let maxPrefix = 0;
+if (fs.existsSync(migrationsDir)) {
+  const files = fs.readdirSync(migrationsDir);
+  for (const file of files) {
+    if (!file.endsWith(".sql")) continue;
+    const m = file.match(PREFIX_REGEX);
     if (m) {
-      const v = parseInt(m[1], 10);
-      if (v > maxVersion) maxVersion = v;
+      const n = Number(m[1]);
+      if (n > maxPrefix) maxPrefix = n;
     }
   }
-} catch (err) {
-  if (err.code === 'ENOENT') {
-    // No migrations yet; use a base from current date
-    const now = new Date();
-    const y = now.getUTCFullYear();
-    const mo = String(now.getUTCMonth() + 1).padStart(2, '0');
-    const d = String(now.getUTCDate()).padStart(2, '0');
-    const h = String(now.getUTCHours()).padStart(2, '0');
-    const mi = String(now.getUTCMinutes()).padStart(2, '0');
-    const s = String(now.getUTCSeconds()).padStart(2, '0');
-    console.log(`${y}${mo}${d}${h}${mi}${s}01`);
-    process.exit(0);
-  }
-  console.error(err.message);
-  process.exit(1);
 }
 
-const nextVersion = maxVersion + 1;
-const padded = String(nextVersion).padStart(14, '0');
-console.log(padded);
+const next = maxPrefix + 1;
+const nextStr = String(next).padStart(14, "0");
+console.log(nextStr);

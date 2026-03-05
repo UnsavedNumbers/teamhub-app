@@ -7,10 +7,12 @@
 
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
+import { getAthleteSensitiveAccess } from './sensitiveAccessService'
 import type {
     AthleteMedicalPrivate,
     EmergencyContact,
 } from '../../types/athleteSportProfiles'
+import { canAccessSensitiveData } from '../../utils/sensitiveAccess'
 
 /**
  * Service response wrapper
@@ -345,11 +347,8 @@ export async function canViewAthleteMedical(athleteId: string): Promise<boolean>
     debug.perf.start('athleteMedicalService.canViewAthleteMedical')
 
     try {
-        const { error } = await getAthleteMedical(athleteId)
-
-        // If we got data or a "not found" error, user has permission
-        // If we got a permission error, user doesn't have permission
-        const hasPermission = error?.message !== 'Permission denied'
+        const { data } = await getAthleteSensitiveAccess(athleteId)
+        const hasPermission = canAccessSensitiveData(data, 'medical', 'read')
         
         debug.perf.end('athleteMedicalService.canViewAthleteMedical')
         debug.data('AthleteMedicalService.canViewAthleteMedical', 'Permission check result', { athleteId, hasPermission })

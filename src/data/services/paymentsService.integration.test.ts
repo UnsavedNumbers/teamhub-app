@@ -3,7 +3,7 @@ import { getFees } from '@/data/services/paymentsService'
 
 const mockContext = { userId: 'u1', orgId: 'org-1', roles: [], permissions: {} } as never
 
-const { state, createChain, mockFrom } = vi.hoisted(() => {
+const { state, mockFrom } = vi.hoisted(() => {
   const state = { chainResult: { data: [] as unknown, error: null as unknown } }
   const c = {
     eq: () => c,
@@ -14,7 +14,7 @@ const { state, createChain, mockFrom } = vi.hoisted(() => {
   const mockFrom = vi.fn(() => ({
     select: vi.fn(() => c),
   }))
-  return { state, createChain, mockFrom }
+  return { state, mockFrom }
 })
 
 vi.mock('@/lib/supabase', () => ({

@@ -14,18 +14,17 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../../lib/supabase'
-import { Badge, ConfirmDialog, Button } from '../../../components/platformAdmin'
+import { ConfirmDialog } from '../../../components/platformAdmin'
 import { useAuth } from '../../../hooks/useAuth'
 import { useRolePermissions } from '../../../hooks/useRolePermissions'
 import { useEventListener } from '../../../hooks/useEventListener'
 import { useExportOrganization } from '../../../hooks/useExportOrganization'
-import { isValidUUID } from '../../../utils/uuid'
+import { isValidUuid } from '../../../utils/uuid'
 import { handleRpcError } from '../../../utils/rpcErrorHandler'
 import { isRpcSuccessResponse } from '../../../utils/typeAdapters'
 import { getLink } from '../../../utils/routes'
 import { showSuccess } from '../../../utils/toast'
 import { USE_FAKE_DATA } from '../../../data/config'
-import { getStatusVariant } from '../../../utils/organizationUtils'
 import { validateAdminOrganization } from '../../../types/platformAdmin.types'
 import { isMockOrganization } from '../../../utils/mockOrganizationUtils'
 import type { AdminOrganization, AdminRpcResponse, PlatformAdminRole } from '../../../types/platformAdmin.types'
@@ -84,7 +83,7 @@ export default function OrganizationDetail() {
   // Validate route parameter
   const isValidId = useMemo(() => {
     if (!id) return false
-    return isValidUUID(id)
+    return isValidUuid(id)
   }, [id])
 
   // Reset dialog function
@@ -259,19 +258,30 @@ export default function OrganizationDetail() {
   // Loading state
   if (loading) {
     return (
-      <div>
-        <div className="pa-flex pa-items-center pa-gap-3 pa-mb-5">
+      <div style={{ padding: 'var(--pa-space-6) var(--pa-space-8)', background: 'var(--pa-surface-page)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-4)', marginBottom: 'var(--pa-space-6)' }}>
           <button
-            className="pa-btn pa-btn--ghost"
             onClick={() => navigate('/platform-admin/organizations')}
-            style={{ padding: '8px' }}
+            style={{ 
+              padding: 'var(--pa-space-2)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              borderRadius: 'var(--pa-radius-s)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background-color 150ms ease',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--pa-n50)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
           >
-            <span className="material-symbols-outlined">arrow_back</span>
+            <span className="material-symbols-outlined" style={{ fontSize: '24px', color: 'var(--pa-n500)' }}>arrow_back</span>
           </button>
-          <div className="pa-skeleton" style={{ width: '300px', height: '32px' }} />
+          <div style={{ width: '300px', height: '32px', background: 'var(--pa-n100)', borderRadius: 'var(--pa-radius-s)' }} />
         </div>
-        <div className="pa-skeleton" style={{ width: '100%', height: '300px', marginBottom: 'var(--pa-space-4)' }} />
-        <div className="pa-skeleton" style={{ width: '100%', height: '200px' }} />
+        <div style={{ width: '100%', height: '400px', marginBottom: 'var(--pa-space-5)', background: 'var(--pa-n0)', borderRadius: 'var(--pa-radius-m)', boxShadow: 'var(--pa-shadow-1)' }} />
+        <div style={{ width: '100%', height: '300px', background: 'var(--pa-n0)', borderRadius: 'var(--pa-radius-m)', boxShadow: 'var(--pa-shadow-1)' }} />
       </div>
     )
   }
@@ -279,22 +289,43 @@ export default function OrganizationDetail() {
   // Invalid ID
   if (!isValidId) {
     return (
-      <div>
+      <div style={{ padding: 'var(--pa-space-6) var(--pa-space-8)', background: 'var(--pa-surface-page)' }}>
         <button
-          className="pa-btn pa-btn--ghost pa-mb-4"
           onClick={() => navigate('/platform-admin/organizations')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--pa-space-2)',
+            padding: 'var(--pa-space-3) var(--pa-space-5)',
+            background: 'transparent',
+            color: 'var(--pa-theme-action-primary)',
+            border: '1px solid var(--pa-n200)',
+            borderRadius: 'var(--pa-radius-s)',
+            fontSize: '14px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            marginBottom: 'var(--pa-space-5)',
+            transition: 'background-color 150ms ease',
+            fontFamily: 'var(--pa-font-body)',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--pa-n50)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
         >
-          <span className="material-symbols-outlined">arrow_back</span>
+          <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_back</span>
           Back to Organizations
         </button>
-        <div className="pa-card">
-          <div className="pa-empty">
-            <div className="pa-empty-icon">
-              <span className="material-symbols-outlined">error</span>
-            </div>
-            <h3 className="pa-empty-title">INVALID ORGANIZATION ID</h3>
-            <p className="pa-empty-text">The organization ID in the URL is invalid.</p>
+        <div style={{
+          background: 'var(--pa-n0)',
+          borderRadius: 'var(--pa-radius-m)',
+          boxShadow: 'var(--pa-shadow-1)',
+          padding: 'var(--pa-space-9)',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: '48px', color: 'var(--pa-n500)', marginBottom: 'var(--pa-space-4)' }}>
+            <span className="material-symbols-outlined">error</span>
           </div>
+          <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--pa-n900)', marginBottom: 'var(--pa-space-2)', fontFamily: 'var(--pa-font-body)' }}>INVALID ORGANIZATION ID</h3>
+          <p style={{ fontSize: '14px', color: 'var(--pa-n600)', fontFamily: 'var(--pa-font-body)' }}>The organization ID in the URL is invalid.</p>
         </div>
       </div>
     )
@@ -303,37 +334,72 @@ export default function OrganizationDetail() {
   // Not found or error state
   if (!organization || error) {
     return (
-      <div>
+      <div style={{ padding: 'var(--pa-space-6) var(--pa-space-8)', background: 'var(--pa-surface-page)' }}>
         <button
-          className="pa-btn pa-btn--ghost pa-mb-4"
           onClick={() => navigate('/platform-admin/organizations')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--pa-space-2)',
+            padding: 'var(--pa-space-3) var(--pa-space-5)',
+            background: 'transparent',
+            color: 'var(--pa-theme-action-primary)',
+            border: '1px solid var(--pa-n200)',
+            borderRadius: 'var(--pa-radius-s)',
+            fontSize: '14px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            marginBottom: 'var(--pa-space-5)',
+            transition: 'background-color 150ms ease',
+            fontFamily: 'var(--pa-font-body)',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--pa-n50)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
         >
-          <span className="material-symbols-outlined">arrow_back</span>
+          <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_back</span>
           Back to Organizations
         </button>
-        <div className="pa-card">
-          <div className="pa-empty">
-            <div className="pa-empty-icon">
-              <span className="material-symbols-outlined">apartment</span>
-            </div>
-            <h3 className="pa-empty-title">ORGANIZATION NOT FOUND</h3>
-            <p className="pa-empty-text">
-              {error || 'The organization you\'re looking for doesn\'t exist.'}
+        <div style={{
+          background: 'var(--pa-n0)',
+          borderRadius: 'var(--pa-radius-m)',
+          boxShadow: 'var(--pa-shadow-1)',
+          padding: 'var(--pa-space-9)',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: '48px', color: 'var(--pa-n500)', marginBottom: 'var(--pa-space-4)' }}>
+            <span className="material-symbols-outlined">apartment</span>
+          </div>
+          <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--pa-n900)', marginBottom: 'var(--pa-space-2)', fontFamily: 'var(--pa-font-body)' }}>ORGANIZATION NOT FOUND</h3>
+          <p style={{ fontSize: '14px', color: 'var(--pa-n600)', marginBottom: 'var(--pa-space-4)', fontFamily: 'var(--pa-font-body)' }}>
+            {error || 'The organization you\'re looking for doesn\'t exist.'}
+          </p>
+          {isOffline && (
+            <p style={{ fontSize: '13px', color: 'var(--pa-n500)', marginBottom: 'var(--pa-space-4)', fontFamily: 'var(--pa-font-body)' }}>
+              You appear to be offline. Please reconnect and try again.
             </p>
-            {isOffline && (
-              <p className="pa-body-s pa-text-muted pa-mt-2">
-                You appear to be offline. Please reconnect and try again.
-              </p>
-            )}
-            <div className="pa-flex pa-gap-2 pa-mt-4" style={{ justifyContent: 'center' }}>
-              <button
-                className="pa-btn pa-btn--primary"
-                onClick={fetchOrganization}
-                disabled={isOffline}
-              >
-                Retry
-              </button>
-            </div>
+          )}
+          <div style={{ display: 'flex', gap: 'var(--pa-space-2)', justifyContent: 'center' }}>
+            <button
+              onClick={fetchOrganization}
+              disabled={isOffline}
+              style={{
+                padding: 'var(--pa-space-3) var(--pa-space-5)',
+                background: 'var(--pa-theme-action-primary)',
+                color: 'var(--pa-theme-text-on-action)',
+                border: 'none',
+                borderRadius: 'var(--pa-radius-s)',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: isOffline ? 'not-allowed' : 'pointer',
+                opacity: isOffline ? 0.6 : 1,
+                transition: 'background-color 150ms ease',
+                fontFamily: 'var(--pa-font-body)',
+              }}
+              onMouseEnter={(e) => !isOffline && (e.currentTarget.style.background = 'var(--pa-theme-action-hover)')}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'var(--pa-theme-action-primary)'}
+            >
+              Retry
+            </button>
           </div>
         </div>
       </div>
@@ -341,254 +407,481 @@ export default function OrganizationDetail() {
   }
 
   return (
-    <div>
+    <div style={{ background: 'var(--pa-surface-page)', minHeight: '100vh' }}>
       {/* Offline indicator */}
       {isOffline && (
         <div
-          className="pa-card pa-mb-4"
           style={{
             background: 'var(--pa-warning-bg)',
             border: '1px solid var(--pa-warning)',
-            padding: 'var(--pa-space-3)',
+            borderRadius: 'var(--pa-radius-m)',
+            padding: 'var(--pa-space-4)',
+            margin: 'var(--pa-space-6) var(--pa-space-8) var(--pa-space-4)',
+            boxShadow: 'var(--pa-shadow-1)',
           }}
         >
-          <div className="pa-flex pa-items-center pa-gap-2">
-            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-warning)' }}>
               wifi_off
             </span>
-            <span className="pa-body-s" style={{ color: 'var(--pa-n900)' }}>
+            <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--pa-n900)', fontFamily: 'var(--pa-font-body)' }}>
               You appear to be offline. Some features may not be available.
             </span>
           </div>
         </div>
       )}
 
-      {/* Header */}
-      <div className="pa-flex pa-items-center pa-gap-3 pa-mb-5">
-        <button
-          className="pa-btn pa-btn--ghost"
-          onClick={() => navigate('/platform-admin/organizations')}
-          style={{ padding: '8px' }}
-          title="Back to Organizations"
-        >
-          <span className="material-symbols-outlined">arrow_back</span>
-        </button>
-        <span className="material-symbols-outlined" style={{ fontSize: '32px', color: 'var(--pa-blue)' }}>
-          apartment
-        </span>
-        <div style={{ flex: 1 }}>
-          <h1 className="pa-h1" style={{ marginBottom: '4px' }}>{organization.name}</h1>
-          <div className="pa-flex pa-gap-2 pa-flex-wrap">
-            <Badge variant={getStatusVariant(organization.status)}>{organization.status}</Badge>
-            {organization.org_type && (
-              <Badge variant="neutral">{organization.org_type}</Badge>
-            )}
-            {organization.license_plan && (
-              <Badge variant="info">{organization.license_plan}</Badge>
-            )}
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="pa-flex pa-gap-2">
-          <Button
-            variant="ghost"
-            size="compact"
-            icon="confirmation_number"
-            onClick={() => navigate(getLink('platformAdmin.ticketing.organization', { id: organization.id }))}
-            title="View this org's ticketing dashboard"
-          >
-            Ticketing
-          </Button>
-          {/* Export Menu */}
-          <div style={{ position: 'relative' }}>
-            <Button
-              variant="blue"
-              size="compact"
-              icon="download"
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              disabled={exporting}
+      {/* Profile Header Section */}
+      <div style={{
+        background: 'var(--pa-n0)',
+        borderBottom: '1px solid var(--pa-n100)',
+        padding: 'var(--pa-space-8) var(--pa-space-8) var(--pa-space-6)',
+      }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          {/* Back button and breadcrumb */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-4)', marginBottom: 'var(--pa-space-6)' }}>
+            <button
+              onClick={() => navigate('/platform-admin/organizations')}
+              style={{ 
+                padding: 'var(--pa-space-2)',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                borderRadius: 'var(--pa-radius-s)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'background-color 150ms ease',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--pa-n50)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              title="Back to Organizations"
             >
-              {exporting ? 'Exporting...' : 'Export'}
-            </Button>
-            {showExportMenu && (
-              <div
-                className="pa-card"
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  right: 0,
-                  marginTop: '8px',
-                  zIndex: 100,
-                  minWidth: '200px',
-                  boxShadow: 'var(--pa-shadow-2)',
-                }}
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <button
-                    className="pa-btn pa-btn--ghost"
-                    onClick={() => handleExport('csv')}
-                    style={{ justifyContent: 'flex-start' }}
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>table_chart</span>
-                    Export as CSV
-                  </button>
-                  <button
-                    className="pa-btn pa-btn--ghost"
-                    onClick={() => handleExport('json')}
-                    style={{ justifyContent: 'flex-start' }}
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>code</span>
-                    Export as JSON
-                  </button>
+              <span className="material-symbols-outlined" style={{ fontSize: '24px', color: 'var(--pa-n500)' }}>arrow_back</span>
+            </button>
+            <div style={{ fontSize: '13px', color: 'var(--pa-n500)', fontFamily: 'var(--pa-font-body)' }}>
+              Organizations <span style={{ margin: '0 var(--pa-space-1)' }}>/</span> Organization details
+            </div>
+          </div>
+
+          {/* Profile Header Content */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--pa-space-6)', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {/* Organization Name */}
+              <h1 style={{ 
+                fontSize: '32px', 
+                fontWeight: 700, 
+                color: 'var(--pa-n900)',
+                margin: 0,
+                marginBottom: 'var(--pa-space-3)',
+                fontFamily: 'var(--pa-font-display)',
+                letterSpacing: '-0.02em',
+              }}>
+                {organization.name}
+              </h1>
+
+              {/* Organization ID and Domain */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-4)', flexWrap: 'wrap', marginBottom: 'var(--pa-space-4)' }}>
+                <div style={{
+                  padding: 'var(--pa-space-1) var(--pa-space-3)',
+                  borderRadius: 'var(--pa-radius-pill)',
+                  background: 'var(--pa-n50)',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  color: 'var(--pa-n600)',
+                  fontFamily: 'var(--pa-font-mono)',
+                }}>
+                  {organization.id}
                 </div>
+                {organization.slug && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)', fontSize: '13px', color: 'var(--pa-n500)', fontFamily: 'var(--pa-font-body)' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>verified</span>
+                    {organization.slug}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {organization.status !== 'active' && (
-            <button
-              className="pa-btn pa-btn--primary pa-btn--compact"
-              disabled={!permissions.canActivateOrganization || isOffline}
-              onClick={() => {
-                resetDialog() // Clear any stale state
-                setConfirmDialog({ open: true, type: 'activate' })
-              }}
-              title={
-                !permissions.canActivateOrganization
-                  ? 'You do not have permission to activate organizations'
-                  : isOffline
-                  ? 'Offline - action unavailable'
-                  : 'Activate organization'
-              }
-              style={{ background: 'var(--pa-success)' }}
-            >
-              <span className="material-symbols-outlined">play_arrow</span>
-              Activate
-            </button>
-          )}
-          {organization.status !== 'suspended' && (
-            <button
-              className="pa-btn pa-btn--secondary pa-btn--compact"
-              disabled={!permissions.canSuspendOrganization || isOffline}
-              onClick={() => {
-                resetDialog() // Clear any stale state
-                setConfirmDialog({ open: true, type: 'suspend' })
-              }}
-              title={
-                !permissions.canSuspendOrganization
-                  ? 'You do not have permission to suspend organizations'
-                  : isOffline
-                  ? 'Offline - action unavailable'
-                  : 'Suspend organization'
-              }
-              style={{ color: 'var(--pa-danger)', borderColor: 'var(--pa-danger)' }}
-            >
-              <span className="material-symbols-outlined">block</span>
-              Suspend
-            </button>
-          )}
-          {organization?.id && isMockOrganization(organization.id) && permissions.canResetMockOrganization && (
-            <button
-              className="pa-btn pa-btn--secondary pa-btn--compact"
-              disabled={isOffline || dialogLoading}
-              onClick={() => {
-                resetDialog()
-                setConfirmDialog({ open: true, type: 'reset' })
-              }}
-              title={
-                isOffline
-                  ? 'Offline - action unavailable'
-                  : 'Reset this mock organization to empty state (re-run seed-all.ts to repopulate)'
-              }
-              style={{ color: 'var(--pa-danger)', borderColor: 'var(--pa-danger)' }}
-            >
-              <span className="material-symbols-outlined">restart_alt</span>
-              Reset to Seed State
-            </button>
-          )}
+              {/* Status Badges */}
+              <div style={{ display: 'flex', gap: 'var(--pa-space-2)', flexWrap: 'wrap', alignItems: 'center' }}>
+                {organization.status === 'active' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--pa-success)' }} />
+                    <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--pa-n700)', fontFamily: 'var(--pa-font-body)' }}>Active</span>
+                  </div>
+                )}
+                {organization.org_type && (
+                  <div style={{
+                    padding: 'var(--pa-space-1) var(--pa-space-3)',
+                    borderRadius: 'var(--pa-radius-pill)',
+                    background: 'var(--pa-n100)',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    color: 'var(--pa-n600)',
+                    fontFamily: 'var(--pa-font-body)',
+                  }}>
+                    {organization.org_type}
+                  </div>
+                )}
+                {organization.tier_name && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--pa-theme-action-primary)' }} />
+                    <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--pa-n700)', fontFamily: 'var(--pa-font-body)' }}>{organization.tier_name}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: 'var(--pa-space-3)', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => navigate(getLink('platformAdmin.ticketing.organization', { id: organization.id }))}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--pa-space-2)',
+                  padding: 'var(--pa-space-3) var(--pa-space-5)',
+                  background: 'var(--pa-theme-action-primary)',
+                  color: 'var(--pa-theme-text-on-action)',
+                  border: 'none',
+                  borderRadius: 'var(--pa-radius-s)',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'background-color 150ms ease',
+                  fontFamily: 'var(--pa-font-body)',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--pa-theme-action-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--pa-theme-action-primary)'}
+                title="View this org's ticketing dashboard"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>confirmation_number</span>
+                Ticketing
+              </button>
+              {/* Export Menu */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  disabled={exporting}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--pa-space-2)',
+                    padding: 'var(--pa-space-3) var(--pa-space-5)',
+                    background: 'transparent',
+                    color: 'var(--pa-theme-action-primary)',
+                    border: '1px solid var(--pa-n200)',
+                    borderRadius: 'var(--pa-radius-s)',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: exporting ? 'not-allowed' : 'pointer',
+                    transition: 'background-color 150ms ease',
+                    opacity: exporting ? 0.6 : 1,
+                    fontFamily: 'var(--pa-font-body)',
+                  }}
+                  onMouseEnter={(e) => !exporting && (e.currentTarget.style.background = 'var(--pa-n50)')}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>download</span>
+                  {exporting ? 'Exporting...' : 'Export'}
+                </button>
+                {showExportMenu && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      marginTop: 'var(--pa-space-2)',
+                      zIndex: 100,
+                      minWidth: '200px',
+                      background: 'var(--pa-n0)',
+                      borderRadius: 'var(--pa-radius-m)',
+                      boxShadow: 'var(--pa-shadow-2)',
+                      padding: 'var(--pa-space-2)',
+                      border: '1px solid var(--pa-n100)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--pa-space-1)' }}>
+                      <button
+                        onClick={() => handleExport('csv')}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 'var(--pa-space-2)',
+                          padding: 'var(--pa-space-2) var(--pa-space-3)',
+                          background: 'transparent',
+                          border: 'none',
+                          borderRadius: 'var(--pa-radius-xs)',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          color: 'var(--pa-n900)',
+                          cursor: 'pointer',
+                          justifyContent: 'flex-start',
+                          transition: 'background-color 150ms ease',
+                          fontFamily: 'var(--pa-font-body)',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--pa-n50)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>table_chart</span>
+                        Export as CSV
+                      </button>
+                      <button
+                        onClick={() => handleExport('json')}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 'var(--pa-space-2)',
+                          padding: 'var(--pa-space-2) var(--pa-space-3)',
+                          background: 'transparent',
+                          border: 'none',
+                          borderRadius: 'var(--pa-radius-xs)',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                          color: 'var(--pa-n900)',
+                          cursor: 'pointer',
+                          justifyContent: 'flex-start',
+                          transition: 'background-color 150ms ease',
+                          fontFamily: 'var(--pa-font-body)',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--pa-n50)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>code</span>
+                        Export as JSON
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {organization.status !== 'active' && (
+                <button
+                  disabled={!permissions.canActivateOrganization || isOffline}
+                  onClick={() => {
+                    resetDialog()
+                    setConfirmDialog({ open: true, type: 'activate' })
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--pa-space-2)',
+                    padding: 'var(--pa-space-3) var(--pa-space-5)',
+                    background: 'var(--pa-success)',
+                    color: 'var(--pa-n0)',
+                    border: 'none',
+                    borderRadius: 'var(--pa-radius-s)',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: (!permissions.canActivateOrganization || isOffline) ? 'not-allowed' : 'pointer',
+                    opacity: (!permissions.canActivateOrganization || isOffline) ? 0.6 : 1,
+                    transition: 'background-color 150ms ease',
+                    fontFamily: 'var(--pa-font-body)',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!(!permissions.canActivateOrganization || isOffline)) {
+                      e.currentTarget.style.background = 'var(--pa-n700)'
+                    }
+                  }}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'var(--pa-success)'}
+                  title={
+                    !permissions.canActivateOrganization
+                      ? 'You do not have permission to activate organizations'
+                      : isOffline
+                      ? 'Offline - action unavailable'
+                      : 'Activate organization'
+                  }
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>play_arrow</span>
+                  Activate
+                </button>
+              )}
+              {organization.status !== 'suspended' && (
+                <button
+                  disabled={!permissions.canSuspendOrganization || isOffline}
+                  onClick={() => {
+                    resetDialog()
+                    setConfirmDialog({ open: true, type: 'suspend' })
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--pa-space-2)',
+                    padding: 'var(--pa-space-3) var(--pa-space-5)',
+                    background: 'var(--pa-danger-bg)',
+                    color: 'var(--pa-danger)',
+                    border: 'none',
+                    borderRadius: 'var(--pa-radius-s)',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: (!permissions.canSuspendOrganization || isOffline) ? 'not-allowed' : 'pointer',
+                    opacity: (!permissions.canSuspendOrganization || isOffline) ? 0.6 : 1,
+                    transition: 'background-color 150ms ease',
+                    fontFamily: 'var(--pa-font-body)',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!(!permissions.canSuspendOrganization || isOffline)) {
+                      e.currentTarget.style.background = 'var(--pa-n100)'
+                    }
+                  }}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'var(--pa-danger-bg)'}
+                  title={
+                    !permissions.canSuspendOrganization
+                      ? 'You do not have permission to suspend organizations'
+                      : isOffline
+                      ? 'Offline - action unavailable'
+                      : 'Suspend organization'
+                  }
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>block</span>
+                  Suspend
+                </button>
+              )}
+              {organization?.id && isMockOrganization(organization.id) && permissions.canResetMockOrganization && (
+                <button
+                  disabled={isOffline || dialogLoading}
+                  onClick={() => {
+                    resetDialog()
+                    setConfirmDialog({ open: true, type: 'reset' })
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--pa-space-2)',
+                    padding: 'var(--pa-space-3) var(--pa-space-5)',
+                    background: 'var(--pa-danger-bg)',
+                    color: 'var(--pa-danger)',
+                    border: 'none',
+                    borderRadius: 'var(--pa-radius-s)',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: (isOffline || dialogLoading) ? 'not-allowed' : 'pointer',
+                    opacity: (isOffline || dialogLoading) ? 0.6 : 1,
+                    transition: 'background-color 150ms ease',
+                    fontFamily: 'var(--pa-font-body)',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!(isOffline || dialogLoading)) {
+                      e.currentTarget.style.background = 'var(--pa-n100)'
+                    }
+                  }}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'var(--pa-danger-bg)'}
+                  title={
+                    isOffline
+                      ? 'Offline - action unavailable'
+                      : 'Reset this mock organization to empty state (re-run seed-all.ts to repopulate)'
+                  }
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>restart_alt</span>
+                  Reset to Seed State
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="pa-flex pa-gap-1 pa-mb-4" style={{ borderBottom: '1px solid var(--pa-n100)' }}>
-        {tabs.map((tab) => (
-          <button
-            key={tab.index}
-            className="pa-btn pa-btn--ghost"
-            onClick={() => setActiveTab(tab.index)}
-            style={{
-              borderRadius: 0,
-              borderBottom: activeTab === tab.index ? '2px solid var(--pa-n900)' : '2px solid transparent',
-              fontWeight: activeTab === tab.index ? 600 : 400,
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div style={{ 
+        background: 'var(--pa-n0)',
+        borderBottom: '1px solid var(--pa-n100)',
+        padding: '0 var(--pa-space-8)',
+      }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', gap: 0 }}>
+          {tabs.map((tab) => (
+            <button
+              key={tab.index}
+              onClick={() => setActiveTab(tab.index)}
+              style={{
+                padding: 'var(--pa-space-3) var(--pa-space-4)',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: activeTab === tab.index ? '2px solid var(--pa-theme-action-primary)' : '2px solid transparent',
+                fontSize: '14px',
+                fontWeight: 500,
+                color: activeTab === tab.index ? 'var(--pa-theme-action-primary)' : 'var(--pa-n500)',
+                cursor: 'pointer',
+                transition: 'color 150ms ease',
+                fontFamily: 'var(--pa-font-body)',
+              }}
+              onMouseEnter={(e) => activeTab !== tab.index && (e.currentTarget.style.color = 'var(--pa-n700)')}
+              onMouseLeave={(e) => activeTab !== tab.index && (e.currentTarget.style.color = 'var(--pa-n500)')}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Tab Content with Lazy Loading */}
-      {activeTab === 0 && (
-        <OverviewTab
-          organization={organization}
-          adminRole={adminRole}
-          onViewActivity={handleViewActivity}
-        />
-      )}
+      {/* Tab Content */}
+      <div style={{ padding: 'var(--pa-space-8)', maxWidth: '1400px', margin: '0 auto' }}>
+        {activeTab === 0 && (
+          <OverviewTab
+            organization={organization}
+            adminRole={adminRole}
+            onViewActivity={handleViewActivity}
+            onRefresh={fetchOrganization}
+          />
+        )}
 
-      {activeTab === 1 && (
-        <UsersTab organizationId={organization.id} adminRole={adminRole} />
-      )}
+        {activeTab === 1 && (
+          <UsersTab organizationId={organization.id} adminRole={adminRole} />
+        )}
 
-      {activeTab === 2 && (
-        <StructureTab organizationId={organization.id} />
-      )}
+        {activeTab === 2 && (
+          <StructureTab organizationId={organization.id} />
+        )}
 
-      {activeTab === 3 && (
-        <PaymentsTab organizationId={organization.id} adminRole={adminRole} />
-      )}
+        {activeTab === 3 && (
+          <PaymentsTab organizationId={organization.id} adminRole={adminRole} />
+        )}
 
-      {activeTab === 4 && (
-        <FeesTab organizationId={organization.id} />
-      )}
+        {activeTab === 4 && (
+          <FeesTab organizationId={organization.id} />
+        )}
 
-      {activeTab === 5 && (
-        <ActivityTab organizationId={organization.id} />
-      )}
+        {activeTab === 5 && (
+          <ActivityTab organizationId={organization.id} />
+        )}
 
-      {activeTab === 6 && (
-        <FeatureFlagsTab
-          organizationId={organization.id}
-          adminRole={adminRole}
-          onFlagToggled={fetchOrganization}
-        />
-      )}
+        {activeTab === 6 && (
+          <FeatureFlagsTab
+            organizationId={organization.id}
+            adminRole={adminRole}
+            onFlagToggled={fetchOrganization}
+          />
+        )}
+      </div>
 
       {/* Export Progress */}
       {exporting && progress && (
         <div
-          className="pa-card pa-mb-4"
           style={{
-            background: 'var(--pa-info-bg)',
-            border: '1px solid var(--pa-info)',
-            padding: 'var(--pa-space-3)',
+            position: 'fixed',
+            bottom: 'var(--pa-space-6)',
+            right: 'var(--pa-space-6)',
+            background: 'var(--pa-n0)',
+            border: '1px solid var(--pa-n100)',
+            borderRadius: 'var(--pa-radius-m)',
+            padding: 'var(--pa-space-4)',
+            boxShadow: 'var(--pa-shadow-2)',
+            minWidth: '300px',
+            zIndex: 1000,
           }}
         >
-          <div className="pa-flex pa-items-center pa-justify-between">
-            <div className="pa-flex pa-items-center pa-gap-2" style={{ flex: 1 }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--pa-space-4)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-3)', flex: 1 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--pa-theme-action-primary)' }}>
                 download
               </span>
               <div style={{ flex: 1 }}>
-                <div className="pa-body-m" style={{ marginBottom: '4px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--pa-n900)', marginBottom: 'var(--pa-space-2)', fontFamily: 'var(--pa-font-body)' }}>
                   {progress.message} ({progress.progress}%)
                 </div>
                 <div
                   style={{
                     width: '100%',
                     height: '4px',
-                    background: 'var(--pa-n200)',
+                    background: 'var(--pa-n100)',
                     borderRadius: '2px',
                     overflow: 'hidden',
                   }}
@@ -597,16 +890,32 @@ export default function OrganizationDetail() {
                     style={{
                       width: `${progress.progress}%`,
                       height: '100%',
-                      background: 'var(--pa-primary)',
+                      background: 'var(--pa-theme-action-primary)',
                       transition: 'width 0.3s ease',
                     }}
                   />
                 </div>
               </div>
             </div>
-            <Button variant="ghost" size="dense" onClick={cancelExport}>
+            <button
+              onClick={cancelExport}
+              style={{
+                padding: 'var(--pa-space-2)',
+                background: 'transparent',
+                color: 'var(--pa-n600)',
+                border: 'none',
+                borderRadius: 'var(--pa-radius-xs)',
+                fontSize: '12px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'background-color 150ms ease',
+                fontFamily: 'var(--pa-font-body)',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--pa-n50)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            >
               Cancel
-            </Button>
+            </button>
           </div>
         </div>
       )}

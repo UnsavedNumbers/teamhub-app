@@ -24,13 +24,40 @@ export type FeatureKey =
     | 'announcements'
     | 'dashboard'
     | 'event_scheduling'
+    | 'facilities_detail'
+    | 'facilities_list'
+    | 'facilities_schedule'
     | 'fee_management'
+    | 'invitations'
     | 'messaging'
     | 'multi_role_support'
     | 'onboarding'
     | 'organization_settings'
     | 'payment_processing'
+    | 'photos_create'
+    | 'photos_detail'
+    | 'photos_gallery'
+    | 'photos_gallery_manage'
+    | 'photos_list'
+    | 'photos_photo'
     | 'registration_forms'
+    | 'reports_builder'
+    | 'reports_domain_communications'
+    | 'reports_domain_operations'
+    | 'reports_domain_participation'
+    | 'reports_domain_payments'
+    | 'reports_domain_scheduling'
+    | 'reports_domain_travel'
+    | 'reports_domain_uniforms'
+    | 'reports_events'
+    | 'reports_exports'
+    | 'reports_overview'
+    | 'reports_registration'
+    | 'reports_saved'
+    | 'reports_schedules'
+    | 'reports_ticketing'
+    | 'reports_video'
+    | 'reports_viewer'
     | 'roster_management'
     | 'settings'
     | 'stripe_integration'
@@ -40,7 +67,9 @@ export type FeatureKey =
     | 'travel_planning'
     | 'trialexpired'
     | 'tryouts'
-    | 'uniform_orders';
+    | 'uniform_orders'
+    | 'videos_detail'
+    | 'videos_list';
 
 // ============================================================================
 // Feature Key Set (runtime validation)
@@ -51,13 +80,40 @@ export const VALID_FEATURE_KEYS: ReadonlySet<string> = new Set([
     'announcements',
     'dashboard',
     'event_scheduling',
+    'facilities_detail',
+    'facilities_list',
+    'facilities_schedule',
     'fee_management',
+    'invitations',
     'messaging',
     'multi_role_support',
     'onboarding',
     'organization_settings',
     'payment_processing',
+    'photos_create',
+    'photos_detail',
+    'photos_gallery',
+    'photos_gallery_manage',
+    'photos_list',
+    'photos_photo',
     'registration_forms',
+    'reports_builder',
+    'reports_domain_communications',
+    'reports_domain_operations',
+    'reports_domain_participation',
+    'reports_domain_payments',
+    'reports_domain_scheduling',
+    'reports_domain_travel',
+    'reports_domain_uniforms',
+    'reports_events',
+    'reports_exports',
+    'reports_overview',
+    'reports_registration',
+    'reports_saved',
+    'reports_schedules',
+    'reports_ticketing',
+    'reports_video',
+    'reports_viewer',
     'roster_management',
     'settings',
     'stripe_integration',
@@ -68,6 +124,8 @@ export const VALID_FEATURE_KEYS: ReadonlySet<string> = new Set([
     'trialexpired',
     'tryouts',
     'uniform_orders',
+    'videos_detail',
+    'videos_list',
 ]);
 
 // ============================================================================
@@ -104,6 +162,36 @@ export const FEATURE_KEY_METADATA: ReadonlyMap<FeatureKey, FeatureKeyMetadata> =
     ['trialexpired', { key: 'trialexpired', displayName: 'Trial Expired', category: 'Admin & Permissions', gateAction: 'overlay', rolloutStatus: 'live' }],
     ['tryouts', { key: 'tryouts', displayName: 'Tryouts', category: 'Tryouts', gateAction: 'overlay', rolloutStatus: 'live' }],
     ['uniform_orders', { key: 'uniform_orders', displayName: 'Uniform Orders', category: 'Uniforms & Gear', gateAction: 'hide', rolloutStatus: 'hidden' }],
+    // Registry-only keys (metadata placeholders until DB sync)
+    ['facilities_list', { key: 'facilities_list', displayName: 'Facilities List', category: 'Facilities', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['facilities_detail', { key: 'facilities_detail', displayName: 'Facilities Detail', category: 'Facilities', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['facilities_schedule', { key: 'facilities_schedule', displayName: 'Facilities Schedule', category: 'Facilities', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['invitations', { key: 'invitations', displayName: 'Invitations', category: 'Admin & Permissions', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['photos_list', { key: 'photos_list', displayName: 'Photos List', category: 'Photos', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['photos_create', { key: 'photos_create', displayName: 'Photos Create', category: 'Photos', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['photos_detail', { key: 'photos_detail', displayName: 'Photos Detail', category: 'Photos', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['photos_photo', { key: 'photos_photo', displayName: 'Photos Photo', category: 'Photos', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['photos_gallery', { key: 'photos_gallery', displayName: 'Photos Gallery', category: 'Photos', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['photos_gallery_manage', { key: 'photos_gallery_manage', displayName: 'Photos Gallery Manage', category: 'Photos', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_overview', { key: 'reports_overview', displayName: 'Reports Overview', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_builder', { key: 'reports_builder', displayName: 'Reports Builder', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_saved', { key: 'reports_saved', displayName: 'Reports Saved', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_exports', { key: 'reports_exports', displayName: 'Reports Exports', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_schedules', { key: 'reports_schedules', displayName: 'Reports Schedules', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_viewer', { key: 'reports_viewer', displayName: 'Reports Viewer', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_ticketing', { key: 'reports_ticketing', displayName: 'Reports Ticketing', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_registration', { key: 'reports_registration', displayName: 'Reports Registration', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_video', { key: 'reports_video', displayName: 'Reports Video', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_events', { key: 'reports_events', displayName: 'Reports Events', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_domain_participation', { key: 'reports_domain_participation', displayName: 'Reports Domain Participation', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_domain_payments', { key: 'reports_domain_payments', displayName: 'Reports Domain Payments', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_domain_scheduling', { key: 'reports_domain_scheduling', displayName: 'Reports Domain Scheduling', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_domain_travel', { key: 'reports_domain_travel', displayName: 'Reports Domain Travel', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_domain_uniforms', { key: 'reports_domain_uniforms', displayName: 'Reports Domain Uniforms', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_domain_communications', { key: 'reports_domain_communications', displayName: 'Reports Domain Communications', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['reports_domain_operations', { key: 'reports_domain_operations', displayName: 'Reports Domain Operations', category: 'Reports', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['videos_list', { key: 'videos_list', displayName: 'Videos List', category: 'Videos', gateAction: 'overlay', rolloutStatus: 'live' }],
+    ['videos_detail', { key: 'videos_detail', displayName: 'Videos Detail', category: 'Videos', gateAction: 'overlay', rolloutStatus: 'live' }],
 ]);
 
 /**

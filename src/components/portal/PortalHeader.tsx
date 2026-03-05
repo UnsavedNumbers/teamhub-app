@@ -1,5 +1,3 @@
-import PortalNav from './PortalNav'
-
 interface PortalHeaderProps {
   /**
    * Override the auto-detected role for navigation display.
@@ -10,13 +8,9 @@ interface PortalHeaderProps {
 
 /**
  * PortalHeader - Main header component for the portal
- * 
- * This component wraps PortalNav which provides:
- * - Role-based mega menu navigation
- * - Organization Admin, Coach, and Parent views
- * - Glass-style design with theme support
- * - Full accessibility features
+ *
+ * NOTE: PortalNav is currently hidden but code is kept for potential repurposing as a secondary menu.
  */
-export default function PortalHeader({ forceRole }: PortalHeaderProps) {
-  return <PortalNav forceRole={forceRole} />
+export default function PortalHeader({ forceRole: _forceRole }: PortalHeaderProps) {
+  return null
 }

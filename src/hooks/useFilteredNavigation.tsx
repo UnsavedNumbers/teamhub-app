@@ -38,6 +38,8 @@ export interface FilteredNavigationItem extends NavigationItem {
     gateAction?: GateAction | null;
     /** Localized message explaining why feature is unavailable */
     gateMessage?: string;
+    /** Reason code from feature gate (for upgrade prompt, icon, etc.) */
+    reasonCode?: string | null;
     /** Whether the item should be shown as gated (overlay/tooltip) */
     isGated?: boolean;
 }
@@ -153,14 +155,18 @@ export function useFilteredNavigation(
                             disabled: true,
                             gateAction: gate.gate_action,
                             gateMessage: getReasonMessage(gate.reason_code as ReasonCode),
+                            reasonCode: gate.reason_code,
+                            featureKey: featureKey,
                             isGated: true,
                         });
                     } else {
-                        // Show with gate indicator
+                        // Show with gate indicator (modal, overlay, etc.)
                         filteredItems.push({
                             ...item,
                             gateAction: gate.gate_action,
                             gateMessage: getReasonMessage(gate.reason_code as ReasonCode),
+                            reasonCode: gate.reason_code,
+                            featureKey: featureKey,
                             isGated: true,
                         });
                     }

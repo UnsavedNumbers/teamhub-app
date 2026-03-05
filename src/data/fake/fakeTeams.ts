@@ -429,6 +429,15 @@ export const fakePrograms: FakeProgram[] = [
         // Deprecated mapping
         age_min: 5,
         age_max: 14,
+        // New enhancement fields
+        is_public: true,
+        activity_start_date: getDateInCurrentYear(3, 1),
+        activity_end_date: getDateInCurrentYear(6, 30),
+        registration_start_date: getDateInCurrentYear(2, 1),
+        registration_end_date: getDateInCurrentYear(2, 28),
+        program_code: 'SOCCER-REC',
+        sponsor: null,
+        default_location_id: null,
     },
     {
         id: PROGRAM_SOCCER_COMP_ID,
@@ -442,6 +451,15 @@ export const fakePrograms: FakeProgram[] = [
         deleted_at: null,
         age_min: 8,
         age_max: 18,
+        // New enhancement fields
+        is_public: true,
+        activity_start_date: getDateInCurrentYear(9, 1),
+        activity_end_date: getDateInCurrentYear(12, 15),
+        registration_start_date: getDateInCurrentYear(8, 1),
+        registration_end_date: getDateInCurrentYear(8, 31),
+        program_code: 'SOCCER-COMP',
+        sponsor: 'Local Sports Foundation',
+        default_location_id: null,
     },
     {
         id: PROGRAM_BASKETBALL_REC_ID,
@@ -455,6 +473,15 @@ export const fakePrograms: FakeProgram[] = [
         deleted_at: null,
         age_min: 6,
         age_max: 14,
+        // New enhancement fields
+        is_public: false,
+        activity_start_date: getDateInCurrentYear(10, 1),
+        activity_end_date: getDateInCurrentYear(12, 20),
+        registration_start_date: getDateInCurrentYear(9, 1),
+        registration_end_date: getDateInCurrentYear(9, 30),
+        program_code: 'BBALL-REC',
+        sponsor: null,
+        default_location_id: null,
     },
     {
         id: PROGRAM_BASKETBALL_ELITE_ID,
@@ -468,6 +495,15 @@ export const fakePrograms: FakeProgram[] = [
         deleted_at: null,
         age_min: 10,
         age_max: 18,
+        // New enhancement fields
+        is_public: true,
+        activity_start_date: getDateInCurrentYear(11, 1),
+        activity_end_date: getDateInCurrentYear(2, 28),
+        registration_start_date: getDateInCurrentYear(10, 1),
+        registration_end_date: getDateInCurrentYear(10, 31),
+        program_code: 'BBALL-ELITE',
+        sponsor: 'Elite Sports Academy',
+        default_location_id: null,
     },
 ]
 
@@ -650,13 +686,22 @@ export const fakeTeams: FakeTeam[] = [
     },
 ]
 
+// Helper to determine if a season is currently active based on dates
+const isSeasonActive = (startDate: string, endDate: string): boolean => {
+    const now = new Date()
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    return start <= now && now <= end
+}
+
+
 export const fakeSeasons: FakeSeason[] = [
     {
         id: SEASON_SPRING_CURRENT_ID,
         org_id: DEMO_ORG_A_ID,
         name: getSpringSeasonName(),
         ...getSpringSeasonDates(),
-        is_active: true,
+        is_active: isSeasonActive(getSpringSeasonDates().start_date, getSpringSeasonDates().end_date),
         created_at: `${getCurrentYear()}-01-15T00:00:00Z`,
         updated_at: `${getCurrentYear()}-03-01T00:00:00Z`,
     },
@@ -665,7 +710,7 @@ export const fakeSeasons: FakeSeason[] = [
         org_id: DEMO_ORG_A_ID,
         name: getFallSeasonName(),
         ...getFallSeasonDates(),
-        is_active: false,
+        is_active: isSeasonActive(getFallSeasonDates().start_date, getFallSeasonDates().end_date),
         created_at: `${getPreviousYear()}-07-01T00:00:00Z`,
         updated_at: `${getPreviousYear()}-12-15T00:00:00Z`,
     },
@@ -674,7 +719,7 @@ export const fakeSeasons: FakeSeason[] = [
         org_id: DEMO_ORG_A_ID,
         name: getFallUpcomingSeasonName(),
         ...getFallUpcomingSeasonDates(),
-        is_active: false, // Upcoming season is not yet active
+        is_active: isSeasonActive(getFallUpcomingSeasonDates().start_date, getFallUpcomingSeasonDates().end_date),
         created_at: `${getCurrentYear()}-06-01T00:00:00Z`,
         updated_at: `${getCurrentYear()}-06-01T00:00:00Z`,
     },
@@ -706,15 +751,22 @@ export const fakeTeamMembers: FakeTeamMember[] = [
     { id: 'tm-009', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_ETHAN_WILLIAMS_ID, role: 'player', status: 'active', jersey_number: '3', position: 'Center', joined_at: getDateInCurrentYear(2, 12), created_at: getDateInCurrentYear(2, 12), updated_at: getDateInCurrentYear(2, 12) },
 
     { id: 'tm-010', team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_ISABELLA_RODRIGUEZ_ID, role: 'player', status: 'active', jersey_number: '17', position: 'Guard', joined_at: getDateInCurrentYear(2, 15), created_at: getDateInCurrentYear(2, 15), updated_at: getDateInCurrentYear(2, 15) },
+
+    // U14 Elite Soccer Team (for demo coach)
+    { id: 'tm-011', team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_EMMA_JOHNSON_ID, role: 'captain', status: 'active', jersey_number: '9', position: 'Forward', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
+    { id: 'tm-012', team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_OLIVIA_SMITH_ID, role: 'player', status: 'active', jersey_number: '11', position: 'Midfielder', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
+    { id: 'tm-013', team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_MASON_RODRIGUEZ_ID, role: 'player', status: 'active', jersey_number: '6', position: 'Defender', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
 ]
 
 export const fakeCoachAssignments: FakeCoachAssignment[] = [
     { id: 'ca-001', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: COACH_ONLY_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 1) },
     { id: 'ca-002', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: COACH_ONLY_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 1) },
-    { id: 'ca-003', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: PARENT_COACH_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 10) },
-    { id: 'ca-004', team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_MARTINEZ_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 15) },
-    { id: 'ca-005', team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_THOMPSON_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 1) },
-    { id: 'ca-006', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_MARTINEZ_ID, role: 'assistant_coach', created_at: getDateInCurrentYear(2, 5) },
+    { id: 'ca-003', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: COACH_ONLY_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 5) }, // Demo coach gets basketball team too
+    { id: 'ca-004', team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: COACH_ONLY_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 8) }, // Demo coach gets elite team too
+    { id: 'ca-005', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: PARENT_COACH_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 10) },
+    { id: 'ca-006', team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_MARTINEZ_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 15) },
+    { id: 'ca-007', team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_THOMPSON_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 1) },
+    { id: 'ca-008', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_MARTINEZ_ID, role: 'assistant_coach', created_at: getDateInCurrentYear(2, 5) },
 ]
 
 // ============================================================================

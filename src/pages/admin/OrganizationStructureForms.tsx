@@ -6,6 +6,8 @@ import { useT } from '../../i18n/useI18n'
 import { useOffline } from '../../hooks/useOffline'
 import { USE_FAKE_DATA } from '../../data/config'
 import { getSports, getSystemSports, getPrograms, createSport, createProgram, updateProgram, uploadSportIcon } from '../../data/services/sportsService'
+import { getVenuesForOrg } from '../../data/services/venueService'
+import { supabase } from '../../lib/supabase'
 import { getLevels } from '../../data/services/levelsService'
 import { createLevel, updateLevel } from '../../data/services/levelsService'
 import { getTeams, createTeam, updateTeam } from '../../data/services/teamsService'
@@ -20,6 +22,7 @@ import { CreateSeasonModal } from '../../components/admin/CreateSeasonModal'
 import { getNextLevel, getParentContextKey, getListPageRoute, getEntityLabelKey, type FormType, type PromptState, isValidPromptState, validateEntityExists } from '../../utils/hierarchyCreation'
 import { savePromptState, loadPromptState, clearPromptState } from '../../utils/sessionStorageHelpers'
 import { getLink } from '../../utils/routes'
+import { cn } from '../../utils/cn'
 import '../../styles/orgAdmin.css'
 
 interface RadioOption {
@@ -53,28 +56,29 @@ function RadioGroup({
 }) {
   return (
     <div className="oa-form-group">
-      <label className={`oa-label ${required ? 'oa-label--required' : ''}`}>{label}</label>
-      {helper && <div className="oa-helper">{helper}</div>}
-      <div className="oa-radio-group">
-        {options.map((option) => (
-          <label key={option.value} className="oa-radio-option">
-            <input
-              type="radio"
-              name={name}
-              value={option.value}
-              checked={value === option.value}
-              onChange={() => onChange(option.value)}
-            />
-            <div>
-              <div className="oa-body-m oa-radio-label">{option.label}</div>
-              {option.helper && (
-                <div className="oa-helper oa-radio-helper">{option.helper}</div>
-              )}
-            </div>
-          </label>
-        ))}
+      <div className="oa-radio-group-wrapper">
+        <span className={`oa-checkbox-label ${required ? 'oa-label--required' : ''}`}>{label}</span>
+        <div className="oa-radio-group">
+          {options.map((option) => (
+            <label key={option.value} className="oa-radio-option">
+              <input
+                type="radio"
+                name={name}
+                value={option.value}
+                checked={value === option.value}
+                onChange={() => onChange(option.value)}
+                className="oa-radio-input"
+              />
+              <span className="oa-radio-label">{option.label}</span>
+            </label>
+          ))}
+        </div>
       </div>
-      {error && <div className="oa-helper oa-helper--error">{error}</div>}
+      {(helper || error) && (
+        <div className={cn('oa-helper', error && 'oa-helper--error')}>
+          {error || helper}
+        </div>
+      )}
     </div>
   )
 }
@@ -127,7 +131,18 @@ export default function OrganizationStructureForms() {
     gender: '' as GenderCategory | '',
     name: '',
     nameTouched: false,
+    is_public: false,
+    activity_start_date: '',
+    activity_end_date: '',
+    registration_start_date: '',
+    registration_end_date: '',
+    program_code: '',
+    sponsor: '',
+    default_location_id: '',
   })
+  const [venues, setVenues] = useState<Array<{ id: string; name: string }>>([])
+  const [checkingProgramCode, setCheckingProgramCode] = useState(false)
+  const programCodeCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const [levelForm, setLevelForm] = useState({
     programId: '',
@@ -362,6 +377,22 @@ export default function OrganizationStructureForms() {
       isActive = false
     }
   }, [context, isReady, t])
+
+  // Load venues when program form is active
+  useEffect(() => {
+    if (!isReady || !context.orgId || activeFormType !== 'program') return
+
+    const loadVenues = async () => {
+      try {
+        const venuesList = await getVenuesForOrg(context.orgId)
+        setVenues(venuesList.map(v => ({ id: v.id, name: v.name })))
+      } catch (err) {
+        console.error('[OrganizationStructureForms] Error loading venues:', err)
+      }
+    }
+
+    loadVenues()
+  }, [isReady, context.orgId, activeFormType])
 
   // Restore prompt from sessionStorage after data is loaded
   useEffect(() => {
@@ -599,6 +630,14 @@ export default function OrganizationStructureForms() {
           gender: program.gender_category,
           name: program.name,
           nameTouched: true,
+          is_public: program.is_public ?? false,
+          activity_start_date: program.activity_start_date ? program.activity_start_date.split('T')[0] : '',
+          activity_end_date: program.activity_end_date ? program.activity_end_date.split('T')[0] : '',
+          registration_start_date: program.registration_start_date ? program.registration_start_date.split('T')[0] : '',
+          registration_end_date: program.registration_end_date ? program.registration_end_date.split('T')[0] : '',
+          program_code: program.program_code || '',
+          sponsor: program.sponsor || '',
+          default_location_id: program.default_location_id || '',
         }))
       }
     }
@@ -780,6 +819,27 @@ export default function OrganizationStructureForms() {
 
   const seasonRangeError = touched['season.endDate'] && seasonForm.startDate && seasonForm.endDate && seasonForm.endDate < seasonForm.startDate
     ? t('admin.structureForms.validation.seasonRangeInvalid')
+    : undefined
+
+  // Program form validation
+  const programActivityDateError = touched['program.activity_end_date'] && 
+    programForm.activity_start_date && programForm.activity_end_date && 
+    programForm.activity_end_date < programForm.activity_start_date
+    ? 'Activity end date must be after start date'
+    : undefined
+
+  const programRegistrationDateError = touched['program.registration_end_date'] && 
+    programForm.registration_start_date && programForm.registration_end_date && 
+    programForm.registration_end_date < programForm.registration_start_date
+    ? 'Registration end date must be after start date'
+    : undefined
+
+  const programRegistrationWithinActivityError = 
+    programForm.activity_start_date && programForm.activity_end_date &&
+    programForm.registration_start_date && programForm.registration_end_date &&
+    (programForm.registration_start_date < programForm.activity_start_date || 
+     programForm.registration_end_date > programForm.activity_end_date)
+    ? 'Registration dates must fall within activity dates'
     : undefined
 
   const canCreateProgram = !!programForm.sportId && !!programForm.gender && !!programForm.name.trim()
@@ -1302,6 +1362,112 @@ export default function OrganizationStructureForms() {
               ]}
               error={programGenderError}
             />
+
+            {/* Visibility Control */}
+            <Checkbox
+              label="Make program public"
+              checked={programForm.is_public}
+              onChange={(e) => setProgramForm((prev) => ({ ...prev, is_public: e.target.checked }))}
+              helper="When enabled, this program will be visible in public listings"
+            />
+
+            {/* Activity Dates */}
+            <div className="oa-grid oa-grid-2 oa-gap-4">
+              <DatePicker
+                label="Activity Start Date"
+                value={programForm.activity_start_date}
+                onChange={(e) => setProgramForm((prev) => ({ ...prev, activity_start_date: e.target.value }))}
+                onBlur={() => markTouched('program.activity_start_date')}
+                helper="When the program activities begin"
+              />
+              <DatePicker
+                label="Activity End Date"
+                value={programForm.activity_end_date}
+                onChange={(e) => setProgramForm((prev) => ({ ...prev, activity_end_date: e.target.value }))}
+                onBlur={() => markTouched('program.activity_end_date')}
+                error={programActivityDateError}
+                helper="When the program activities end (optional)"
+              />
+            </div>
+
+            {/* Registration Window Dates */}
+            <div className="oa-grid oa-grid-2 oa-gap-4">
+              <DatePicker
+                label="Registration Start Date"
+                value={programForm.registration_start_date}
+                onChange={(e) => setProgramForm((prev) => ({ ...prev, registration_start_date: e.target.value }))}
+                onBlur={() => markTouched('program.registration_start_date')}
+                helper="Earliest date registrations are accepted"
+              />
+              <DatePicker
+                label="Registration End Date"
+                value={programForm.registration_end_date}
+                onChange={(e) => setProgramForm((prev) => ({ ...prev, registration_end_date: e.target.value }))}
+                onBlur={() => markTouched('program.registration_end_date')}
+                error={programRegistrationDateError || programRegistrationWithinActivityError}
+                helper="Latest date registrations are accepted"
+              />
+            </div>
+
+            {/* Program Code & Sponsor */}
+            <div className="oa-grid oa-grid-2 oa-gap-4">
+              <Input
+                label="Program Code"
+                placeholder="e.g., SPR2024"
+                value={programForm.program_code}
+                onChange={(e) => {
+                  setProgramForm((prev) => ({ ...prev, program_code: e.target.value }))
+                  // Debounce uniqueness check
+                  if (programCodeCheckTimeoutRef.current) {
+                    clearTimeout(programCodeCheckTimeoutRef.current)
+                  }
+                  if (e.target.value.trim() && editType !== 'program' && context.orgId) {
+                    setCheckingProgramCode(true)
+                    programCodeCheckTimeoutRef.current = setTimeout(async () => {
+                      try {
+                        const { data: existing } = await supabase
+                          .from('programs')
+                          .select('id')
+                          .eq('org_id', context.orgId)
+                          .eq('program_code', e.target.value.trim())
+                          .maybeSingle()
+                        
+                        if (existing) {
+                          setActionError('Program code already exists. Please choose a different code.')
+                        }
+                      } catch (err) {
+                        // Silently fail - backend will catch it on submit
+                        console.error('[OrganizationStructureForms] Error checking program code:', err)
+                      } finally {
+                        setCheckingProgramCode(false)
+                      }
+                    }, 300)
+                  } else {
+                    setCheckingProgramCode(false)
+                  }
+                }}
+                helper={checkingProgramCode ? "Checking availability..." : "Optional unique identifier for reporting"}
+              />
+              <Input
+                label="Sponsor"
+                placeholder="Sponsor name"
+                value={programForm.sponsor}
+                onChange={(e) => setProgramForm((prev) => ({ ...prev, sponsor: e.target.value }))}
+                helper="Optional sponsor name"
+              />
+            </div>
+
+            {/* Default Location */}
+            <Select
+              label="Default Location"
+              value={programForm.default_location_id}
+              onChange={(e) => setProgramForm((prev) => ({ ...prev, default_location_id: e.target.value }))}
+              options={[
+                { value: '', label: 'No default location' },
+                ...venues.map(v => ({ value: v.id, label: v.name })),
+              ]}
+              helper="Default venue/facility for events in this program"
+            />
             
             <div className="oa-form-actions">
               <Button
@@ -1330,6 +1496,14 @@ export default function OrganizationStructureForms() {
                       name: programForm.name.trim(),
                       gender_category: programForm.gender as GenderCategory,
                       description: undefined,
+                      is_public: programForm.is_public,
+                      activity_start_date: programForm.activity_start_date || undefined,
+                      activity_end_date: programForm.activity_end_date || undefined,
+                      registration_start_date: programForm.registration_start_date || undefined,
+                      registration_end_date: programForm.registration_end_date || undefined,
+                      program_code: programForm.program_code.trim() || undefined,
+                      sponsor: programForm.sponsor.trim() || undefined,
+                      default_location_id: programForm.default_location_id || undefined,
                     })
                     if (result.error) {
                       setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.program }))
@@ -1344,6 +1518,14 @@ export default function OrganizationStructureForms() {
                       name: programForm.name.trim(),
                       gender_category: programForm.gender as GenderCategory,
                       description: undefined,
+                      is_public: programForm.is_public,
+                      activity_start_date: programForm.activity_start_date || undefined,
+                      activity_end_date: programForm.activity_end_date || undefined,
+                      registration_start_date: programForm.registration_start_date || undefined,
+                      registration_end_date: programForm.registration_end_date || undefined,
+                      program_code: programForm.program_code.trim() || undefined,
+                      sponsor: programForm.sponsor.trim() || undefined,
+                      default_location_id: programForm.default_location_id || undefined,
                     })
                     if (result.error) {
                       setActionError(t('admin.structureForms.errors.saveFailed', { item: formLabels.program }))
@@ -1362,6 +1544,14 @@ export default function OrganizationStructureForms() {
                         sportId: '',
                         gender: 'coed',
                         nameTouched: false,
+                        is_public: false,
+                        activity_start_date: '',
+                        activity_end_date: '',
+                        registration_start_date: '',
+                        registration_end_date: '',
+                        program_code: '',
+                        sponsor: '',
+                        default_location_id: '',
                       }))
                       
                       // Check if there's a next level and save prompt state

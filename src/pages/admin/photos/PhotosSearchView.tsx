@@ -21,7 +21,6 @@ import {
   type GalleryPhoto,
   type GalleryType 
 } from '@/data/services/galleryService'
-import { getMockGalleriesForOrg, getMockPhotosForGallery } from '@/data/fake/mockGalleries'
 import { getLink } from '@/utils/routes/helpers'
 import { usePagination } from '@/hooks/usePagination'
 import { useHideEmptyGalleries } from './useHideEmptyGalleries'
@@ -73,23 +72,6 @@ export function PhotosSearchView() {
     let mounted = true
     const load = async () => {
       if (!isReady || !context?.orgId) {
-        setLoading(false)
-        return
-      }
-
-      if (USE_FAKE_DATA) {
-        const mockGalleries = getMockGalleriesForOrg(context.orgId)
-        // Add photo counts for mock galleries
-        const galleriesWithCounts = mockGalleries.map(g => {
-          const photos = getMockPhotosForGallery(g.id)
-          return {
-            ...g,
-            photo_count: photos.filter(p => p.status === 'approved').length,
-            pending_count: photos.filter(p => p.status === 'pending').length,
-            cover_url: photos.find(p => p.id === g.cover_photo_id)?.storage_path || null,
-          }
-        })
-        setGalleries(galleriesWithCounts as Gallery[])
         setLoading(false)
         return
       }

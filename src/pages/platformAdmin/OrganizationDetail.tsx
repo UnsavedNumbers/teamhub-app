@@ -1,14 +1,17 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { Badge, Card, ConfirmDialog, PlatformDataTable, type ColumnConfig } from '../../components/platformAdmin'
 import { canPerformAction, getDeniedMessage } from '../../utils/platformAdminPermissions'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
-import { isValidUUID } from '../../utils/uuid'
+import { isValidUuid } from '../../utils/uuid'
 import { useAuth } from '../../hooks/useAuth'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
 import { USE_FAKE_DATA } from '../../data/config'
+import { upgradeOrgLicense } from '../../api/billing'
+import { getActiveTiers } from '../../data/services/licenseTiersService'
 import type { AdminRpcResponse } from '../../types/platformAdmin.types'
 import type { 
   AdminOrganization, 
@@ -41,6 +44,17 @@ export default function OrganizationDetail() {
     flagKey?: string
     currentEnabled?: boolean
   }>({ open: false, type: 'activate' })
+
+  // Tier change state
+  const [selectedTierId, setSelectedTierId] = useState<string>('')
+  const [tierChanging, setTierChanging] = useState(false)
+  const [tierChangeError, setTierChangeError] = useState<string | null>(null)
+
+  // Load all active tiers for the selector
+  const { data: activeTiers } = useQuery({
+    queryKey: ['active-tiers'],
+    queryFn: () => getActiveTiers(),
+  })
   const [dialogLoading, setDialogLoading] = useState(false)
   const [dialogError, setDialogError] = useState<string | null>(null)
   
@@ -66,7 +80,7 @@ export default function OrganizationDetail() {
   // Validate route parameter
   const isValidId = useMemo(() => {
     if (!id) return false
-    return isValidUUID(id)
+    return isValidUuid(id)
   }, [id])
 
   const fetchOrganization = useCallback(async () => {
@@ -137,6 +151,37 @@ export default function OrganizationDetail() {
   useEffect(() => {
     fetchOrganization()
   }, [fetchOrganization])
+
+  const handleTierChange = async () => {
+    if (!organization || !selectedTierId) return
+    if (selectedTierId === organization.current_tier_id) {
+      setTierChangeError('Organization is already on this tier.')
+      return
+    }
+
+    setTierChanging(true)
+    setTierChangeError(null)
+
+    try {
+      const result = await upgradeOrgLicense({
+        organizationId: organization.id,
+        targetTierId: selectedTierId,
+        allowDowngrade: true,
+      })
+
+      if (result.success) {
+        showSuccess(`Tier changed successfully.`)
+        setSelectedTierId('')
+        fetchOrganization()
+      } else {
+        setTierChangeError(result.message || 'Failed to change tier.')
+      }
+    } catch (err) {
+      setTierChangeError(getErrorMessage(err) || 'Failed to change tier.')
+    } finally {
+      setTierChanging(false)
+    }
+  }
 
   const handleConfirmAction = async (reason: string) => {
     if (!organization) return
@@ -425,8 +470,8 @@ export default function OrganizationDetail() {
             {organization.org_type && (
               <Badge variant="neutral">{organization.org_type}</Badge>
             )}
-            {organization.license_plan && (
-              <Badge variant="info">{organization.license_plan}</Badge>
+            {organization.tier_name && (
+              <Badge variant="info">{organization.tier_name}</Badge>
             )}
           </div>
         </div>
@@ -547,8 +592,56 @@ export default function OrganizationDetail() {
                 </div>
               </div>
               <div>
-                <div className="pa-caption pa-text-muted pa-mb-1">Plan</div>
-                <div className="pa-body-m">{organization.license_plan || '—'}</div>
+                <div className="pa-caption pa-text-muted pa-mb-1">Tier</div>
+                <div className="pa-body-m">{organization.tier_name || '—'}</div>
+              </div>
+              <div style={{ gridColumn: '1 / -1', borderTop: '1px solid var(--pa-border)', paddingTop: 'var(--pa-space-3)', marginTop: 'var(--pa-space-1)' }}>
+                <div className="pa-caption pa-text-muted pa-mb-2">Change Tier</div>
+                {organization.stripe_subscription_id ? (
+                  <>
+                    <div style={{ display: 'flex', gap: 'var(--pa-space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <select
+                        value={selectedTierId}
+                        onChange={(e) => { setSelectedTierId(e.target.value); setTierChangeError(null) }}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid var(--pa-border)',
+                          background: 'var(--pa-surface)',
+                          color: 'var(--pa-text-primary)',
+                          fontSize: '13px',
+                          minWidth: '160px',
+                        }}
+                      >
+                        <option value="">Select tier…</option>
+                        {(activeTiers ?? []).map(tier => (
+                          <option
+                            key={tier.id}
+                            value={tier.id}
+                            disabled={tier.id === organization.current_tier_id}
+                          >
+                            {tier.tier_name}{tier.id === organization.current_tier_id ? ' (current)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={handleTierChange}
+                        disabled={!selectedTierId || tierChanging || selectedTierId === organization.current_tier_id}
+                        className="pa-btn pa-btn--secondary"
+                        style={{ fontSize: '13px', padding: '6px 14px' }}
+                      >
+                        {tierChanging ? 'Changing…' : 'Apply'}
+                      </button>
+                    </div>
+                    {tierChangeError && (
+                      <p style={{ color: 'var(--pa-status-error)', fontSize: '12px', marginTop: '6px' }}>
+                        {tierChangeError}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="pa-caption pa-text-muted">No active Stripe subscription — tier changes require a subscription.</p>
+                )}
               </div>
               <div>
                 <div className="pa-caption pa-text-muted pa-mb-1">Trial Ends</div>

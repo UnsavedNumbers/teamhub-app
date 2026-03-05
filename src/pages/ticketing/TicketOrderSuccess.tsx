@@ -6,20 +6,31 @@
  * Design: ticket_mobile_entry (success banner)
  */
 
-import { useCallback, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getPublicOrderWithTickets, resendTickets, type PublicOrderResponse } from '@/data/services'
-import { useRouteLink } from '@/utils/routes'
+import { getLink, RouteKeys } from '@/utils/routes'
 import TicketCard from '@/components/ticketing/TicketCard'
-
+import { captureEvent } from '@/lib/analytics/analytics'
 import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+import { resolveTicketCheckoutRole } from '@/utils/ticketCheckoutRole'
+import { useOptionalAuth } from '@/hooks/useAuth'
 
 export default function TicketOrderSuccess() {
   useDebugLifecycle('TicketOrderSuccess')
   
   const { orderId } = useParams<{ orderId: string }>()
-  const myTicketsLink = useRouteLink('portal.myTickets')
+  const [searchParams] = useSearchParams()
+  const auth = useOptionalAuth()
+  const profileRoles = auth?.profile?.organizations?.flatMap((organization) => organization.roles ?? []) ?? []
+  const checkoutRole = resolveTicketCheckoutRole(searchParams.get('role'), {
+    profileRoles,
+    fallbackRole: 'guardian',
+  })
+  const myTicketsLink = checkoutRole === 'fan'
+    ? getLink(RouteKeys.FAN_TICKETS)
+    : getLink(RouteKeys.PORTAL_MY_TICKETS)
   const [isResending, setIsResending] = useState(false)
   const [resendMessage, setResendMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -62,6 +73,25 @@ export default function TicketOrderSuccess() {
     queryFn: () => getPublicOrderWithTickets(orderId!),
     enabled: !!orderId,
   })
+
+  const trackedOrderRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!orderId || !data?.order) return
+    const order = data.order
+    const paid = order.status === 'paid'
+    if (!paid) return
+    if (trackedOrderRef.current === orderId) return
+    trackedOrderRef.current = orderId
+    const ticketCount = data.tickets?.length ?? 0
+    const orderAny = order as Record<string, unknown>
+    captureEvent('ticket_purchased', {
+      order_id: orderId,
+      event_id: order.event?.id,
+      org_id: orderAny.org_id,
+      ticket_count: ticketCount,
+      purchaser_user_id: orderAny.purchaser_user_id,
+    })
+  }, [orderId, data])
 
   if (!orderId) {
     return (
@@ -195,7 +225,7 @@ export default function TicketOrderSuccess() {
           <div className="flex flex-col gap-3 py-6">
             <Link
               to={myTicketsLink}
-              className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
+              className="flex min-w-0 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
             >
               <span className="material-symbols-outlined">confirmation_number</span>
               <span className="truncate uppercase">View All My Tickets</span>
@@ -205,7 +235,7 @@ export default function TicketOrderSuccess() {
             <button
               onClick={handleResendTickets}
               disabled={isResending}
-              className="flex min-w-[84px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-12 px-5 bg-white dark:bg-gray-900 text-[#111418] dark:text-white border-2 border-gray-300 dark:border-gray-700 text-base font-bold leading-normal tracking-[0.015em] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex min-w-0 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-12 px-5 bg-white dark:bg-gray-900 text-[#111418] dark:text-white border-2 border-gray-300 dark:border-gray-700 text-base font-bold leading-normal tracking-[0.015em] w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="material-symbols-outlined text-lg">
                 {isResending ? 'hourglass_empty' : 'forward_to_inbox'}

@@ -8,17 +8,21 @@
  * The deleted_at column does not exist in the schema, so deletes are hard deletes.
  */
 
-import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS } from '../config'
+import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import { supabase } from '../../lib/supabase'
-import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
-import type { UserContext } from '../fake/userContext'
+import type { UserContext, PermissionSet } from '../fake/userContext'
+import { getCoachTeamIds, getGuardianCanonicalUserId } from '../fake/userContext'
+import { getChildrenForUserId, getFamiliesForUserId } from '../fake/relationships'
 import { logSportEvent } from '../../utils/eventLogger'
 import { debug } from '../../lib/debug'
+import { getCurrentDemoSessionSnapshot } from './demoSessionService'
 import {
     getSportById,
     getSportsForOrg,
     getProgramById,
     getProgramsForOrg,
+    getTeamById,
+    fakeSports,
     type FakeSport,
     type FakeProgram,
 } from '../fake/fakeTeams'
@@ -65,6 +69,26 @@ export async function getSystemSports(): Promise<{ data: Sport[]; error: Error |
     debug.perf.start('sportsService.getSystemSports')
 
     try {
+        if (USE_FAKE_DATA) {
+            await simulateDelay()
+            const data: Sport[] = fakeSports.map((s): Sport => ({
+                id: s.id,
+                org_id: null,
+                name: s.name || 'Unknown Sport',
+                slug: s.slug ?? null,
+                icon: s.icon ?? null,
+                color: s.color || 'var(--org-btn-primary-bg, #137fec)',
+                created_at: s.created_at || new Date().toISOString(),
+                updated_at: s.updated_at || new Date().toISOString(),
+                deleted_at: s.deleted_at ?? null,
+                is_system: true,
+            }))
+            debug.perf.end('sportsService.getSystemSports')
+            debug.data('SportsService.getSystemSports', 'Response (fake)', { sportCount: data.length })
+            console.groupEnd()
+            return { data, error: null }
+        }
+
         // System sports are identified by org_id IS NULL and is_system = true
         const { data, error } = await supabase
             .from('sports')
@@ -132,11 +156,46 @@ export async function getSports(
     debug.perf.start('sportsService.getSports')
 
     try {
-        if (USE_FAKE_DATA) {
+        const demoSession = getCurrentDemoSessionSnapshot()
+        const isDemoSession = demoSession.is_demo_session && demoSession.demo_org_id !== null
+        
+        if (USE_FAKE_DATA || isDemoSession) {
             await simulateDelay()
-            const sports = getSportsForOrg(context.orgId)
+            // When USE_FAKE_DATA is true, use DEMO_ORG_A_ID for filtering static fake data
+            // If there's a demo session with generated data, it will also be in the arrays
+            // but static fake data is keyed to DEMO_ORG_A_ID
+            const fakeOrgId = USE_FAKE_DATA ? DEMO_ORG_A_ID : (isDemoSession && demoSession.demo_org_id ? demoSession.demo_org_id : context.orgId)
+            let sports = getSportsForOrg(fakeOrgId)
+            
+            // Filter sports for coaches - only show sports used by teams they're assigned to
+            if (context.roles.includes('coach') && !context.roles.includes('org_admin')) {
+                const guardianUserId = getGuardianCanonicalUserId(context)
+                const permissions: PermissionSet = {
+                    canViewAllOrgData: false,
+                    canViewAssignedTeams: true,
+                    canViewOwnChildrenData: false,
+                    assignedTeamIds: await getCoachTeamIds(context),
+                    ownedChildIds: getChildrenForUserId(guardianUserId),
+                    ownedFamilyIds: getFamiliesForUserId(guardianUserId),
+                }
+                
+                if (permissions.assignedTeamIds.length > 0) {
+                    const sportIds = new Set<string>()
+                    for (const teamId of permissions.assignedTeamIds) {
+                        const team = getTeamById(teamId)
+                        if (team?.sport_id) {
+                            sportIds.add(team.sport_id)
+                        }
+                    }
+                    sports = sports.filter(s => sportIds.has(s.id))
+                } else {
+                    // Coach with no assigned teams sees no sports
+                    sports = []
+                }
+            }
+            
             debug.perf.end('sportsService.getSports')
-            debug.data('SportsService.getSports', 'Response (fake)', { sportCount: sports.length })
+            debug.data('SportsService.getSports', 'Response (fake)', { sportCount: sports.length, fakeOrgId, USE_FAKE_DATA, isDemoSession })
             console.groupEnd()
             return { data: sports, error: null }
         }
@@ -299,7 +358,7 @@ export async function getSportBySlug(
 ): Promise<{ data: Sport | FakeSport | null; error: Error | null }> {
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        const allSports = getSportsForOrg(context.orgId)
+        const allSports = getSportsForOrg(DEMO_ORG_A_ID)
         const sport = allSports.find(s => s.slug === sportSlug)
         return { data: sport || null, error: null }
     }
@@ -1181,7 +1240,35 @@ export async function getPrograms(
 
     if (USE_FAKE_DATA) {
         await simulateDelay()
-        let programs = getProgramsForOrg(context.orgId)
+        let programs = getProgramsForOrg(DEMO_ORG_A_ID)
+        
+        // Filter programs for coaches - only show programs used by teams they're assigned to
+        if (context.roles.includes('coach') && !context.roles.includes('org_admin')) {
+            const guardianUserId = getGuardianCanonicalUserId(context)
+            const permissions: PermissionSet = {
+                canViewAllOrgData: false,
+                canViewAssignedTeams: true,
+                canViewOwnChildrenData: false,
+                assignedTeamIds: await getCoachTeamIds(context),
+                ownedChildIds: getChildrenForUserId(guardianUserId),
+                ownedFamilyIds: getFamiliesForUserId(guardianUserId),
+            }
+            
+            if (permissions.assignedTeamIds.length > 0) {
+                const programIds = new Set<string>()
+                for (const teamId of permissions.assignedTeamIds) {
+                    const team = getTeamById(teamId)
+                    if (team?.program_id) {
+                        programIds.add(team.program_id)
+                    }
+                }
+                programs = programs.filter(p => programIds.has(p.id))
+            } else {
+                // Coach with no assigned teams sees no programs
+                programs = []
+            }
+        }
+        
         if (sportId) {
             programs = programs.filter(p => p.sport_id === sportId)
         }
@@ -1277,8 +1364,100 @@ export async function createProgram(
     }
 
     try {
-        type ProgramInsert = Database['public']['Tables']['programs']['Insert']
-        const insertData = {
+        // Validate program code uniqueness if provided
+        if (dto.program_code && dto.program_code.trim()) {
+            const { data: existing } = await supabase
+                .from('programs')
+                .select('id')
+                .eq('org_id', dto.org_id)
+                .eq('program_code', dto.program_code.trim())
+                .maybeSingle()
+            
+            if (existing) {
+                debug.perf.end('sportsService.createProgram')
+                debug.error('SportsService.createProgram', 'Program code already exists', { program_code: dto.program_code })
+                console.groupEnd()
+                return { 
+                    data: null, 
+                    error: new Error('Program code already exists. Please choose a different code.') 
+                }
+            }
+        }
+
+        // Validate date ranges
+        if (dto.activity_start_date && dto.activity_end_date) {
+            const start = new Date(dto.activity_start_date)
+            const end = new Date(dto.activity_end_date)
+            if (end < start) {
+                debug.perf.end('sportsService.createProgram')
+                debug.error('SportsService.createProgram', 'Activity end date before start date', { activity_start_date: dto.activity_start_date, activity_end_date: dto.activity_end_date })
+                console.groupEnd()
+                return { 
+                    data: null, 
+                    error: new Error('Activity end date must be after start date.') 
+                }
+            }
+        }
+
+        if (dto.registration_start_date && dto.registration_end_date) {
+            const regStart = new Date(dto.registration_start_date)
+            const regEnd = new Date(dto.registration_end_date)
+            if (regEnd < regStart) {
+                debug.perf.end('sportsService.createProgram')
+                debug.error('SportsService.createProgram', 'Registration end date before start date', { registration_start_date: dto.registration_start_date, registration_end_date: dto.registration_end_date })
+                console.groupEnd()
+                return { 
+                    data: null, 
+                    error: new Error('Registration end date must be after start date.') 
+                }
+            }
+        }
+
+        // Validate registration dates fall within activity dates (when both set)
+        if (dto.activity_start_date && dto.activity_end_date && 
+            dto.registration_start_date && dto.registration_end_date) {
+            const activityStart = new Date(dto.activity_start_date)
+            const activityEnd = new Date(dto.activity_end_date)
+            const regStart = new Date(dto.registration_start_date)
+            const regEnd = new Date(dto.registration_end_date)
+            
+            if (regStart < activityStart || regEnd > activityEnd) {
+                debug.perf.end('sportsService.createProgram')
+                debug.error('SportsService.createProgram', 'Registration dates outside activity dates', { 
+                    activity_start_date: dto.activity_start_date, 
+                    activity_end_date: dto.activity_end_date,
+                    registration_start_date: dto.registration_start_date,
+                    registration_end_date: dto.registration_end_date
+                })
+                console.groupEnd()
+                return { 
+                    data: null, 
+                    error: new Error('Registration dates must fall within activity dates.') 
+                }
+            }
+        }
+
+        // Validate default_location_id belongs to org if provided
+        if (dto.default_location_id) {
+            const { data: venue, error: venueError } = await supabase
+                .from('venues')
+                .select('id')
+                .eq('id', dto.default_location_id)
+                .eq('org_id', dto.org_id)
+                .maybeSingle()
+            
+            if (venueError || !venue) {
+                debug.perf.end('sportsService.createProgram')
+                debug.error('SportsService.createProgram', 'Invalid venue', { default_location_id: dto.default_location_id, error: venueError })
+                console.groupEnd()
+                return { 
+                    data: null, 
+                    error: new Error('Selected location is not available for this organization.') 
+                }
+            }
+        }
+
+        const insertData: any = {
             org_id: dto.org_id,
             sport_id: dto.sport_id,
             name: dto.name,
@@ -1286,14 +1465,35 @@ export async function createProgram(
             description: dto.description || null,
             age_min: dto.age_min || null,
             age_max: dto.age_max || null,
-        } satisfies ProgramInsert
+            is_public: dto.is_public ?? false,
+            activity_start_date: dto.activity_start_date || null,
+            activity_end_date: dto.activity_end_date || null,
+            registration_start_date: dto.registration_start_date || null,
+            registration_end_date: dto.registration_end_date || null,
+            program_code: dto.program_code?.trim() || null,
+            sponsor: dto.sponsor?.trim() || null,
+            default_location_id: dto.default_location_id || null,
+            registration_mode: dto.registration_mode || 'both',
+        }
         const { data, error } = await supabase
             .from('programs')
             .insert(insertData)
             .select()
             .single()
 
-        if (error) throw error
+        if (error) {
+            // Handle uniqueness constraint violation
+            if (error.code === '23505' || error.message?.includes('unique constraint') || error.message?.includes('duplicate key')) {
+                debug.perf.end('sportsService.createProgram')
+                debug.error('SportsService.createProgram', 'Program code uniqueness violation', { error, program_code: dto.program_code })
+                console.groupEnd()
+                return { 
+                    data: null, 
+                    error: new Error('Program code already exists. Please choose a different code.') 
+                }
+            }
+            throw error
+        }
         debug.perf.end('sportsService.createProgram')
         debug.flow('SportsService.createProgram', 'Program created successfully', { programId: data?.id, name: dto.name })
         console.groupEnd()
@@ -1331,13 +1531,128 @@ export async function updateProgram(
     }
 
     try {
-        type ProgramUpdate = Database['public']['Tables']['programs']['Update']
-        const updateData: ProgramUpdate = {}
+        // Validate program code uniqueness if provided and changed
+        if (dto.program_code !== undefined && dto.program_code.trim()) {
+            const { data: existing } = await supabase
+                .from('programs')
+                .select('id')
+                .eq('org_id', context.orgId)
+                .eq('program_code', dto.program_code.trim())
+                .neq('id', programId)
+                .maybeSingle()
+            
+            if (existing) {
+                debug.perf.end('sportsService.updateProgram')
+                debug.error('SportsService.updateProgram', 'Program code already exists', { program_code: dto.program_code })
+                console.groupEnd()
+                return { 
+                    data: null, 
+                    error: new Error('Program code already exists. Please choose a different code.') 
+                }
+            }
+        }
+
+        // Get current program data for date validation
+        const { data: currentProgram } = await (supabase as any)
+            .from('programs')
+            .select('activity_start_date, activity_end_date, registration_start_date, registration_end_date')
+            .eq('id', programId)
+            .eq('org_id', context.orgId)
+            .single()
+
+        const activityStart = dto.activity_start_date || currentProgram?.activity_start_date
+        const activityEnd = dto.activity_end_date || currentProgram?.activity_end_date
+
+        // Validate date ranges
+        if (activityStart && activityEnd) {
+            const start = new Date(activityStart)
+            const end = new Date(activityEnd)
+            if (end < start) {
+                debug.perf.end('sportsService.updateProgram')
+                debug.error('SportsService.updateProgram', 'Activity end date before start date', { activity_start_date: activityStart, activity_end_date: activityEnd })
+                console.groupEnd()
+                return { 
+                    data: null, 
+                    error: new Error('Activity end date must be after start date.') 
+                }
+            }
+        }
+
+        const regStart = dto.registration_start_date || currentProgram?.registration_start_date
+        const regEnd = dto.registration_end_date || currentProgram?.registration_end_date
+
+        if (regStart && regEnd) {
+            const start = new Date(regStart)
+            const end = new Date(regEnd)
+            if (end < start) {
+                debug.perf.end('sportsService.updateProgram')
+                debug.error('SportsService.updateProgram', 'Registration end date before start date', { registration_start_date: regStart, registration_end_date: regEnd })
+                console.groupEnd()
+                return { 
+                    data: null, 
+                    error: new Error('Registration end date must be after start date.') 
+                }
+            }
+        }
+
+        // Validate registration dates fall within activity dates (when both set)
+        if (activityStart && activityEnd && regStart && regEnd) {
+            const actStart = new Date(activityStart)
+            const actEnd = new Date(activityEnd)
+            const regStartDate = new Date(regStart)
+            const regEndDate = new Date(regEnd)
+            
+            if (regStartDate < actStart || regEndDate > actEnd) {
+                debug.perf.end('sportsService.updateProgram')
+                debug.error('SportsService.updateProgram', 'Registration dates outside activity dates', { 
+                    activity_start_date: activityStart, 
+                    activity_end_date: activityEnd,
+                    registration_start_date: regStart,
+                    registration_end_date: regEnd
+                })
+                console.groupEnd()
+                return { 
+                    data: null, 
+                    error: new Error('Registration dates must fall within activity dates.') 
+                }
+            }
+        }
+
+        // Validate default_location_id belongs to org if provided
+        if (dto.default_location_id !== undefined && dto.default_location_id) {
+            const { data: venue, error: venueError } = await supabase
+                .from('venues')
+                .select('id')
+                .eq('id', dto.default_location_id)
+                .eq('org_id', context.orgId)
+                .maybeSingle()
+            
+            if (venueError || !venue) {
+                debug.perf.end('sportsService.updateProgram')
+                debug.error('SportsService.updateProgram', 'Invalid venue', { default_location_id: dto.default_location_id, error: venueError })
+                console.groupEnd()
+                return { 
+                    data: null, 
+                    error: new Error('Selected location is not available for this organization.') 
+                }
+            }
+        }
+
+        const updateData: any = {}
         if (dto.name !== undefined) updateData.name = dto.name
         if (dto.gender_category !== undefined) updateData.gender_category = dto.gender_category
         if (dto.description !== undefined) updateData.description = dto.description
         if (dto.age_min !== undefined) updateData.age_min = dto.age_min
         if (dto.age_max !== undefined) updateData.age_max = dto.age_max
+        if (dto.is_public !== undefined) updateData.is_public = dto.is_public
+        if (dto.activity_start_date !== undefined) updateData.activity_start_date = dto.activity_start_date || null
+        if (dto.activity_end_date !== undefined) updateData.activity_end_date = dto.activity_end_date || null
+        if (dto.registration_start_date !== undefined) updateData.registration_start_date = dto.registration_start_date || null
+        if (dto.registration_end_date !== undefined) updateData.registration_end_date = dto.registration_end_date || null
+        if (dto.program_code !== undefined) updateData.program_code = dto.program_code?.trim() || null
+        if (dto.sponsor !== undefined) updateData.sponsor = dto.sponsor?.trim() || null
+        if (dto.default_location_id !== undefined) updateData.default_location_id = dto.default_location_id || null
+        if (dto.registration_mode !== undefined) updateData.registration_mode = dto.registration_mode
 
         const { data, error} = await supabase
             .from('programs')
@@ -1347,9 +1662,27 @@ export async function updateProgram(
             .select()
             .single()
 
-        if (error) throw error
+        if (error) {
+            // Handle uniqueness constraint violation
+            if (error.code === '23505' || error.message?.includes('unique constraint') || error.message?.includes('duplicate key')) {
+                debug.perf.end('sportsService.updateProgram')
+                debug.error('SportsService.updateProgram', 'Program code uniqueness violation', { error, program_code: dto.program_code })
+                console.groupEnd()
+                return { 
+                    data: null, 
+                    error: new Error('Program code already exists. Please choose a different code.') 
+                }
+            }
+            throw error
+        }
+        debug.perf.end('sportsService.updateProgram')
+        debug.flow('SportsService.updateProgram', 'Program updated successfully', { programId })
+        console.groupEnd()
         return { data: data as unknown as Program, error: null }
     } catch (err) {
+        debug.perf.end('sportsService.updateProgram')
+        debug.error('SportsService.updateProgram', 'Failed to update program', { error: err, programId })
+        console.groupEnd()
         console.error('[sportsService] Error updating program:', err)
         return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
     }

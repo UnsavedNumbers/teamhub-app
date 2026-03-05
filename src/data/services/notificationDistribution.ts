@@ -4,6 +4,7 @@ import { USE_FAKE_DATA } from '../config'
 import { debug } from '../../lib/debug'
 import type { NotificationAction } from '../../types/notifications'
 import { notifyUsers } from './notificationServiceCore'
+import { collectTeamManagers, collectStaffMembers } from './notificationHelpers'
 
 interface EventNotificationInput {
     id: string
@@ -29,6 +30,8 @@ export async function distributeEventNotifications(event: EventNotificationInput
     try {
         const guardianUserIds: string[] = []
         const coachUserIds: string[] = []
+        const teamManagerUserIds: string[] = []
+        const staffUserIds: string[] = []
 
         // Get guardians of team members
         const { data: members, error: memberError } = await supabase
@@ -74,6 +77,14 @@ export async function distributeEventNotifications(event: EventNotificationInput
                 }
             })
         }
+
+        // Get team managers for team
+        const teamManagerIds = await collectTeamManagers(event.team_id, event.created_by_user_id)
+        teamManagerUserIds.push(...teamManagerIds)
+
+        // Get staff members for organization
+        const staffIds = await collectStaffMembers(event.org_id, event.team_id, event.created_by_user_id)
+        staffUserIds.push(...staffIds)
 
         const action: NotificationAction = 'event_created'
         let totalInAppCount = 0
@@ -122,6 +133,50 @@ export async function distributeEventNotifications(event: EventNotificationInput
             }
         }
 
+        // Notify team managers
+        if (teamManagerUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: teamManagerUserIds,
+                orgId: event.org_id,
+                teamId: event.team_id,
+                action,
+                roleContext: 'team_manager',
+                title: event.title,
+                body: `New event scheduled for ${new Date(event.start_time).toLocaleDateString()}`,
+                linkUrl: `/portal/calendar/events/${event.id}`,
+                entityType: 'event',
+                entityId: event.id,
+                metadata: {
+                    start_time: event.start_time
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
+
+        // Notify staff
+        if (staffUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: staffUserIds,
+                orgId: event.org_id,
+                teamId: event.team_id,
+                action,
+                roleContext: 'staff',
+                title: event.title,
+                body: `New event scheduled for ${new Date(event.start_time).toLocaleDateString()}`,
+                linkUrl: `/portal/calendar/events/${event.id}`,
+                entityType: 'event',
+                entityId: event.id,
+                metadata: {
+                    start_time: event.start_time
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
+
         debug.perf.end('notificationDistributionService.distributeEventNotifications')
         debug.flow('NotificationDistributionService.distributeEventNotifications', 'Notifications distributed successfully', { eventId: event.id, recipientCount: totalInAppCount })
         console.groupEnd()
@@ -150,6 +205,8 @@ export async function distributeEventUpdateNotifications(event: EventNotificatio
     try {
         const guardianUserIds: string[] = []
         const coachUserIds: string[] = []
+        const teamManagerUserIds: string[] = []
+        const staffUserIds: string[] = []
 
         const { data: members, error: memberError } = await supabase
             .from('team_memberships')
@@ -193,6 +250,14 @@ export async function distributeEventUpdateNotifications(event: EventNotificatio
                 }
             })
         }
+
+        // Get team managers for team
+        const teamManagerIds = await collectTeamManagers(event.team_id, event.created_by_user_id)
+        teamManagerUserIds.push(...teamManagerIds)
+
+        // Get staff members for organization
+        const staffIds = await collectStaffMembers(event.org_id, event.team_id, event.created_by_user_id)
+        staffUserIds.push(...staffIds)
 
         const action: NotificationAction = 'event_updated'
         let totalInAppCount = 0
@@ -241,6 +306,50 @@ export async function distributeEventUpdateNotifications(event: EventNotificatio
             }
         }
 
+        // Notify team managers
+        if (teamManagerUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: teamManagerUserIds,
+                orgId: event.org_id,
+                teamId: event.team_id,
+                action,
+                roleContext: 'team_manager',
+                title: `Event Updated: ${event.title}`,
+                body: `Event details have been updated`,
+                linkUrl: `/portal/calendar/events/${event.id}`,
+                entityType: 'event',
+                entityId: event.id,
+                metadata: {
+                    start_time: event.start_time
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
+
+        // Notify staff
+        if (staffUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: staffUserIds,
+                orgId: event.org_id,
+                teamId: event.team_id,
+                action,
+                roleContext: 'staff',
+                title: `Event Updated: ${event.title}`,
+                body: `Event details have been updated`,
+                linkUrl: `/portal/calendar/events/${event.id}`,
+                entityType: 'event',
+                entityId: event.id,
+                metadata: {
+                    start_time: event.start_time
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
+
         debug.perf.end('notificationDistributionService.distributeEventUpdateNotifications')
         debug.flow('NotificationDistributionService.distributeEventUpdateNotifications', 'Update notifications distributed successfully', { eventId: event.id, recipientCount: totalInAppCount })
         console.groupEnd()
@@ -269,6 +378,8 @@ export async function distributeEventCancelNotifications(event: EventNotificatio
     try {
         const guardianUserIds: string[] = []
         const coachUserIds: string[] = []
+        const teamManagerUserIds: string[] = []
+        const staffUserIds: string[] = []
 
         const { data: members, error: memberError } = await supabase
             .from('team_memberships')
@@ -312,6 +423,14 @@ export async function distributeEventCancelNotifications(event: EventNotificatio
                 }
             })
         }
+
+        // Get team managers for team
+        const teamManagerIds = await collectTeamManagers(event.team_id, event.created_by_user_id)
+        teamManagerUserIds.push(...teamManagerIds)
+
+        // Get staff members for organization
+        const staffIds = await collectStaffMembers(event.org_id, event.team_id, event.created_by_user_id)
+        staffUserIds.push(...staffIds)
 
         const action: NotificationAction = 'event_canceled'
         let totalInAppCount = 0
@@ -362,6 +481,52 @@ export async function distributeEventCancelNotifications(event: EventNotificatio
             }
         }
 
+        // Notify team managers
+        if (teamManagerUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: teamManagerUserIds,
+                orgId: event.org_id,
+                teamId: event.team_id,
+                action,
+                roleContext: 'team_manager',
+                title: `Event Canceled: ${event.title}`,
+                body: `This event has been canceled`,
+                linkUrl: `/portal/calendar/events/${event.id}`,
+                entityType: 'event',
+                entityId: event.id,
+                presentation: 'warning',
+                metadata: {
+                    start_time: event.start_time
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
+
+        // Notify staff
+        if (staffUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: staffUserIds,
+                orgId: event.org_id,
+                teamId: event.team_id,
+                action,
+                roleContext: 'staff',
+                title: `Event Canceled: ${event.title}`,
+                body: `This event has been canceled`,
+                linkUrl: `/portal/calendar/events/${event.id}`,
+                entityType: 'event',
+                entityId: event.id,
+                presentation: 'warning',
+                metadata: {
+                    start_time: event.start_time
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
+
         debug.perf.end('notificationDistributionService.distributeEventCancelNotifications')
         debug.flow('NotificationDistributionService.distributeEventCancelNotifications', 'Cancel notifications distributed successfully', { eventId: event.id, recipientCount: totalInAppCount })
         console.groupEnd()
@@ -390,6 +555,8 @@ export async function distributeEventRescheduledNotifications(event: EventNotifi
     try {
         const guardianUserIds: string[] = []
         const coachUserIds: string[] = []
+        const teamManagerUserIds: string[] = []
+        const staffUserIds: string[] = []
 
         const { data: members, error: memberError } = await supabase
             .from('team_memberships')
@@ -434,6 +601,14 @@ export async function distributeEventRescheduledNotifications(event: EventNotifi
             })
         }
 
+        // Get team managers for team
+        const teamManagerIds = await collectTeamManagers(event.team_id, event.created_by_user_id)
+        teamManagerUserIds.push(...teamManagerIds)
+
+        // Get staff members for organization
+        const staffIds = await collectStaffMembers(event.org_id, event.team_id, event.created_by_user_id)
+        staffUserIds.push(...staffIds)
+
         const action: NotificationAction = 'event_rescheduled'
         let totalInAppCount = 0
 
@@ -469,6 +644,54 @@ export async function distributeEventRescheduledNotifications(event: EventNotifi
                 teamId: event.team_id,
                 action,
                 roleContext: 'coach',
+                title: `Event Rescheduled: ${event.title}`,
+                body: `Event time changed from ${new Date(oldStartTime).toLocaleString()} to ${new Date(event.start_time).toLocaleString()}`,
+                linkUrl: `/portal/calendar/events/${event.id}`,
+                entityType: 'event',
+                entityId: event.id,
+                presentation: 'warning',
+                metadata: {
+                    old_start_time: oldStartTime,
+                    new_start_time: event.start_time
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
+
+        // Notify team managers
+        if (teamManagerUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: teamManagerUserIds,
+                orgId: event.org_id,
+                teamId: event.team_id,
+                action,
+                roleContext: 'team_manager',
+                title: `Event Rescheduled: ${event.title}`,
+                body: `Event time changed from ${new Date(oldStartTime).toLocaleString()} to ${new Date(event.start_time).toLocaleString()}`,
+                linkUrl: `/portal/calendar/events/${event.id}`,
+                entityType: 'event',
+                entityId: event.id,
+                presentation: 'warning',
+                metadata: {
+                    old_start_time: oldStartTime,
+                    new_start_time: event.start_time
+                }
+            })
+            if (result.success) {
+                totalInAppCount += result.inAppCount
+            }
+        }
+
+        // Notify staff
+        if (staffUserIds.length > 0) {
+            const result = await notifyUsers({
+                userIds: staffUserIds,
+                orgId: event.org_id,
+                teamId: event.team_id,
+                action,
+                roleContext: 'staff',
                 title: `Event Rescheduled: ${event.title}`,
                 body: `Event time changed from ${new Date(oldStartTime).toLocaleString()} to ${new Date(event.start_time).toLocaleString()}`,
                 linkUrl: `/portal/calendar/events/${event.id}`,

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * NearbyAmenities Component
  *
  * Accordion-based display of four curated categories: Pre-Game Food, Coffee & Quick Stops,
@@ -112,7 +112,7 @@ function getCategoryIcon(category: string): string {
 
 /**
  * Default expanded accordion key from event start time (context-aware)
- * Before event start → Pre-Game Food; Morning events → Coffee & Quick Stops; After event end → Post-Game Hangouts
+ * Before event start -> Pre-Game Food; Morning events -> Coffee & Quick Stops; After event end -> Post-Game Hangouts
  */
 function getDefaultExpandedKey(eventStartTime: string, categoryIdsWithItems: CuratedCategoryId[]): CuratedCategoryId | null {
   if (categoryIdsWithItems.length === 0) return null
@@ -229,28 +229,28 @@ export default function NearbyAmenities({
         <Card className="p-0 overflow-hidden relative bg-gradient-to-r from-[var(--org-btn-primary-bg,#137fec)]/5 to-transparent dark:from-[var(--org-btn-primary-bg,#137fec)]/10 dark:to-transparent">
           <div className="absolute top-0 left-0 bg-black text-white px-4 py-2 rounded-br-lg w-32 h-10 animate-pulse" />
           <div className="pt-12 p-6 space-y-4 animate-pulse">
-            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4 max-w-xs" />
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 max-w-xs" />
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <div className="h-6 w-20 bg-slate-200 dark:bg-slate-700 rounded-full" />
-                <div className="h-4 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
+                <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full" />
+                <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
               </div>
               <div className="space-y-2">
-                <div className="h-16 bg-slate-200 dark:bg-slate-700 rounded-lg" />
-                <div className="h-16 bg-slate-200 dark:bg-slate-700 rounded-lg" />
+                <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg" />
+                <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg" />
               </div>
               <div className="flex items-center gap-2">
-                <div className="h-6 w-16 bg-slate-200 dark:bg-slate-700 rounded-full" />
-                <div className="h-4 w-20 bg-slate-200 dark:bg-slate-700 rounded" />
+                <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full" />
+                <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
               </div>
               <div className="space-y-2">
-                <div className="h-16 bg-slate-200 dark:bg-slate-700 rounded-lg" />
-                <div className="h-16 bg-slate-200 dark:bg-slate-700 rounded-lg" />
+                <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg" />
+                <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg" />
               </div>
             </div>
-            <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-slate-200 dark:bg-slate-700" />
-              <div className="h-3 w-40 bg-slate-200 dark:bg-slate-700 rounded" />
+            <div className="pt-2 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-gray-200 dark:bg-gray-700" />
+              <div className="h-3 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
             </div>
           </div>
         </Card>
@@ -407,7 +407,7 @@ export default function NearbyAmenities({
 
         <div className="pt-12 px-4 pb-4 space-y-3">
           {/* Subtitle */}
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             {SUBTITLE}
           </p>
 
@@ -437,7 +437,7 @@ export default function NearbyAmenities({
 
           {/* Fallback notice */}
           {isFallback && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded">
+            <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 rounded">
               AI descriptions temporarily unavailable. Showing nearby places by category.
             </p>
           )}
@@ -493,7 +493,7 @@ export default function NearbyAmenities({
               return (
                 <div
                   key={category.id}
-                  className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-900/50"
+                  className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-900/50"
                 >
                   <h4>
                     <button
@@ -504,7 +504,7 @@ export default function NearbyAmenities({
                       aria-controls={panelId}
                       onClick={() => setExpandedKey(prev => (prev === category.id ? null : category.id))}
                       onKeyDown={handleKeyDown}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)] focus:ring-inset"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)] focus:ring-inset"
                     >
                       <Icon
                         name={category.icon}
@@ -512,16 +512,16 @@ export default function NearbyAmenities({
                         className="flex-shrink-0 text-[var(--org-btn-primary-bg,#137fec)]"
                       />
                       <span className="flex-1 min-w-0">
-                        <span className="font-semibold text-sm text-slate-900 dark:text-white">{category.name}</span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">{category.descriptor}</span>
+                        <span className="font-semibold text-sm text-gray-900 dark:text-white">{category.name}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">{category.descriptor}</span>
                       </span>
-                      <span className="text-xs font-medium text-slate-400 tabular-nums">
+                      <span className="text-xs font-medium text-gray-400 tabular-nums">
                         {items.length}
                       </span>
                       <Icon
                         name="expand_more"
                         size="text-lg"
-                        className={`flex-shrink-0 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                        className={`flex-shrink-0 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                       />
                     </button>
                   </h4>
@@ -532,7 +532,7 @@ export default function NearbyAmenities({
                     hidden={!isExpanded}
                     className={isExpanded ? '' : 'hidden'}
                   >
-                    <div className="border-t border-slate-200 dark:border-slate-700 px-3 py-1">
+                    <div className="border-t border-gray-200 dark:border-gray-700 px-3 py-1">
                       {items.map((amenity, i) => (
                         <AmenityRow key={`${amenity.place_id}-${i}`} amenity={amenity} category={category.id} />
                       ))}
@@ -551,8 +551,8 @@ export default function NearbyAmenities({
           )}
 
           {/* Footer */}
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-            <span className="text-xs text-slate-400">
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+            <span className="text-xs text-gray-400">
               Walking times are approximate
             </span>
           </div>
@@ -620,7 +620,7 @@ function AmenityRow({ amenity, category, isFan = false }: { amenity: AmenityItem
       href={mapsUrl || '#'}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-b-0"
+      className="flex items-center gap-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors border-b border-gray-100 dark:border-gray-800 last:border-b-0"
     >
       {/* Category icon */}
       <div
@@ -632,11 +632,11 @@ function AmenityRow({ amenity, category, isFan = false }: { amenity: AmenityItem
 
       {/* Name and description */}
       <div className="flex-1 min-w-0">
-        <span className="font-semibold text-sm text-slate-900 dark:text-white block truncate">
+        <span className="font-semibold text-sm text-gray-900 dark:text-white block truncate">
           {amenity.name}
         </span>
         {sanitizedDescription && (
-          <span className="text-xs text-slate-500 dark:text-slate-400 truncate block">
+          <span className="text-xs text-gray-500 dark:text-gray-400 truncate block">
             {sanitizedDescription}
           </span>
         )}
@@ -644,14 +644,15 @@ function AmenityRow({ amenity, category, isFan = false }: { amenity: AmenityItem
 
       {/* Walking time */}
       {amenity.walking_minutes > 0 && (
-        <span className="flex-shrink-0 inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+        <span className="flex-shrink-0 inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
           <Icon name="directions_walk" size="text-sm" />
           {amenity.walking_minutes}m
         </span>
       )}
 
       {/* External link icon */}
-      <Icon name="open_in_new" size="text-sm" className="flex-shrink-0 text-slate-300 dark:text-slate-600" />
+      <Icon name="open_in_new" size="text-sm" className="flex-shrink-0 text-gray-300 dark:text-gray-600" />
     </a>
   )
 }
+

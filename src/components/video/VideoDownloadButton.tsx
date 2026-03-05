@@ -10,6 +10,7 @@ import Icon from '@/components/portal/Icon'
 import Button from '@/components/portal/Button'
 import { cn } from '@/utils/cn'
 import { showSuccess, showError } from '@/utils/toast'
+import { USE_FAKE_DATA } from '@/data/config'
 
 interface VideoDownloadButtonProps {
   videoId: string
@@ -28,8 +29,14 @@ export default function VideoDownloadButton({
 }: VideoDownloadButtonProps) {
   const { getDownloadUrl, isLoading } = useVideoDownload({ videoId })
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const isDemoMode = USE_FAKE_DATA
 
   const handleDownload = useCallback(async (_quality: string) => {
+    if (isDemoMode) {
+      showError('Download is not available in demo mode')
+      return
+    }
+    
     setIsMenuOpen(false)
     
     try {
@@ -52,7 +59,7 @@ export default function VideoDownloadButton({
       showError('Failed to start download')
       console.error('Download error:', err)
     }
-  }, [videoTitle, getDownloadUrl])
+  }, [videoTitle, getDownloadUrl, isDemoMode])
 
   // Icon-only variant
   if (variant === 'icon') {
@@ -60,10 +67,10 @@ export default function VideoDownloadButton({
       <div className="relative">
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          disabled={isLoading}
+          disabled={isLoading || isDemoMode}
           className={cn(
             "p-2 rounded-lg transition-colors",
-            isLoading
+            isLoading || isDemoMode
               ? "text-gray-400 cursor-not-allowed"
               : "text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800",
             className
@@ -94,10 +101,10 @@ export default function VideoDownloadButton({
       <div className="relative">
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          disabled={isLoading}
+          disabled={isLoading || isDemoMode}
           className={cn(
             "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors",
-            isLoading
+            isLoading || isDemoMode
               ? "text-gray-400 cursor-not-allowed"
               : "hover:bg-gray-50 dark:hover:bg-gray-800",
             className
@@ -131,10 +138,10 @@ export default function VideoDownloadButton({
       <Button
         variant="secondary"
         onClick={() => setIsMenuOpen(!isMenuOpen)}
-        disabled={isLoading}
+        disabled={isLoading || isDemoMode}
         className={cn(
           "flex items-center gap-2",
-          isLoading && "opacity-50 cursor-not-allowed",
+          (isLoading || isDemoMode) && "opacity-50 cursor-not-allowed",
           className
         )}
       >

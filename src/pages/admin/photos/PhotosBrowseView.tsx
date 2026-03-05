@@ -17,7 +17,6 @@ import { getGalleriesForUser, type Gallery, deleteGallery } from '@/data/service
 import { getSeasons } from '@/data/services/seasonsService'
 import { getSports } from '@/data/services/sportsService'
 import { getAthletesByGallery } from '@/data/services/athletesService'
-import { getMockGalleriesForOrg } from '@/data/fake/mockGalleries'
 import { getLink } from '@/utils/routes/helpers'
 import { showError, showSuccess } from '@/utils/toast'
 import './PhotosBrowseView.css'
@@ -69,42 +68,6 @@ export function PhotosBrowseView() {
     let mounted = true
     const load = async () => {
       if (!isReady || !context?.orgId) {
-        setLoading(false)
-        return
-      }
-
-      if (USE_FAKE_DATA) {
-        const mockGalleries = getMockGalleriesForOrg(context.orgId)
-        setGalleries(mockGalleries as Gallery[])
-        
-        // Create mock tree nodes from mock data
-        const nodes: TreeNode[] = [
-          {
-            id: 'varsity-football',
-            type: 'sport',
-            name: 'Varsity Football',
-            icon: 'sports_football',
-            expanded: false,
-            selected: false,
-          },
-          {
-            id: 'elite-basketball',
-            type: 'sport',
-            name: 'Elite Basketball',
-            icon: 'sports_basketball',
-            expanded: false,
-            selected: false,
-          },
-          {
-            id: 'premier-soccer',
-            type: 'sport',
-            name: 'Premier Soccer',
-            icon: 'sports_soccer',
-            expanded: false,
-            selected: false,
-          },
-        ]
-        setTreeNodes(nodes)
         setLoading(false)
         return
       }
@@ -332,12 +295,7 @@ export function PhotosBrowseView() {
       return
     }
     
-    if (USE_FAKE_DATA) {
-      setDemoAction(t('photos.browse.browseDeck'))
-      setShowDemoModal(true)
-      return
-    }
-    
+    // In demo mode, navigate to gallery page which has fake data support
     navigate(getLink('admin.photos.detail', { id }))
   }
 
