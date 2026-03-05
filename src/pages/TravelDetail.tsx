@@ -1026,7 +1026,6 @@ export default function TravelDetail() {
                     ? ([defaultContact!.first_name, defaultContact!.last_name].filter(Boolean).join(' ') || 'General Info')
                     : 'General Info'
                   const initial = (displayName.charAt(0) || 'G').toUpperCase()
-                  const email = hasDefault ? defaultContact!.email : orgFallbackContact!.email
                   const phone = hasDefault ? defaultContact!.phone : orgFallbackContact!.phone
                   return (
                     <div className="flex items-center gap-4 px-5 py-3.5 active:bg-gray-50 dark:active:bg-gray-800/50">

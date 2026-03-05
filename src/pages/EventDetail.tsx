@@ -603,43 +603,43 @@ export default function EventDetail() {
     }
   }
 
+  function handleUseCurrentLocation() {
+    if (!navigator.geolocation) {
+      setGeolocationError('Location is not supported by this browser.')
+      return
+    }
+
+    setGeolocating(true)
+    setGeolocationError(null)
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude.toFixed(6)
+        const lng = position.coords.longitude.toFixed(6)
+        const currentLocation = `${lat}, ${lng}`
+        setCommuteInputValue(currentLocation)
+        setGeolocating(false)
+      },
+      (error) => {
+        const message = error.code === error.PERMISSION_DENIED
+          ? 'Location permission was denied. Enable location access and try again.'
+          : error.code === error.POSITION_UNAVAILABLE
+            ? 'Current location is unavailable right now.'
+            : error.code === error.TIMEOUT
+              ? 'Timed out while getting your current location.'
+              : 'Unable to get your current location.'
+        setGeolocationError(message)
+        setGeolocating(false)
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 60000,
+      },
+    )
+  }
+
   function handleSaveCommuteLocation() {
-      function handleUseCurrentLocation() {
-        if (!navigator.geolocation) {
-          setGeolocationError('Location is not supported by this browser.')
-          return
-        }
-
-        setGeolocating(true)
-        setGeolocationError(null)
-
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const lat = position.coords.latitude.toFixed(6)
-            const lng = position.coords.longitude.toFixed(6)
-            const currentLocation = `${lat}, ${lng}`
-            setCommuteInputValue(currentLocation)
-            setGeolocating(false)
-          },
-          (error) => {
-            const message = error.code === error.PERMISSION_DENIED
-              ? 'Location permission was denied. Enable location access and try again.'
-              : error.code === error.POSITION_UNAVAILABLE
-                ? 'Current location is unavailable right now.'
-                : error.code === error.TIMEOUT
-                  ? 'Timed out while getting your current location.'
-                  : 'Unable to get your current location.'
-            setGeolocationError(message)
-            setGeolocating(false)
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 12000,
-            maximumAge: 60000,
-          },
-        )
-      }
-                    Add All to Calendar
     const trimmed = commuteInputValue.trim()
     setCommuteStartLocation(trimmed)
     localStorage.setItem('commuteStartLocation', trimmed)
@@ -980,15 +980,16 @@ export default function EventDetail() {
                 <div className="mb-4">
                   <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Open in Maps</p>
                   <div className="flex flex-wrap gap-2">
-                  <VenueMapActionButtons
-                    googleUrl={googleMapsLink(venueAddress)}
-                    appleUrl={appleMapsLink(venueAddress)}
-                    wazeUrl={wazeLink(venueAddress)}
-                    onCopyAddress={() => handleCopy(venueAddress, 'Address')}
-                    copied={copiedText === 'Address'}
-                    copyError={copyError && copiedText === 'Address' ? copyError : null}
-                    fullWidth
-                  />
+                    <VenueMapActionButtons
+                      googleUrl={googleMapsLink(venueAddress)}
+                      appleUrl={appleMapsLink(venueAddress)}
+                      wazeUrl={wazeLink(venueAddress)}
+                      onCopyAddress={() => handleCopy(venueAddress, 'Address')}
+                      copied={copiedText === 'Address'}
+                      copyError={copyError && copiedText === 'Address' ? copyError : null}
+                      fullWidth
+                    />
+                  </div>
                 </div>
 
                 {/* Ride-Share Shortcuts */}
@@ -996,11 +997,12 @@ export default function EventDetail() {
                   <div>
                     <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Need a Ride?</p>
                     <div className="flex flex-wrap gap-2">
-                    <VenueRideShareButtons
-                      uberUrl={uberLink(venueAddress)}
-                      lyftUrl={lyftLink(venueAddress)}
-                      fullWidth
-                    />
+                      <VenueRideShareButtons
+                        uberUrl={uberLink(venueAddress)}
+                        lyftUrl={lyftLink(venueAddress)}
+                        fullWidth
+                      />
+                    </div>
                   </div>
                 )}
               </div>
