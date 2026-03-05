@@ -30,6 +30,31 @@ CREATE INDEX IF NOT EXISTS idx_user_push_subscriptions_provider_subscription_id
   ON public.user_push_subscriptions(provider_subscription_id)
   WHERE provider_subscription_id IS NOT NULL;
 
+-- Ensure true device uniqueness even when org_id is NULL.
+-- A regular UNIQUE(user_id, org_id, device_id, provider) allows duplicates when org_id is NULL.
+WITH ranked_subscriptions AS (
+  SELECT
+    id,
+    ROW_NUMBER() OVER (
+      PARTITION BY user_id, device_id, provider
+      ORDER BY updated_at DESC, created_at DESC, id DESC
+    ) AS rn
+  FROM public.user_push_subscriptions
+  WHERE org_id IS NULL
+)
+DELETE FROM public.user_push_subscriptions ups
+USING ranked_subscriptions rs
+WHERE ups.id = rs.id
+  AND rs.rn > 1;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_push_subscriptions_unique_global_device
+  ON public.user_push_subscriptions(user_id, device_id, provider)
+  WHERE org_id IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_push_subscriptions_unique_org_device
+  ON public.user_push_subscriptions(user_id, org_id, device_id, provider)
+  WHERE org_id IS NOT NULL;
+
 CREATE OR REPLACE FUNCTION public.update_user_push_subscriptions_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN

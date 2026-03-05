@@ -1,4 +1,4 @@
-/**
+﻿/**
  * My Tickets Page
  *
  * Shows all tickets for the logged-in user.
@@ -461,18 +461,18 @@ export default function MyTickets() {
       <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
         <div className="mb-6 sm:mb-8">
           <PageTitle>My Tickets</PageTitle>
-          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
+          <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
             Your event tickets
           </p>
         </div>
-        <div className="bg-white dark:bg-slate-900/50 rounded-xl shadow-sm p-12 text-center border border-slate-200 dark:border-slate-700">
-          <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
-            <span className="material-symbols-outlined text-3xl text-slate-400">confirmation_number</span>
+        <div className="bg-white dark:bg-gray-900/50 rounded-xl shadow-sm p-12 text-center border border-gray-200 dark:border-gray-700">
+          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+            <span className="material-symbols-outlined text-3xl text-gray-400">confirmation_number</span>
           </div>
-          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
             No tickets found
           </h3>
-          <p className="text-slate-500 dark:text-slate-400 text-lg mb-8 max-w-md mx-auto">
+          <p className="text-gray-500 dark:text-gray-400 text-lg mb-8 max-w-md mx-auto">
             You haven't purchased any tickets yet. Browse upcoming events to get started.
           </p>
           <a
@@ -492,14 +492,14 @@ export default function MyTickets() {
       <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
         <div className="mb-6 sm:mb-8">
           <PageTitle>My Tickets</PageTitle>
-          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
+          <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
             Your event tickets
           </p>
         </div>
-        <div className="animate-pulse bg-white dark:bg-slate-900/50 rounded-xl shadow-sm p-6 border border-slate-200 dark:border-slate-700">
-          <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-1/3 mb-6" />
-          <div className="h-6 bg-slate-100 dark:bg-slate-800 rounded w-2/3 mb-4" />
-          <div className="h-[420px] bg-slate-100 dark:bg-slate-800 rounded-xl" />
+        <div className="animate-pulse bg-white dark:bg-gray-900/50 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-6" />
+          <div className="h-6 bg-gray-100 dark:bg-gray-800 rounded w-2/3 mb-4" />
+          <div className="h-[420px] bg-gray-100 dark:bg-gray-800 rounded-xl" />
         </div>
       </PortalLayout>
     )
@@ -508,7 +508,7 @@ export default function MyTickets() {
   if (isTicketsError) {
     return (
       <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
-        <div className="text-center py-12 bg-white dark:bg-slate-900/50 rounded-xl shadow-sm border border-red-200 dark:border-red-900/30">
+        <div className="text-center py-12 bg-white dark:bg-gray-900/50 rounded-xl shadow-sm border border-red-200 dark:border-red-900/30">
             <div className="bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 p-4 rounded-xl inline-block mb-4">
               <span className="material-symbols-outlined text-4xl">error_outline</span>
             </div>
@@ -534,13 +534,13 @@ export default function MyTickets() {
       <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
         <div className="mb-6 sm:mb-8">
           <PageTitle>My Tickets</PageTitle>
-          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
+          <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
             Your event tickets
           </p>
         </div>
-        <div className="text-center py-12 bg-white dark:bg-slate-900/50 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No ticket records found</h2>
-          <p className="text-slate-500 dark:text-slate-400">We found your orders but no active ticket records for this account.</p>
+        <div className="text-center py-12 bg-white dark:bg-gray-900/50 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No ticket records found</h2>
+          <p className="text-gray-500 dark:text-gray-400">We found your orders but no active ticket records for this account.</p>
         </div>
       </PortalLayout>
     )
@@ -552,7 +552,7 @@ export default function MyTickets() {
         <div className="mobile-stack-controls mb-6 sm:mb-8 sm:items-end sm:justify-between sm:gap-6">
           <div className="flex-1">
             <PageTitle>My Tickets</PageTitle>
-            <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
+            <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
               Your event tickets
             </p>
           </div>
@@ -574,3 +574,4 @@ export default function MyTickets() {
     </PortalLayout>
   )
 }
+

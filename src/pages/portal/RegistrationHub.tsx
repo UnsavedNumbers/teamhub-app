@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+﻿import { Link } from 'react-router-dom'
 import { useMemo } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { getLink } from '@/utils/routes'
@@ -101,11 +101,11 @@ export default function RegistrationHub() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-        <p className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">{content.roleLabel}</p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-900 dark:text-white">Registration Hub</h1>
-        <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">{content.title}</p>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{content.description}</p>
+      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+        <p className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">{content.roleLabel}</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight text-gray-900 dark:text-white">Registration Hub</h1>
+        <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">{content.title}</p>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{content.description}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -113,13 +113,14 @@ export default function RegistrationHub() {
           <Link
             key={action.label}
             to={action.to}
-            className="rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 dark:hover:bg-slate-800"
+            className="rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700 dark:hover:bg-gray-800"
           >
-            <p className="text-sm font-black uppercase tracking-wide text-slate-900 dark:text-white">{action.label}</p>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{action.description}</p>
+            <p className="text-sm font-black uppercase tracking-wide text-gray-900 dark:text-white">{action.label}</p>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{action.description}</p>
           </Link>
         ))}
       </div>
     </div>
   )
 }
+

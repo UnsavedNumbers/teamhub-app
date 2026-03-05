@@ -1,4 +1,4 @@
-
+﻿
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
@@ -814,8 +814,8 @@ export default function Calendar() {
             <div className="flex-1">
               <PageTitle>{safeT('calendar.title', 'Events')}</PageTitle>
               {nextUpcomingEvent && counts.upcoming > 0 && (
-                <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide mt-1">
-                  Next up: {nextUpcomingEvent.title} — {formatEventDate(nextUpcomingEvent.start_time, nextUpcomingEvent.timezone)} {formatEventTimeRange(nextUpcomingEvent.start_time, nextUpcomingEvent.end_time, nextUpcomingEvent.timezone)}
+                <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide mt-1">
+                  Next up: {nextUpcomingEvent.title} - {formatEventDate(nextUpcomingEvent.start_time, nextUpcomingEvent.timezone)} {formatEventTimeRange(nextUpcomingEvent.start_time, nextUpcomingEvent.end_time, nextUpcomingEvent.timezone)}
                 </p>
               )}
             </div>
@@ -846,7 +846,7 @@ export default function Calendar() {
                 {safeT('calendar.event.addToCalendar', 'Add to Calendar')}
               </Button>
 
-              <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 w-full sm:w-auto">
+              <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1 w-full sm:w-auto">
                 {(['agenda', 'week', 'month'] as CalendarViewMode[]).map((v) => (
                   <button
                     key={v}
@@ -858,7 +858,7 @@ export default function Calendar() {
                     className={`flex-1 sm:flex-none px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                       viewMode === v
                         ? 'bg-[var(--org-btn-primary-bg)] text-white'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                     }`}
                   >
                     {safeT(`calendar.views.${v}`, v)}
@@ -870,14 +870,14 @@ export default function Calendar() {
           
           {/* Time Context Tabs */}
           {!fanView && (
-            <div className="mb-4 flex gap-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1">
+            <div className="mb-4 flex gap-1 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1">
               <button
                 onClick={() => handleTimeContextChange('upcoming')}
                 disabled={loading}
                 className={`flex-1 px-4 py-2 text-sm font-bold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                   timeContext === 'upcoming'
                     ? 'bg-[var(--org-btn-primary-bg)] text-white'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 Upcoming {counts.upcoming > 0 && `(${counts.upcoming})`}
@@ -888,7 +888,7 @@ export default function Calendar() {
                 className={`flex-1 px-4 py-2 text-sm font-bold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                   timeContext === 'past'
                     ? 'bg-[var(--org-btn-primary-bg)] text-white'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 Past {counts.past > 0 && `(${counts.past})`}
@@ -899,7 +899,7 @@ export default function Calendar() {
                 className={`flex-1 px-4 py-2 text-sm font-bold rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                   timeContext === 'all'
                     ? 'bg-[var(--org-btn-primary-bg)] text-white'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 All
@@ -932,7 +932,7 @@ export default function Calendar() {
                 onChange={(e) => setFanView(e.target.checked)}
                 className="w-4 h-4 rounded border-gray-300 text-[var(--org-btn-primary-bg)] focus:ring-[var(--org-btn-primary-bg)]"
               />
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Fan View (includes events from followed organizations, bookmarks, and tickets)
               </span>
             </label>
@@ -952,13 +952,13 @@ export default function Calendar() {
                              newDate.setMonth(newDate.getMonth() - 1)
                              setCurrentDate(newDate)
                            }} 
-                           className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
+                           className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                            disabled={loading}
                            aria-label="Previous month"
                          >
-                             <Icon name="chevron_left" className="text-slate-500 dark:text-slate-400" />
+                             <Icon name="chevron_left" className="text-gray-500 dark:text-gray-400" />
                          </button>
-                         <span className="font-bold text-slate-700 dark:text-slate-300">
+                         <span className="font-bold text-gray-700 dark:text-gray-300">
                              {currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric'})}
                          </span>
                          <button 
@@ -967,11 +967,11 @@ export default function Calendar() {
                              newDate.setMonth(newDate.getMonth() + 1)
                              setCurrentDate(newDate)
                            }}
-                           className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
+                           className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                            disabled={loading}
                            aria-label="Next month"
                          >
-                             <Icon name="chevron_right" className="text-slate-500 dark:text-slate-400" />
+                             <Icon name="chevron_right" className="text-gray-500 dark:text-gray-400" />
                          </button>
                      </div>
                      <button 
@@ -985,14 +985,14 @@ export default function Calendar() {
 
                  {/* Scheduling Contact */}
                  {schedulingContact && (
-                    <Card className="p-4 mt-6 bg-slate-50 dark:bg-slate-800/50">
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Schedule Questions?</h3>
-                        <p className="font-bold text-sm text-slate-900 dark:text-white mb-1">{schedulingContact.name}</p>
+                    <Card className="p-4 mt-6 bg-gray-50 dark:bg-gray-800/50">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Schedule Questions?</h3>
+                        <p className="font-bold text-sm text-gray-900 dark:text-white mb-1">{schedulingContact.name}</p>
                         <a href={`mailto:${schedulingContact.email}`} className="text-sm text-[var(--org-link-color)] hover:underline block break-all">
                             {schedulingContact.email}
                         </a>
                         {schedulingContact.phone && (
-                            <a href={`tel:${schedulingContact.phone}`} className="text-sm text-slate-500 hover:text-slate-700 block mt-1">
+                            <a href={`tel:${schedulingContact.phone}`} className="text-sm text-gray-500 hover:text-gray-700 block mt-1">
                                 {schedulingContact.phone}
                             </a>
                         )}
@@ -1003,8 +1003,8 @@ export default function Calendar() {
             <div className="lg:col-span-3 order-1 lg:order-2">
                 {loading ? (
                 <div className="flex flex-col items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
-                    <p className="mt-4 text-sm text-slate-500">Loading events...</p>
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
+                    <p className="mt-4 text-sm text-gray-500">Loading events...</p>
                 </div>
                 ) : error ? (
                   <div className="flex flex-col items-center justify-center py-12">
@@ -1024,9 +1024,9 @@ export default function Calendar() {
                   // Fan view (existing logic)
                   fanEvents.length === 0 ? (
                     <Card className="text-center py-12">
-                      <Icon name="event" size="text-6xl" className="text-slate-400 mb-4" />
+                      <Icon name="event" size="text-6xl" className="text-gray-400 mb-4" />
                       <CardTitle className="mb-2">{safeT('calendar.noEvents.title', 'No events')}</CardTitle>
-                      <p className="text-slate-500 dark:text-slate-400">
+                      <p className="text-gray-500 dark:text-gray-400">
                         No events from your followed organizations, bookmarks, or tickets.
                       </p>
                     </Card>
@@ -1065,9 +1065,9 @@ export default function Calendar() {
                     if (hasActiveFilters && filteredCount === 0 && totalCount > 0) {
                       return (
                         <Card className="text-center py-12">
-                          <Icon name="filter_list" size="text-6xl" className="text-slate-400 mb-4" />
+                          <Icon name="filter_list" size="text-6xl" className="text-gray-400 mb-4" />
                           <CardTitle className="mb-2">No events match your filters</CardTitle>
-                          <p className="text-slate-500 dark:text-slate-400 mb-4">
+                          <p className="text-gray-500 dark:text-gray-400 mb-4">
                             Try adjusting your filters to see more events.
                           </p>
                           <Button
@@ -1084,9 +1084,9 @@ export default function Calendar() {
                     if (totalCount === 0) {
                       return (
                         <Card className="text-center py-12">
-                          <Icon name="event" size="text-6xl" className="text-slate-400 mb-4" />
+                          <Icon name="event" size="text-6xl" className="text-gray-400 mb-4" />
                           <CardTitle className="mb-2">No events yet</CardTitle>
-                          <p className="text-slate-500 dark:text-slate-400 mb-4">
+                          <p className="text-gray-500 dark:text-gray-400 mb-4">
                             Events will appear here once scheduled.
                           </p>
                           {(isCoach || isAdmin || isStaff) && (
@@ -1101,7 +1101,7 @@ export default function Calendar() {
                             </Button>
                           )}
                           {isFan && (
-                            <p className="text-sm text-slate-500 mt-4">
+                            <p className="text-sm text-gray-500 mt-4">
                               Follow organizations to see public events
                             </p>
                           )}
@@ -1146,14 +1146,14 @@ export default function Calendar() {
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
-                                  <Icon name="event" className="text-slate-500 dark:text-slate-400" />
+                                <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
+                                  <Icon name="event" className="text-gray-500 dark:text-gray-400" />
                                 </div>
                                 <div>
-                                  <p className="font-bold text-slate-900 dark:text-white">
+                                  <p className="font-bold text-gray-900 dark:text-white">
                                     {formatEventDate(nextUpcomingEvent.start_time, nextUpcomingEvent.timezone)}
                                   </p>
-                                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">
                                     {formatEventTimeRange(nextUpcomingEvent.start_time, nextUpcomingEvent.end_time, nextUpcomingEvent.timezone)}
                                   </p>
                                 </div>
@@ -1161,15 +1161,15 @@ export default function Calendar() {
                               
                               {(nextUpcomingEvent.event_location?.venue_name || nextUpcomingEvent.location) && (
                                 <div className="flex items-start gap-3">
-                                  <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
-                                    <Icon name="location_on" className="text-slate-500 dark:text-slate-400" />
+                                  <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
+                                    <Icon name="location_on" className="text-gray-500 dark:text-gray-400" />
                                   </div>
                                   <div className="flex-1">
-                                    <p className="font-bold text-slate-900 dark:text-white text-sm">
+                                    <p className="font-bold text-gray-900 dark:text-white text-sm">
                                       {nextUpcomingEvent.event_location?.venue_name || nextUpcomingEvent.location}
                                     </p>
                                     {nextUpcomingEvent.event_location && (
-                                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                                      <p className="text-xs text-gray-500 dark:text-gray-400">
                                         {formatEventLocation(nextUpcomingEvent.event_location)}
                                       </p>
                                     )}
@@ -1179,7 +1179,7 @@ export default function Calendar() {
                             </div>
                             
                             {/* Actions */}
-                            <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
+                            <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
                               {(isGuardian || isAthlete) && (
                                 <AddToCalendarActions
                                   event={calendarExportEvent}
@@ -1195,7 +1195,7 @@ export default function Calendar() {
                                   href={eventMapUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors text-sm font-medium"
+                                  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors text-sm font-medium"
                                 >
                                   <Icon name="directions" size="text-sm" />
                                   Directions
@@ -1230,7 +1230,7 @@ export default function Calendar() {
                           {counts.past > 0 && (
                             <div>
                               <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                                   Past Events
                                 </h3>
                                 <button
@@ -1331,14 +1331,14 @@ export default function Calendar() {
                         <div>
                         <div className="flex items-center gap-2 mb-1">
                             {selectedEvent.is_cancelled && <span className="text-xs font-black text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded">{safeT('calendar.event.cancelled', 'Cancelled').toUpperCase()}</span>}
-                             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{safeT(`calendar.eventTypes.${selectedEvent.type}`, selectedEvent.type)}</span>
+                             <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{safeT(`calendar.eventTypes.${selectedEvent.type}`, selectedEvent.type)}</span>
                         </div>
                         <CardTitle className="mb-1 text-2xl">{selectedEvent.title}</CardTitle>
                         <p className="text-xs font-bold uppercase tracking-widest text-[var(--org-link-color)]">{selectedEvent.team?.name}</p>
                         </div>
                         <button 
                           onClick={() => setSelectedEvent(null)} 
-                          className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+                          className="text-gray-400 hover:text-gray-900 dark:hover:text-white p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
                           aria-label="Close event details"
                         >
                         <Icon name="close" />
@@ -1347,12 +1347,12 @@ export default function Calendar() {
 
                     <div className="space-y-4">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
-                                <Icon name="event" className="text-slate-500 dark:text-slate-400" />
+                            <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
+                                <Icon name="event" className="text-gray-500 dark:text-gray-400" />
                             </div>
                             <div>
-                                <p className="font-bold text-slate-900 dark:text-white">{formatEventDate(selectedEvent.start_time, selectedEvent.timezone)}</p>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">{formatEventTimeRange(selectedEvent.start_time, selectedEvent.end_time, selectedEvent.timezone)}</p>
+                                <p className="font-bold text-gray-900 dark:text-white">{formatEventDate(selectedEvent.start_time, selectedEvent.timezone)}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{formatEventTimeRange(selectedEvent.start_time, selectedEvent.end_time, selectedEvent.timezone)}</p>
                             </div>
                         </div>
 
@@ -1361,7 +1361,7 @@ export default function Calendar() {
                              <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center shrink-0">
                                 <Icon name="schedule" className="text-amber-500 dark:text-amber-400" />
                              </div>
-                            <p className="font-bold text-slate-900 dark:text-white">
+                            <p className="font-bold text-gray-900 dark:text-white">
                                 {safeT('calendar.event.arriveBy', 'Arrive by {{time}}').replace('{{time}}', new Date(selectedEvent.arrival_time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }))}
                             </p>
                         </div>
@@ -1369,12 +1369,12 @@ export default function Calendar() {
 
                         {(selectedEvent.event_location?.venue_name || selectedEvent.location) && (
                         <div className="flex items-start gap-3">
-                             <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
-                                <Icon name="location_on" className="text-slate-500 dark:text-slate-400" />
+                             <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
+                                <Icon name="location_on" className="text-gray-500 dark:text-gray-400" />
                              </div>
                             <div className="flex-1">
-                                <p className="font-bold text-slate-900 dark:text-white text-sm">{selectedEvent.event_location?.venue_name || selectedEvent.location}</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">{selectedEvent.event_location ? formatEventLocation(selectedEvent.event_location) : ''}</p>
+                                <p className="font-bold text-gray-900 dark:text-white text-sm">{selectedEvent.event_location?.venue_name || selectedEvent.location}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{selectedEvent.event_location ? formatEventLocation(selectedEvent.event_location) : ''}</p>
                                 {mapUrl && (
                                     <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--org-link-color)] hover:underline flex items-center gap-1 mt-1">
                                         {safeT('calendar.event.getDirections', 'Get Directions')} <Icon name="open_in_new" size="text-[10px]" />
@@ -1385,15 +1385,15 @@ export default function Calendar() {
                         )}
 
                         {selectedEvent.notes && (
-                            <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                                <p className="text-sm text-slate-500 dark:text-slate-400 whitespace-pre-wrap">{selectedEvent.notes}</p>
+                            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                                <p className="text-sm text-gray-500 dark:text-gray-400 whitespace-pre-wrap">{selectedEvent.notes}</p>
                             </div>
                         )}
 
                          {/* RSVP Section - Only show if RSVP is enabled */}
                         {selectedEvent.rsvp_config?.enabled && isReady && context?.userId && (
-                            <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                                <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white mb-3">{safeT('calendar.rsvp.yourResponse', 'Your Response')}</h4>
+                            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                                <h4 className="text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white mb-3">{safeT('calendar.rsvp.yourResponse', 'Your Response')}</h4>
                                 
                                 {isGeneralRSVP(selectedEvent) ? (
                                     <GeneralRSVPForm 
@@ -1430,7 +1430,7 @@ export default function Calendar() {
                                     />
                                 ) : isAthleteRSVP(selectedEvent) ? (
                                     children.length === 0 ? (
-                                        <p className="text-sm text-slate-500 italic">No children connected to account.</p>
+                                        <p className="text-sm text-gray-500 italic">No children connected to account.</p>
                                     ) : (
                                         <div className="space-y-3">
                                             {children.map(child => {
@@ -1456,8 +1456,8 @@ export default function Calendar() {
                     </div>
 
                     {(isGuardian || isAthlete) && (
-                      <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
-                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white mb-3">
+                      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-gray-900 dark:text-white mb-3">
                           {safeT('calendar.event.addToCalendar', 'Add to Calendar')}
                         </h4>
                         <AddToCalendarActions
@@ -1469,7 +1469,7 @@ export default function Calendar() {
                       </div>
                     )}
 
-                    <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                    <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                         <Button
                             variant="secondary"
                             onClick={() => {
@@ -1498,3 +1498,4 @@ export default function Calendar() {
       </PortalLayout>
   )
 }
+

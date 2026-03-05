@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Bookmarked Events Page
  * 
  * Lists all events the user has bookmarked.
@@ -66,7 +66,7 @@ export default function BookmarkedEvents() {
       >
         <div className="mb-6 sm:mb-8">
           <PageTitle>{t('portal.fan.bookmarkedEvents.title')}</PageTitle>
-          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide mt-1">
+          <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide mt-1">
             {t('portal.fan.bookmarkedEvents.description')}
           </p>
         </div>
@@ -95,7 +95,7 @@ export default function BookmarkedEvents() {
     >
       <div className="mb-6 sm:mb-8">
         <PageTitle>{t('portal.fan.bookmarkedEvents.title')}</PageTitle>
-        <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide mt-1">
+        <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide mt-1">
           {t('portal.fan.bookmarkedEvents.description')}
         </p>
       </div>
@@ -175,3 +175,4 @@ export default function BookmarkedEvents() {
     </PortalLayout>
   )
 }
+

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+﻿import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { useAuth } from '../hooks/useAuth'
@@ -676,10 +676,10 @@ export default function EventDetail() {
     going: 'bg-emerald-500 text-white',
     late: 'bg-amber-500 text-white',
     not_going: 'bg-red-500 text-white',
-    unknown: 'bg-slate-500 text-white',
+    unknown: 'bg-gray-500 text-white',
   }
 
-  const statusInactiveStyles = 'bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+  const statusInactiveStyles = 'bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
 
   if (loading) {
     return (
@@ -691,7 +691,7 @@ export default function EventDetail() {
         ]}
       >
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
         </div>
       </PortalLayout>
     )
@@ -758,9 +758,9 @@ export default function EventDetail() {
             <h1 className="event-hero-title">{event.title}</h1>
             <p className="event-hero-meta">
               {formatDate(event.start_time, event.timezone)}
-              <span className="meta-separator"> • </span>
+              <span className="meta-separator"> - </span>
               <span className="meta-time">{formatTime(event.start_time, event.timezone)} - {formatTime(event.end_time, event.timezone)}</span>
-              {timezoneLabel && <><span className="meta-separator"> • </span><span className="meta-time">{timezoneLabel}</span></>}
+              {timezoneLabel && <><span className="meta-separator"> - </span><span className="meta-time">{timezoneLabel}</span></>}
             </p>
             <p className="event-hero-team">{event.team.name}</p>
             
@@ -789,8 +789,8 @@ export default function EventDetail() {
                     <p className="quick-info-value">{t('calendar.event.loading')}</p>
                   ) : weatherData ? (
                     <div>
-                      <p className="quick-info-value">{weatherData.temperature}°F • <span className="capitalize">{weatherData.description}</span></p>
-                      <p className="quick-info-subtext">{weatherData.precipitation}% precip • {weatherData.windSpeed} mph</p>
+                      <p className="quick-info-value">{weatherData.temperature} deg F - <span className="capitalize">{weatherData.description}</span></p>
+                      <p className="quick-info-subtext">{weatherData.precipitation}% precip - {weatherData.windSpeed} mph</p>
                     </div>
                   ) : (
                     <p className="quick-info-value opacity-50">{t('calendar.event.unavailable')}</p>
@@ -854,11 +854,11 @@ export default function EventDetail() {
           <div className="flex items-start justify-between mb-4">
             <div>
               <PageTitle>{event.title}</PageTitle>
-              <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
-                {formatDate(event.start_time, event.timezone)} • {formatTime(event.start_time, event.timezone)} - {formatTime(event.end_time, event.timezone)}
-                {timezoneLabel ? ` • ${timezoneLabel}` : ''}
+              <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide mt-2">
+                {formatDate(event.start_time, event.timezone)} - {formatTime(event.start_time, event.timezone)} - {formatTime(event.end_time, event.timezone)}
+                {timezoneLabel ? ` - ${timezoneLabel}` : ''}
               </p>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mt-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mt-2">
                 {event.team.name}
               </p>
             </div>
@@ -905,40 +905,40 @@ export default function EventDetail() {
 
       {/* Quick Summary Banner - Mobile only when hero exists, always when no hero */}
       <div className={`mb-8 ${bannerUrl ? 'md:hidden' : ''}`}>
-        <Card className="bg-gradient-to-r from-[var(--org-btn-primary-bg, #137fec)]/5 to-slate-50 dark:to-slate-800/50 border-l-4 border-[var(--org-btn-primary-bg, #137fec)] p-6">
+        <Card className="bg-gradient-to-r from-[var(--org-btn-primary-bg, #137fec)]/5 to-gray-50 dark:to-gray-800/50 border-l-4 border-[var(--org-btn-primary-bg, #137fec)] p-6">
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.eventType')}</p>
-              <p className="text-lg font-black text-slate-900 dark:text-white capitalize">{event.type}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('calendar.event.eventType')}</p>
+              <p className="text-lg font-black text-gray-900 dark:text-white capitalize">{event.type}</p>
             </div>
             {event.arrival_time && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time, event.timezone) })}</p>
-                <p className="text-lg font-black text-slate-900 dark:text-white">{formatTime(event.arrival_time, event.timezone)}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time, event.timezone) })}</p>
+                <p className="text-lg font-black text-gray-900 dark:text-white">{formatTime(event.arrival_time, event.timezone)}</p>
               </div>
             )}
             {venueAddress && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.location')}</p>
-                <p className="text-lg font-black text-slate-900 dark:text-white truncate">{venueAddress.split(',')[0]}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('calendar.event.location')}</p>
+                <p className="text-lg font-black text-gray-900 dark:text-white truncate">{venueAddress.split(',')[0]}</p>
               </div>
             )}
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.weather')}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('calendar.event.weather')}</p>
               {loadingWeather ? (
-                <p className="text-lg font-black text-slate-900 dark:text-white">{t('calendar.event.loading')}</p>
+                <p className="text-lg font-black text-gray-900 dark:text-white">{t('calendar.event.loading')}</p>
               ) : weatherData ? (
                 <div>
-                  <p className="text-lg font-black text-slate-900 dark:text-white">{weatherData.temperature}°F • <span className="capitalize">{weatherData.description}</span></p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{weatherData.precipitation}% precip • {weatherData.windSpeed} mph wind</p>
+                  <p className="text-lg font-black text-gray-900 dark:text-white">{weatherData.temperature} deg F - <span className="capitalize">{weatherData.description}</span></p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{weatherData.precipitation}% precip - {weatherData.windSpeed} mph wind</p>
                 </div>
               ) : (
-                <p className="text-lg font-black text-slate-500 dark:text-slate-400">{t('calendar.event.unavailable')}</p>
+                <p className="text-lg font-black text-gray-500 dark:text-gray-400">{t('calendar.event.unavailable')}</p>
               )}
             </div>
             {!isEventOver24HoursAgo && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">{t('calendar.event.entry')}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('calendar.event.entry')}</p>
                 {event.ticketed_event ? (
                   <Button
                     onClick={() => {
@@ -957,7 +957,7 @@ export default function EventDetail() {
                     {t('calendar.event.getTickets')}
                   </Button>
                 ) : (
-                  <p className="text-lg font-black text-slate-900 dark:text-white">{t('calendar.event.freeEntry')}</p>
+                  <p className="text-lg font-black text-gray-900 dark:text-white">{t('calendar.event.freeEntry')}</p>
                 )}
               </div>
             )}
@@ -981,7 +981,7 @@ export default function EventDetail() {
                 {event.event_location?.venue_name && (
                   <CardTitle className="text-xl mb-4">{event.event_location.venue_name}</CardTitle>
                 )}
-                <div className="mb-4 text-slate-700 dark:text-slate-300">
+                <div className="mb-4 text-gray-700 dark:text-gray-300">
                   {eventLocation?.address_line1 && (
                     <p className="text-base">{eventLocation.address_line1}</p>
                   )}
@@ -995,7 +995,7 @@ export default function EventDetail() {
 
                 {/* Smart Map Links */}
                 <div className="mb-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Open in Maps</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Open in Maps</p>
                   <div className="flex flex-wrap gap-2">
                     {googleMapsLink(venueAddress) ? (
                       <a href={googleMapsLink(venueAddress)!} target="_blank" rel="noreferrer">
@@ -1053,7 +1053,7 @@ export default function EventDetail() {
                 {/* Ride-Share Shortcuts */}
                 {!isEventOver24HoursAgo && (
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Need a Ride?</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Need a Ride?</p>
                     <div className="flex flex-wrap gap-2">
                       {uberLink(venueAddress) ? (
                         <a href={uberLink(venueAddress)!} target="_blank" rel="noreferrer">
@@ -1093,10 +1093,10 @@ export default function EventDetail() {
                 {t('calendar.event.noLocationInfo')}
               </div>
               <div className="pt-12">
-                <p className="text-slate-600 dark:text-slate-300">
+                <p className="text-gray-600 dark:text-gray-300">
                   This event doesn't have a venue location set yet.
                 </p>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                   {canManage ? (
                     <Button
                       variant="primary"
@@ -1127,7 +1127,7 @@ export default function EventDetail() {
                 {t('calendar.event.eventNotes')}
               </div>
               <div className="pt-12">
-                <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap bg-slate-50 dark:bg-slate-800/50 p-4 rounded">
+                <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap bg-gray-50 dark:bg-gray-800/50 p-4 rounded">
                   {event.notes}
                 </p>
               </div>
@@ -1144,7 +1144,7 @@ export default function EventDetail() {
               <div className="pt-12">
                 {children.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-slate-500 dark:text-slate-400 mb-4">{t('portal.events.noChildren')}</p>
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">{t('portal.events.noChildren')}</p>
                     <Button variant="primary" onClick={() => navigate(getLink(RouteKeys.PORTAL_ATHLETES))}>
                       {t('portal.events.add')}
                     </Button>
@@ -1154,11 +1154,11 @@ export default function EventDetail() {
                     {children.map((child) => {
                       const att = attendance[child.id]
                       return (
-                        <div key={child.id} className="border-b border-slate-200 dark:border-slate-700 pb-4 last:border-b-0 last:pb-0">
+                        <div key={child.id} className="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-b-0 last:pb-0">
                           <div className="flex items-center justify-between mb-3">
                             <CardTitle className="text-lg">{child.first_name} {child.last_name}</CardTitle>
                             {saving === child.id && (
-                              <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t('calendar.rsvp.saving')}</span>
+                              <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">{t('calendar.rsvp.saving')}</span>
                             )}
                           </div>
                           <div className="flex flex-col sm:flex-row gap-2">
@@ -1230,8 +1230,8 @@ export default function EventDetail() {
                       <>
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Your Starting Point</p>
-                            <p className="text-sm font-bold text-slate-900 dark:text-white">{commuteStartLocation}</p>
+                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Your Starting Point</p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">{commuteStartLocation}</p>
                           </div>
                           <Button
                             variant="secondary"
@@ -1247,22 +1247,22 @@ export default function EventDetail() {
                         </div>
                         
                         {loadingCommute ? (
-                          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 flex items-center justify-center">
-                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-slate-900 dark:border-white mr-3"></div>
-                            <span className="text-sm text-slate-600 dark:text-slate-300">Calculating route...</span>
+                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-900 dark:border-white mr-3"></div>
+                            <span className="text-sm text-gray-600 dark:text-gray-300">Calculating route...</span>
                           </div>
                         ) : commuteSummary ? (
-                          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4">
+                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Distance</p>
-                                <p className="text-lg font-black text-slate-900 dark:text-white">{commuteSummary.distance}</p>
+                                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Distance</p>
+                                <p className="text-lg font-black text-gray-900 dark:text-white">{commuteSummary.distance}</p>
                               </div>
                               <div>
-                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
+                                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">
                                   {commuteSummary.durationInTraffic ? 'With Traffic' : 'Duration'}
                                 </p>
-                                <p className="text-lg font-black text-slate-900 dark:text-white">
+                                <p className="text-lg font-black text-gray-900 dark:text-white">
                                   {commuteSummary.durationInTraffic || commuteSummary.duration}
                                 </p>
                               </div>
@@ -1284,10 +1284,10 @@ export default function EventDetail() {
                                 const leaveByTime = leaveByDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
                                 
                                 return (
-                                  <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Need to Leave By</p>
+                                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Need to Leave By</p>
                                     <p className="text-xl font-black text-[var(--org-btn-primary-bg,#137fec)]">{leaveByTime}</p>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
                                       To arrive by {new Date(targetTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                                       {event.arrival_time ? ' (arrival time)' : ' (start time)'}
                                     </p>
@@ -1315,8 +1315,8 @@ export default function EventDetail() {
                       </>
                     ) : (
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Set Your Starting Location</p>
-                        <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Set Your Starting Location</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                           Save your home, work, or any starting point to quickly get directions with current traffic conditions.
                         </p>
                         <Button
@@ -1332,13 +1332,13 @@ export default function EventDetail() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Enter Your Starting Location</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Enter Your Starting Location</p>
                     <input
                       type="text"
                       value={commuteInputValue}
                       onChange={(e) => setCommuteInputValue(e.target.value)}
                       placeholder="e.g., 123 Main St, City, State"
-                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)]"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)]"
                       autoFocus
                     />
                     <div className="flex gap-2">
@@ -1401,3 +1401,4 @@ export default function EventDetail() {
     </PortalLayout>
   )
 }
+

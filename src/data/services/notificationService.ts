@@ -1,22 +1,22 @@
 /**
  * Notification Service
  *
- * Facade for notification operations that delegates to messagesService
+ * Facade for notification operations that delegates to userNotificationsService
  * and preferencesService. Provides a single entry point for notification
  * read/write operations and settings management.
  */
 
 import type { UserContext } from '../fake/userContext'
 import {
-  getNotifications as getNotificationsFromMessages,
-  markNotificationRead as markNotificationReadFromMessages,
-  markAllNotificationsRead as markAllNotificationsReadFromMessages,
-  getUnreadCount as getUnreadCountFromMessages,
-  archiveNotification as archiveNotificationFromMessages,
-  deleteNotification as deleteNotificationFromMessages,
+  getNotifications as getNotificationsFromUserNotifications,
+  markNotificationRead as markNotificationReadFromUserNotifications,
+  markAllNotificationsRead as markAllNotificationsReadFromUserNotifications,
+  getUnreadCount as getUnreadCountFromUserNotifications,
+  archiveNotification as archiveNotificationFromUserNotifications,
+  deleteNotification as deleteNotificationFromUserNotifications,
   type GetNotificationsOptions,
   type NotificationCursor,
-} from './messagesService'
+} from './userNotificationsService'
 import {
   getUserPreferences,
   updateUserPreferences,
@@ -34,7 +34,7 @@ export const notificationService = {
     context: UserContext,
     options?: GetNotificationsOptions | number
   ): Promise<{ data: NotificationRecord[]; error: Error | null; nextCursor: NotificationCursor | null }> => {
-    return getNotificationsFromMessages(context, options)
+    return getNotificationsFromUserNotifications(context, options)
   },
 
   /**
@@ -44,7 +44,7 @@ export const notificationService = {
     context: UserContext,
     notificationId: string
   ): ServiceResult => {
-    const result = await markNotificationReadFromMessages(context, notificationId)
+    const result = await markNotificationReadFromUserNotifications(context, notificationId)
     return { data: result.success ? true : null, error: result.error }
   },
 
@@ -52,7 +52,7 @@ export const notificationService = {
    * Mark all notifications as read for a user
    */
   markAllAsRead: async (context: UserContext): ServiceResult => {
-    const result = await markAllNotificationsReadFromMessages(context)
+    const result = await markAllNotificationsReadFromUserNotifications(context)
     return { data: result.success ? true : null, error: result.error }
   },
 
@@ -63,7 +63,7 @@ export const notificationService = {
     context: UserContext,
     notificationId: string
   ): ServiceResult => {
-    const result = await archiveNotificationFromMessages(context, notificationId)
+    const result = await archiveNotificationFromUserNotifications(context, notificationId)
     return { data: result.success ? true : null, error: result.error }
   },
 
@@ -74,7 +74,7 @@ export const notificationService = {
     context: UserContext,
     notificationId: string
   ): ServiceResult => {
-    const result = await deleteNotificationFromMessages(context, notificationId)
+    const result = await deleteNotificationFromUserNotifications(context, notificationId)
     return { data: result.success ? true : null, error: result.error }
   },
 
@@ -101,7 +101,7 @@ export const notificationService = {
    * Get unread notification count
    */
   getUnreadCount: async (context: UserContext): ServiceResult<number> => {
-    return getUnreadCountFromMessages(context)
+    return getUnreadCountFromUserNotifications(context)
   },
 
   /**

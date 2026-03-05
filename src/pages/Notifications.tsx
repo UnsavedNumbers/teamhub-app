@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
+﻿import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { getLink, RouteKeys } from '../utils/routes'
 import { useOptionalAuth } from '../hooks/useAuth'
@@ -7,7 +7,7 @@ import { notificationService } from '../data/services/notificationService'
 import { getAthletes } from '../data/services/familyService'
 import { getTeamsForParent } from '../data/services/teamsService'
 import { NotificationRecord } from '../types/notifications'
-import type { NotificationCursor } from '../data/services/messagesService'
+import type { NotificationCursor } from '../data/services/userNotificationsService'
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle } from '../components/portal/Typography'
 import NotificationErrorBoundary from '../components/common/NotificationErrorBoundary'
@@ -40,8 +40,8 @@ const FilterSection = ({ title, items, selectedIds, onToggle, onSelectAll }: Fil
   const isAllSelected = selectedIds.size === items.length
   
   return (
-    <div className="pt-5 border-t border-gray-100 dark:border-slate-800 animate-in fade-in slide-in-from-top-2 duration-200">
-      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-2">
+    <div className="pt-5 border-t border-gray-100 dark:border-gray-800 animate-in fade-in slide-in-from-top-2 duration-200">
+      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full bg-[var(--org-btn-primary-bg)]" aria-hidden />
         {title}
       </h3>
@@ -49,17 +49,17 @@ const FilterSection = ({ title, items, selectedIds, onToggle, onSelectAll }: Fil
       {/* Select All Option */}
       <button
         onClick={onSelectAll}
-        className="flex items-center gap-3 w-full text-left cursor-pointer mb-3 pb-3 border-b border-gray-50 dark:border-slate-800/50 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-all group"
+        className="flex items-center gap-3 w-full text-left cursor-pointer mb-3 pb-3 border-b border-gray-50 dark:border-gray-800/50 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all group"
       >
         <div className={cn(
           "w-5 h-5 rounded border flex items-center justify-center transition-all shadow-inner",
           isAllSelected 
             ? "bg-[var(--org-btn-primary-bg)] border-[var(--org-btn-primary-bg)] text-white" 
-            : "bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 group-hover:border-[var(--org-btn-primary-bg)]"
+            : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 group-hover:border-[var(--org-btn-primary-bg)]"
         )}>
           {isAllSelected && <span className="material-symbols-outlined text-[14px]">check</span>}
         </div>
-        <span className="text-sm font-bold text-slate-900 dark:text-white">
+        <span className="text-sm font-bold text-gray-900 dark:text-white">
           All {title}
         </span>
       </button>
@@ -76,20 +76,20 @@ const FilterSection = ({ title, items, selectedIds, onToggle, onSelectAll }: Fil
                 "flex items-center gap-3 w-full text-left cursor-pointer p-3 rounded-xl transition-all border group",
                 isSelected 
                   ? "bg-[var(--org-btn-primary-bg)]/8 dark:bg-[var(--org-btn-primary-bg)]/12 border-[var(--org-btn-primary-bg)]/40 shadow-sm" 
-                  : "border-transparent hover:border-[var(--org-btn-primary-bg)]/40 hover:bg-gray-50 dark:hover:bg-slate-800/50 hover:shadow-sm hover:translate-y-[-1px]"
+                  : "border-transparent hover:border-[var(--org-btn-primary-bg)]/40 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:shadow-sm hover:translate-y-[-1px]"
               )}
             >
               <div className={cn(
                 "w-5 h-5 rounded border flex items-center justify-center transition-all",
                 isSelected 
                   ? "bg-[var(--org-btn-primary-bg)] border-[var(--org-btn-primary-bg)] text-white" 
-                  : "bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 group-hover:border-[var(--org-btn-primary-bg)]"
+                  : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 group-hover:border-[var(--org-btn-primary-bg)]"
               )}>
                 {isSelected && <span className="material-symbols-outlined text-[14px] animate-in zoom-in">check</span>}
               </div>
               <span className={cn(
                 "text-sm transition-colors",
-                isSelected ? "font-bold text-[var(--org-btn-primary-bg)]" : "font-medium text-slate-700 dark:text-slate-300"
+                isSelected ? "font-bold text-[var(--org-btn-primary-bg)]" : "font-medium text-gray-700 dark:text-gray-300"
               )}>
                 {item.name}
               </span>
@@ -436,7 +436,7 @@ export default function Notifications() {
       >
         <div className="mb-6 sm:mb-8">
           <PageTitle>Notifications</PageTitle>
-          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide mt-1">
+          <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide mt-1">
             Stay on top of team, athlete, and program updates.
           </p>
         </div>
@@ -444,13 +444,13 @@ export default function Notifications() {
         <div className="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-280px)] lg:min-h-[600px]">
         
         {/* Sidebar Navigation */}
-        <aside className="w-full lg:w-[320px] lg:flex-shrink-0 flex flex-col border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+        <aside className="w-full lg:w-[320px] lg:flex-shrink-0 flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/50">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-slate-900 dark:text-white">Filters</h3>
+              <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 dark:text-white">Filters</h3>
               <button
                 onClick={clearFilters}
-                className="text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-[var(--org-link-color)] transition-colors"
+                className="text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-[var(--org-link-color)] transition-colors"
               >
                 Clear
               </button>
@@ -461,7 +461,7 @@ export default function Notifications() {
                 className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
                   filterByType === 'athlete' 
                     ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-btn-primary-bg)]' 
-                    : 'hover:bg-gray-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -476,7 +476,7 @@ export default function Notifications() {
                 className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
                   filterByType === 'team' 
                     ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-btn-primary-bg)]' 
-                    : 'hover:bg-gray-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -491,7 +491,7 @@ export default function Notifications() {
                 className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
                   filterByType === 'program' 
                     ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-btn-primary-bg)]' 
-                    : 'hover:bg-gray-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -506,7 +506,7 @@ export default function Notifications() {
                 className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
                   filterByType === 'sport' 
                     ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-btn-primary-bg)]' 
-                    : 'hover:bg-gray-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -560,10 +560,10 @@ export default function Notifications() {
             )}
           </div>
 
-          <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
             <button 
               onClick={clearFilters}
-              className="flex w-full items-center justify-center rounded-lg h-10 px-4 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              className="flex w-full items-center justify-center rounded-lg h-10 px-4 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             >
               Clear All Filters
             </button>
@@ -749,3 +749,4 @@ export default function Notifications() {
     </NotificationErrorBoundary>
   )
 }
+

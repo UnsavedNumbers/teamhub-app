@@ -43,10 +43,23 @@ function hasAnyRole(roles: string[], allowed: string[]): boolean {
   return roles.some((role) => allowed.includes(role))
 }
 
-function hasRequiredStaffFlags(permissions: Record<string, boolean>, required: string[]): boolean {
+function hasRequiredStaffFlags(
+  roles: string[],
+  permissions: Record<string, boolean>,
+  required: string[],
+): boolean {
   if (required.length === 0) {
     return true
   }
+
+  if (roles.includes("platform_admin")) {
+    return true
+  }
+
+  if (!roles.includes("staff")) {
+    return true
+  }
+
   return required.every((flag) => permissions[flag] === true)
 }
 
@@ -141,6 +154,10 @@ export async function resolveAuthorizationContext(
   const roles = new Set<string>()
   let staffPermissions: Record<string, boolean> = {}
 
+  if (!requirements.requireAuth) {
+    roles.add("public")
+  }
+
   if (resolvedOrgId) {
     const { data: membershipRow, error: membershipError } = await supabase
       .from("organization_members")
@@ -172,7 +189,7 @@ export async function resolveAuthorizationContext(
     throw new ApiManagerError("FORBIDDEN", "You do not have permission to run this operation.", 403)
   }
 
-  if (!hasRequiredStaffFlags(staffPermissions, requirements.requiredStaffFlags)) {
+  if (!hasRequiredStaffFlags(roleList, staffPermissions, requirements.requiredStaffFlags)) {
     throw new ApiManagerError("FORBIDDEN", "Your staff permissions do not allow this operation.", 403)
   }
 

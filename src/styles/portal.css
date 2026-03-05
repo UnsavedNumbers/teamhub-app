@@ -1647,7 +1647,7 @@
 
 /* Portal workspace layout (Vimeo-style: header + sidebar + main) */
 .portal-workspace-main {
-  min-height: calc(100vh - 3.5rem);
+  min-height: 0;
 }
 
 .portal-workspace-header {

@@ -442,6 +442,9 @@ verify_jwt = false
 [functions.resend-tickets]
 verify_jwt = false
 
+[functions.api]
+verify_jwt = false
+
 [functions.upgrade-org-license]
 verify_jwt = false
 

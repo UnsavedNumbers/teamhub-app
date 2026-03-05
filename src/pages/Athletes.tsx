@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { useOrganization } from '../contexts/OrganizationContext'
@@ -303,7 +303,7 @@ export default function Athletes() {
       <div className="mb-8 sm:mb-12 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 sm:gap-6">
         <div className="flex-1">
           <PageTitle>{isAthlete ? 'My Team' : 'My Athletes'}</PageTitle>
-          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
+          <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
             {isAthlete ? 'View your team members and their profiles.' : 'Manage your children\'s profiles and information.'}
           </p>
         </div>
@@ -316,7 +316,7 @@ export default function Athletes() {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
         </div>
       ) : error ? (
         <Card className="text-center py-12">
@@ -324,7 +324,7 @@ export default function Athletes() {
             <Icon name="error" size="text-4xl" className="text-red-500" />
           </div>
           <CardTitle className="mb-2 text-red-600 dark:text-red-400">Failed to Load Athletes</CardTitle>
-          <p className="text-slate-500 dark:text-slate-400 mb-6">{error}</p>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">{error}</p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
             <Button variant="primary" onClick={handleRetry} disabled={loading} className="w-full sm:w-auto">
               Retry
@@ -338,11 +338,11 @@ export default function Athletes() {
         </Card>
       ) : athletes.length === 0 ? (
         <Card className="text-center py-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full mb-4">
-            <Icon name="group" size="text-4xl" className="text-slate-400" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 dark:bg-neutral-900 rounded-full mb-4">
+            <Icon name="group" size="text-4xl" className="text-gray-400" />
           </div>
           <CardTitle className="mb-2">{isAthlete ? t('portal.athletes.noTeamMembers') : t('portal.children.noChildren')}</CardTitle>
-          <p className="text-slate-500 dark:text-slate-400 mb-6">{isAthlete ? t('portal.athletes.noTeamMembersDescription') : t('portal.children.addChildren')}</p>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">{isAthlete ? t('portal.athletes.noTeamMembersDescription') : t('portal.children.addChildren')}</p>
           {!isAthlete && (
             <Button variant="primary" onClick={handleAddAthleteClick} disabled={loading}>
               {t('portal.children.add')}
@@ -365,7 +365,7 @@ export default function Athletes() {
                 onClick={() => handleCardClick(athlete.id)}
               >
                 {/* Image spans full card */}
-                <div className="w-full aspect-[4/3] relative bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+                <div className="w-full aspect-[4/3] relative bg-gray-100 dark:bg-neutral-900 flex items-center justify-center overflow-hidden">
                   <AthleteAvatar athlete={athlete} size="xl" className="w-full h-full rounded-none object-cover" />
                   {/* Gradient overlay for better text readability */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
@@ -382,7 +382,7 @@ export default function Athletes() {
                       )}
                       {genderLabel !== 'Not specified' && (
                         <>
-                          {age !== null && <span>•</span>}
+                          {age !== null && <span>&bull;</span>}
                           <span>{genderLabel}</span>
                         </>
                       )}
@@ -409,7 +409,7 @@ export default function Athletes() {
                     {/* Action Button */}
                     <Button
                       variant="secondary"
-                      className="w-full text-sm px-4 py-2 bg-white/95 hover:bg-white text-slate-900 font-semibold border-0 shadow-lg opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-200"
+                      className="w-full text-sm px-4 py-2 bg-white/95 hover:bg-white text-gray-900 dark:text-gray-900 font-semibold border-0 shadow-lg opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-200"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleCardClick(athlete.id)
@@ -437,36 +437,36 @@ export default function Athletes() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-xl border-2 border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-900"
+            className="w-full max-w-md rounded-xl border-2 border-gray-200 bg-white p-6 dark:border-neutral-700 dark:bg-black"
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 id="add-athlete-dialog-title" className="text-xl font-black uppercase tracking-wide text-slate-900 dark:text-slate-100">
+              <h2 id="add-athlete-dialog-title" className="text-xl font-black uppercase tracking-wide text-gray-900 dark:text-gray-100">
                 Add Athlete
               </h2>
               <button
                 type="button"
                 onClick={() => setShowAddAthleteDialog(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-gray-100"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <p className="mb-6 text-sm font-medium text-slate-600 dark:text-slate-400">
+            <p className="mb-6 text-sm font-medium text-gray-600 dark:text-gray-400">
               Choose how you want to add an athlete to your account.
             </p>
             <div className="flex flex-col gap-3">
               <button
                 type="button"
                 onClick={handleClaimAthlete}
-                className="flex items-center gap-4 rounded-lg border-2 border-slate-200 bg-white p-4 text-left transition-all hover:border-[var(--org-link-color)]/30 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+                className="flex items-center gap-4 rounded-lg border-2 border-gray-200 bg-white p-4 text-left transition-all hover:border-[var(--org-link-color)]/30 hover:bg-gray-50 dark:border-neutral-700 dark:bg-black dark:hover:bg-neutral-900"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[var(--org-btn-primary-bg)]/10">
                   <Link2 className="h-6 w-6 text-[var(--org-link-color)]" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-base font-bold text-slate-900 dark:text-slate-100">Claim an Athlete</p>
-                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                  <p className="text-base font-bold text-gray-900 dark:text-gray-100">Claim an Athlete</p>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                     Request to attach to an existing athlete profile
                   </p>
                 </div>
@@ -474,14 +474,14 @@ export default function Athletes() {
               <button
                 type="button"
                 onClick={handleAddNewAthlete}
-                className="flex items-center gap-4 rounded-lg border-2 border-slate-200 bg-white p-4 text-left transition-all hover:border-[var(--org-link-color)]/30 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+                className="flex items-center gap-4 rounded-lg border-2 border-gray-200 bg-white p-4 text-left transition-all hover:border-[var(--org-link-color)]/30 hover:bg-gray-50 dark:border-neutral-700 dark:bg-black dark:hover:bg-neutral-900"
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[var(--org-btn-primary-bg)]/10">
                   <UserPlus className="h-6 w-6 text-[var(--org-link-color)]" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-base font-bold text-slate-900 dark:text-slate-100">Add New Athlete</p>
-                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                  <p className="text-base font-bold text-gray-900 dark:text-gray-100">Add New Athlete</p>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                     Create a new athlete profile from scratch
                   </p>
                 </div>
@@ -491,7 +491,7 @@ export default function Athletes() {
               <button
                 type="button"
                 onClick={() => setShowAddAthleteDialog(false)}
-                className="rounded-lg border-2 border-slate-200 bg-white px-4 py-2 text-sm font-bold uppercase tracking-wide text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                className="rounded-lg border-2 border-gray-200 bg-white px-4 py-2 text-sm font-bold uppercase tracking-wide text-gray-700 transition-colors hover:bg-gray-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-gray-200 dark:hover:bg-neutral-800"
               >
                 Cancel
               </button>
@@ -503,3 +503,4 @@ export default function Athletes() {
     </PortalLayout>
   )
 }
+

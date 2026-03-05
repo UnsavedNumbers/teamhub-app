@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Complete Profile Page
  *
  * Optional profile completion step shown after first team join.
@@ -126,7 +126,7 @@ export default function CompleteProfile() {
       <div className="max-w-md mx-auto">
         <div className="mb-12 text-center">
           <PageTitle>Complete Your Profile</PageTitle>
-          <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
+          <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide mt-2">
             Add some information to help us personalize your experience (optional)
           </p>
         </div>
@@ -150,7 +150,7 @@ export default function CompleteProfile() {
                 required
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
                 placeholder="John"
               />
             </div>
@@ -166,7 +166,7 @@ export default function CompleteProfile() {
                 required
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
                 placeholder="Smith"
               />
             </div>
@@ -174,14 +174,14 @@ export default function CompleteProfile() {
             {/* Phone */}
             <div>
               <label htmlFor="phone" className="block text-sm font-medium mb-2">
-                Phone Number <span className="text-slate-400 text-xs">(Optional)</span>
+                Phone Number <span className="text-gray-400 text-xs">(Optional)</span>
               </label>
               <input
                 id="phone"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
                 placeholder="(555) 123-4567"
               />
             </div>
@@ -189,7 +189,7 @@ export default function CompleteProfile() {
             {/* Home Zipcode */}
             <div>
               <label htmlFor="homeZipcode" className="block text-sm font-medium mb-2">
-                Home Zip Code <span className="text-slate-400 text-xs">(Optional)</span>
+                Home Zip Code <span className="text-gray-400 text-xs">(Optional)</span>
               </label>
               <input
                 id="homeZipcode"
@@ -197,7 +197,7 @@ export default function CompleteProfile() {
                 maxLength={10}
                 value={homeZipcode}
                 onChange={(e) => setHomeZipcode(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
                 placeholder="12345"
               />
             </div>
@@ -228,3 +228,4 @@ export default function CompleteProfile() {
     </PortalLayout>
   )
 }
+

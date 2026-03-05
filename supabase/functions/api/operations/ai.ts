@@ -41,7 +41,7 @@ const summarizeAnnouncement: OperationDefinition = {
     requireAuth: true,
     orgScoped: true,
     allowedRoles: ["org_admin", "coach", "staff", "platform_admin"],
-    requiredStaffFlags: [],
+    requiredStaffFlags: ["can_use_ai_tools"],
     allowPlatformAdmin: true,
   },
   validateInput(input: unknown) {

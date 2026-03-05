@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Photos Landing Page
  * 
  * Entry point for photo galleries. Shows galleries organized by:
@@ -189,9 +189,9 @@ export default function Photos() {
           >
             <Icon 
               name={isCollapsed ? "chevron_right" : "expand_more"} 
-              className="text-slate-500 transition-transform"
+              className="text-gray-500 transition-transform"
             />
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
           </button>
           {!isCollapsed && (
             <EmptyState
@@ -212,19 +212,19 @@ export default function Photos() {
         >
           <Icon 
             name={isCollapsed ? "chevron_right" : "expand_more"} 
-            className="text-slate-500 transition-transform"
+            className="text-gray-500 transition-transform"
           />
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
         </button>
         {!isCollapsed && (
           <>
             {loading ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="border border-slate-200 dark:border-slate-700 animate-pulse" style={{ borderRadius: '2px' }}>
-                    <div className="h-40 bg-slate-200 dark:bg-slate-700"></div>
+                  <div key={i} className="border border-gray-200 dark:border-gray-700 animate-pulse" style={{ borderRadius: '2px' }}>
+                    <div className="h-40 bg-gray-200 dark:bg-gray-700"></div>
                     <div className="p-3">
-                      <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
                     </div>
                   </div>
                 ))}
@@ -248,10 +248,10 @@ export default function Photos() {
                 <Link
                   key={gallery.id}
                   to={getLink('portal.photosGallery', { id: gallery.id })}
-                  className="block border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-colors group"
+                  className="block border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors group"
                   style={{ borderRadius: '2px' }}
                 >
-                  <div className="relative h-40 overflow-hidden bg-slate-100 dark:bg-slate-800">
+                  <div className="relative h-40 overflow-hidden bg-gray-100 dark:bg-gray-800">
                     {hasCover && mainSrc ? (
                       <picture className="w-full h-full block">
                         {gallery.cover_thumbnails?.thumb_medium?.webp && (
@@ -266,7 +266,7 @@ export default function Photos() {
                       </picture>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Icon name="cloud_upload" size="text-5xl" className="text-slate-300 dark:text-slate-600" />
+                        <Icon name="cloud_upload" size="text-5xl" className="text-gray-300 dark:text-gray-600" />
                       </div>
                     )}
                     <div className="absolute bottom-2 right-2 px-2 py-1 flex items-center gap-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', borderRadius: '2px' }}>
@@ -277,7 +277,7 @@ export default function Photos() {
                     </div>
                   </div>
                   <div className="p-3">
-                    <h3 className="font-medium text-base text-slate-900 dark:text-slate-100 leading-snug line-clamp-2">{gallery.name}</h3>
+                    <h3 className="font-medium text-base text-gray-900 dark:text-gray-100 leading-snug line-clamp-2">{gallery.name}</h3>
                   </div>
                 </Link>
               );
@@ -301,7 +301,7 @@ export default function Photos() {
       >
         <div className="mb-8">
           <PageTitle>{t('photos.title')}</PageTitle>
-          <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+          <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide">
             {t('photos.landing.subtitle')}
           </p>
         </div>
@@ -320,10 +320,10 @@ export default function Photos() {
         {/* Loading Skeleton */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="border border-slate-200 dark:border-slate-700 animate-pulse" style={{ borderRadius: '2px' }}>
-              <div className="h-40 bg-slate-200 dark:bg-slate-700"></div>
+            <div key={i} className="border border-gray-200 dark:border-gray-700 animate-pulse" style={{ borderRadius: '2px' }}>
+              <div className="h-40 bg-gray-200 dark:bg-gray-700"></div>
               <div className="p-3">
-                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
               </div>
             </div>
           ))}
@@ -344,7 +344,7 @@ export default function Photos() {
     >
       <div className="mb-8">
         <PageTitle>{t('photos.title')}</PageTitle>
-        <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+        <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide">
           {t('photos.landing.subtitle')}
         </p>
       </div>
@@ -378,4 +378,5 @@ export default function Photos() {
     </PortalLayout>
   )
 }
+
 

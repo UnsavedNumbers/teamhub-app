@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+﻿import { Link } from 'react-router-dom'
 import {
   Calendar,
   MessageSquare,
@@ -21,7 +21,8 @@ import { useState, useEffect } from 'react'
 import { getLink } from '../../utils/routes'
 import { useUserContext } from '../../hooks/useUserContext'
 import { getUpcomingEventsForUser } from '../../data/services/eventsService'
-import { getAnnouncements, getNotifications } from '../../data/services/messagesService'
+import { getAnnouncements } from '../../data/services/messagesService'
+import { getNotifications } from '../../data/services/userNotificationsService'
 import { getUnpaidFeeAssignments } from '../../data/services/paymentsService'
 import { getTeamsForParent } from '../../data/services/teamsService'
 import { getPrimarySportForUser } from '../../utils/sportContext'
@@ -218,7 +219,7 @@ export default function GuardianDashboardContent() {
     ? `${eventCountThisWeek} event${eventCountThisWeek !== 1 ? 's' : ''} this week`
     : 'No events this week'
   const subtext = firstEvent
-    ? `${firstEvent.type === 'practice' ? 'Practice' : 'Game'} ${firstEvent.title} • ${new Date(firstEvent.start_time).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`
+    ? `${firstEvent.type === 'practice' ? 'Practice' : 'Game'} ${firstEvent.title} - ${new Date(firstEvent.start_time).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`
     : 'Add events to your calendar.'
 
   const normalizedUnpaid = (unpaid ?? []).map(normalizeAssignment)
@@ -237,7 +238,7 @@ export default function GuardianDashboardContent() {
 
   const trimText = (value: string | null | undefined, maxLength: number): string | undefined => {
     if (!value) return undefined
-    return value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value
+    return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value
   }
 
   const manualActivityItems: Array<{ item: RecentActivityItem; sortMs: number }> = []
@@ -332,15 +333,15 @@ export default function GuardianDashboardContent() {
     <div className="space-y-8">
       <section>
         <h1 className="sr-only">Guardian dashboard</h1>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-900/70">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl bg-gray-50 px-4 py-3 dark:bg-gray-900/70">
           {GUARDIAN_ACTIONS.map((action) => (
             <Link
               key={action.to + action.label}
               to={action.to}
-              className="group text-sm font-bold uppercase tracking-wide text-slate-700 transition-colors hover:text-slate-950 dark:text-slate-300 dark:hover:text-white"
+              className="group text-sm font-bold uppercase tracking-wide text-gray-700 transition-colors hover:text-gray-950 dark:text-gray-300 dark:hover:text-white"
             >
               {action.label}
-              <span className="ml-2 hidden text-[11px] font-medium normal-case tracking-normal text-slate-500 dark:text-slate-400 lg:inline">
+              <span className="ml-2 hidden text-[11px] font-medium normal-case tracking-normal text-gray-500 dark:text-gray-400 lg:inline">
                 {action.subtext}
               </span>
             </Link>
@@ -368,21 +369,21 @@ export default function GuardianDashboardContent() {
         </div>
         <div>
           <div className="space-y-4">
-            <section className="rounded-xl bg-slate-50 p-5 dark:bg-slate-900/70">
+            <section className="rounded-xl bg-gray-50 p-5 dark:bg-gray-900/70">
               <div className="mb-4 flex items-end justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Events</p>
-                  <p className="mt-1 text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">{eventCountThisWeek}</p>
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">this week</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Events</p>
+                  <p className="mt-1 text-3xl font-black tracking-tight text-gray-900 dark:text-gray-100">{eventCountThisWeek}</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">this week</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{events.length} total</p>
-                  {nextEventDate && <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">Next {nextEventDate}</p>}
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{events.length} total</p>
+                  {nextEventDate && <p className="mt-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">Next {nextEventDate}</p>}
                 </div>
               </div>
               <div className="space-y-2.5">
                 {events.length === 0 ? (
-                  <p className="rounded-xl bg-slate-100/70 px-3 py-3 text-sm font-medium text-slate-600 dark:bg-slate-800/70 dark:text-slate-400">
+                  <p className="rounded-xl bg-gray-100/70 px-3 py-3 text-sm font-medium text-gray-600 dark:bg-gray-800/70 dark:text-gray-400">
                     No upcoming events scheduled.
                   </p>
                 ) : (
@@ -405,7 +406,7 @@ export default function GuardianDashboardContent() {
                       <Link
                         key={event.id}
                         to={`/portal/calendar/events/${event.id}`}
-                        className="group flex items-center gap-3 rounded-xl bg-slate-100/70 p-2.5 transition-colors hover:bg-slate-200/70 dark:bg-slate-800/60 dark:hover:bg-slate-800"
+                        className="group flex items-center gap-3 rounded-xl bg-gray-100/70 p-2.5 transition-colors hover:bg-gray-200/70 dark:bg-gray-800/60 dark:hover:bg-gray-800"
                       >
                         {ticketBannerUrl ? (
                           <img
@@ -422,15 +423,15 @@ export default function GuardianDashboardContent() {
                           />
                         )}
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100">{event.title}</p>
-                          <p className="mt-0.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{eventTypeLabel}</p>
+                          <p className="truncate text-sm font-bold text-gray-900 dark:text-gray-100">{event.title}</p>
+                          <p className="mt-0.5 text-[11px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">{eventTypeLabel}</p>
                           {formattedArrivalTime && (
                             <p className="mt-0.5 text-[11px] font-black uppercase tracking-wide text-rose-600 dark:text-rose-400">
                               Arrive by {formattedArrivalTime}
                             </p>
                           )}
                         </div>
-                        <span className="shrink-0 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <span className="shrink-0 text-[11px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                           {formattedDate}
                         </span>
                       </Link>
@@ -441,21 +442,21 @@ export default function GuardianDashboardContent() {
                   to={getLink('portal.calendar')}
                   className="block pt-1 text-sm font-bold uppercase tracking-wide text-[var(--org-link-color)] hover:underline"
                 >
-                  View all events →
+                  View all events -&gt;
                 </Link>
               </div>
             </section>
 
-            <section className="rounded-xl bg-slate-50 p-5 dark:bg-slate-900/70">
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Upcoming payments</p>
-              <p className="mt-2 text-4xl font-black tracking-tight text-slate-900 dark:text-slate-100">{paymentHeadline}</p>
-              <p className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">{paymentSubtext}</p>
+            <section className="rounded-xl bg-gray-50 p-5 dark:bg-gray-900/70">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Upcoming payments</p>
+              <p className="mt-2 text-4xl font-black tracking-tight text-gray-900 dark:text-gray-100">{paymentHeadline}</p>
+              <p className="mt-1 text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">{paymentSubtext}</p>
               {upcomingPaymentItems.length > 0 && (
                 <div className="mt-4 space-y-2">
                   {upcomingPaymentItems.map((item) => (
                     <div key={item.id} className="flex items-center justify-between gap-3 text-sm">
-                      <span className="truncate font-semibold text-slate-700 dark:text-slate-300">{item.title}</span>
-                      <span className="font-bold text-slate-900 dark:text-slate-100">{item.amountLabel}</span>
+                      <span className="truncate font-semibold text-gray-700 dark:text-gray-300">{item.title}</span>
+                      <span className="font-bold text-gray-900 dark:text-gray-100">{item.amountLabel}</span>
                     </div>
                   ))}
                 </div>
@@ -464,7 +465,7 @@ export default function GuardianDashboardContent() {
                 to={getLink('portal.payments')}
                 className="mt-4 block text-sm font-bold uppercase tracking-wide text-[var(--org-link-color)] hover:underline"
               >
-                Payment summary →
+                Payment summary -&gt;
               </Link>
             </section>
           </div>
@@ -473,30 +474,30 @@ export default function GuardianDashboardContent() {
 
       <section>
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-lg font-black uppercase tracking-wide text-slate-900 dark:text-slate-100">Team feed</h2>
+          <h2 className="text-lg font-black uppercase tracking-wide text-gray-900 dark:text-gray-100">Team feed</h2>
           <Link to={getLink('portal.photos')} className="text-sm font-bold uppercase tracking-wide text-[var(--org-link-color)] hover:underline">
-            View all →
+            View all -&gt;
           </Link>
         </div>
-        <div className="grid grid-cols-1 gap-3 lg:flex lg:gap-4 lg:overflow-x-auto lg:pb-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {announcements?.slice(0, 4).map((a) => (
             <Link
               key={a.id}
               to={`/portal/announcements/${a.id}`}
-              className="group flex flex-col rounded-xl bg-slate-50 p-5 transition-colors hover:bg-slate-100 lg:min-w-[240px] lg:shrink-0 dark:bg-slate-900/70 dark:hover:bg-slate-900"
+              className="group flex h-full flex-col rounded-xl bg-gray-50 p-5 transition-colors hover:bg-gray-100 dark:bg-gray-900/70 dark:hover:bg-gray-900"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-200 dark:bg-slate-800">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-200 dark:bg-gray-800">
                 <span className="text-base leading-none" aria-hidden>
                   {getAnnouncementEmoji(a.type)}
                 </span>
               </div>
-              <p className="mt-3 truncate text-sm font-black uppercase tracking-wide text-slate-900 dark:text-slate-100">{a.title}</p>
-              <p className="mt-2 line-clamp-2 text-xs font-medium text-slate-600 dark:text-slate-400">{a.content}</p>
+              <p className="mt-3 truncate text-sm font-black uppercase tracking-wide text-gray-900 dark:text-gray-100">{a.title}</p>
+              <p className="mt-2 line-clamp-2 text-xs font-medium text-gray-600 dark:text-gray-400">{a.content}</p>
             </Link>
           ))}
           <Link
             to={getLink('portal.photos')}
-            className="flex flex-col items-center justify-center rounded-xl bg-slate-50 p-8 text-slate-500 transition-colors hover:bg-slate-100 lg:min-w-[240px] lg:shrink-0 dark:bg-slate-900/70 dark:text-slate-400 dark:hover:bg-slate-900"
+            className="flex h-full flex-col items-center justify-center rounded-xl bg-gray-50 p-8 text-gray-500 transition-colors hover:bg-gray-100 dark:bg-gray-900/70 dark:text-gray-400 dark:hover:bg-gray-900"
           >
             <span className="text-sm font-bold uppercase tracking-wide">Photos</span>
           </Link>
@@ -505,3 +506,4 @@ export default function GuardianDashboardContent() {
     </div>
   )
 }
+

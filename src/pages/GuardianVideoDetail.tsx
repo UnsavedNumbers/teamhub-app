@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Guardian Video Detail Page
  * 
  * Video detail view for guardians with coach notes display.
@@ -146,17 +146,17 @@ export default function GuardianVideoDetail() {
         ]}
       >
         <div className="animate-pulse">
-          <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-1/3 mb-4" />
-          <div className="aspect-video bg-slate-200 dark:bg-slate-700 rounded-2xl mb-8" />
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4" />
+          <div className="aspect-video bg-gray-200 dark:bg-gray-700 rounded-2xl mb-8" />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="space-y-4">
               {[1, 2, 3].map(i => (
-                <div key={i} className="h-32 bg-slate-200 dark:bg-slate-700 rounded-xl" />
+                <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl" />
               ))}
             </div>
             <div className="space-y-4">
               {[1, 2].map(i => (
-                <div key={i} className="h-32 bg-slate-200 dark:bg-slate-700 rounded-xl" />
+                <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl" />
               ))}
             </div>
           </div>
@@ -177,10 +177,10 @@ export default function GuardianVideoDetail() {
       >
         <Card className="text-center py-12">
           <Icon name="error" size="text-4xl" className="text-red-500 mb-4" />
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
             Failed to load video
           </h3>
-          <p className="text-slate-500 mb-4">
+          <p className="text-gray-500 mb-4">
             {videoError?.message || 'Video not found'}
           </p>
           <Button as={Link} to="/portal/videos">
@@ -202,10 +202,10 @@ export default function GuardianVideoDetail() {
       {/* Page Heading */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
         <div className="flex-1">
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-gray-900 dark:text-white mb-2">
             Guardian Video: Athlete Feedback
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-base">
+          <p className="text-gray-500 dark:text-gray-400 text-base">
             {video.team?.name && `${video.team.name} - `}
             {video.title}
           </p>
@@ -239,19 +239,19 @@ export default function GuardianVideoDetail() {
         
         {/* Description */}
         {(video.description || (video.tags && video.tags.length > 0)) && (
-          <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <div className="p-6 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
             {video.description && (
-              <p className="text-sm text-slate-700 dark:text-slate-300 mb-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
                 {video.description}
               </p>
             )}
             {video.tags && video.tags.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
-                <Icon name="label" size="text-sm" className="text-slate-400 shrink-0" />
+                <Icon name="label" size="text-sm" className="text-gray-400 shrink-0" />
                 {video.tags.map((link) => (
                   <span
                     key={link.id}
-                    className="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                    className="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
                     style={link.tag?.color ? { borderColor: link.tag.color, color: link.tag.color } : undefined}
                   >
                     {link.tag?.name ?? 'Tag'}
@@ -263,7 +263,7 @@ export default function GuardianVideoDetail() {
         )}
         
         {/* Interactive Timeline Bar */}
-        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="bg-gray-50 dark:bg-gray-900/50 p-4 border-t border-gray-100 dark:border-gray-800">
           <div className="flex items-center justify-between overflow-x-auto pb-2">
             <div className="flex items-center gap-12 px-4 whitespace-nowrap">
               {markers.map((marker, index) => {
@@ -280,11 +280,11 @@ export default function GuardianVideoDetail() {
                         ? "bg-[var(--org-btn-primary-bg)] border-[var(--org-btn-primary-bg)]/20 scale-125 shadow-sm shadow-[var(--org-btn-primary-bg)]"
                         : marker.time <= currentTime
                         ? "bg-[var(--org-btn-primary-bg)] border-[var(--org-btn-primary-bg)]/20"
-                        : "bg-slate-300 dark:bg-slate-600"
+                        : "bg-gray-300 dark:bg-gray-600"
                     )} />
                     <span className={cn(
                       "text-[10px] font-bold",
-                      isActive ? "text-[var(--org-btn-primary-bg)]" : "text-slate-400"
+                      isActive ? "text-[var(--org-btn-primary-bg)]" : "text-gray-400"
                     )}>
                       {formatTimestamp(marker.time)}
                     </span>
@@ -302,7 +302,7 @@ export default function GuardianVideoDetail() {
         {/* Feedback */}
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold tracking-tight uppercase text-slate-900 dark:text-white">
+            <h3 className="text-xl font-bold tracking-tight uppercase text-gray-900 dark:text-white">
               Feedback
             </h3>
             <span className="bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-btn-primary-bg)] px-3 py-1 rounded-full text-xs font-bold">
@@ -312,8 +312,8 @@ export default function GuardianVideoDetail() {
           
           {athleteNotes.length === 0 ? (
             <Card className="text-center py-8">
-              <Icon name="comment" size="text-3xl" className="text-slate-300 mb-2" />
-              <p className="text-slate-500 text-sm">No personal feedback available</p>
+              <Icon name="comment" size="text-3xl" className="text-gray-300 mb-2" />
+              <p className="text-gray-500 text-sm">No personal feedback available</p>
             </Card>
           ) : (
             <div className="space-y-4">
@@ -341,18 +341,18 @@ export default function GuardianVideoDetail() {
         {/* Team Notes */}
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold tracking-tight uppercase text-slate-900 dark:text-white">
+            <h3 className="text-xl font-bold tracking-tight uppercase text-gray-900 dark:text-white">
               Team Notes
             </h3>
-            <span className="bg-slate-200 dark:bg-slate-800 text-slate-500 px-3 py-1 rounded-full text-xs font-bold">
+            <span className="bg-gray-200 dark:bg-gray-800 text-gray-500 px-3 py-1 rounded-full text-xs font-bold">
               GENERAL
             </span>
           </div>
           
           {teamNotes.length === 0 ? (
             <Card className="text-center py-8 opacity-80">
-              <Icon name="groups" size="text-3xl" className="text-slate-300 mb-2" />
-              <p className="text-slate-500 text-sm">No team notes available</p>
+              <Icon name="groups" size="text-3xl" className="text-gray-300 mb-2" />
+              <p className="text-gray-500 text-sm">No team notes available</p>
             </Card>
           ) : (
             <div className="space-y-4">
@@ -556,3 +556,4 @@ function formatTimestamp(seconds: number): string {
   const secs = Math.floor(seconds % 60)
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
 }
+

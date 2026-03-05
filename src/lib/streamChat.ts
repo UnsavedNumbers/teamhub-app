@@ -9,6 +9,21 @@ import { StreamChat, Channel, ChannelFilters, ChannelOptions, ChannelSort } from
 
 // Stream Chat client singleton
 let streamChatClient: StreamChat | null = null
+const STREAM_CHANNEL_ID_DISALLOWED = /[^a-zA-Z0-9_-]/g
+
+function sanitizeStreamChannelId(rawChannelId: string): string {
+  const normalized = rawChannelId
+    .trim()
+    .replace(STREAM_CHANNEL_ID_DISALLOWED, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[-_]+|[-_]+$/g, '')
+
+  if (!normalized) {
+    throw new Error('Unable to build a valid Stream channel id')
+  }
+
+  return normalized
+}
 
 /**
  * Stream Chat user type
@@ -101,7 +116,7 @@ export async function getTeamChannel(
   members?: ChannelMember[]
 ): Promise<Channel> {
   const client = getStreamClient()
-  const channelId = `team:${teamId}`
+  const channelId = sanitizeStreamChannelId(`team-${teamId}`)
   
   const channel = client.channel('messaging', channelId, {
     name: teamName,
@@ -123,7 +138,7 @@ export async function getOrgChannel(
   members?: ChannelMember[]
 ): Promise<Channel> {
   const client = getStreamClient()
-  const channelId = `org:${orgId}`
+  const channelId = sanitizeStreamChannelId(`org-${orgId}`)
   
   const channel = client.channel('messaging', channelId, {
     name: `${orgName} Organization`,
@@ -154,7 +169,7 @@ export async function getDMChannel(
   
   // Sort user IDs to ensure consistent channel ID
   const [user1, user2] = [userId1, userId2].sort()
-  const channelId = options?.channelId || `dm:${user1}:${user2}`
+  const channelId = sanitizeStreamChannelId(options?.channelId || `dm-${user1}-${user2}`)
   const members = Array.from(new Set([user1, user2, ...(options?.members || [])]))
   
   const channel = client.channel('messaging', channelId, {

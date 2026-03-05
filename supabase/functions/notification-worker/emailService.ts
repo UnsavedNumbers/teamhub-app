@@ -52,6 +52,52 @@ export interface EmailResult {
   emailId?: string;
 }
 
+async function sendEmailViaApiManager(payload: {
+  to: string | string[]
+  from: string
+  subject: string
+  html?: string
+  text?: string
+}): Promise<{ providerMessageId: string }> {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  const internalToken = Deno.env.get('API_MANAGER_INTERNAL_TOKEN')
+
+  if (!supabaseUrl || !serviceRoleKey || !internalToken) {
+    throw new Error('API manager internal configuration is missing')
+  }
+
+  const functionsBaseUrl = supabaseUrl.replace('/rest/v1', '')
+  const response = await fetch(`${functionsBaseUrl}/functions/v1/api`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${serviceRoleKey}`,
+    },
+    body: JSON.stringify({
+      operation: 'email.resend.send',
+      input: {
+        ...payload,
+        internalToken,
+      },
+    }),
+  })
+
+  const data = await response.json().catch(() => null)
+  if (!response.ok || !data?.ok) {
+    throw new Error(data?.error?.message || `API manager email request failed (${response.status})`)
+  }
+
+  const providerMessageId = data?.data?.providerMessageId
+  if (typeof providerMessageId !== 'string' || providerMessageId.length === 0) {
+    throw new Error('API manager email response missing providerMessageId')
+  }
+
+  return {
+    providerMessageId,
+  }
+}
+
 // Email subjects and preview text
 const EMAIL_CONFIG = {
   new_event: {
@@ -260,39 +306,19 @@ export async function sendNotificationEmailWithTemplate(
     // Generate plain text fallback
     const textContent = generatePlainText(htmlContent)
 
-    // Send email via Resend API
-    const resendApiKey = Deno.env.get('RESEND_API_KEY')
-    if (!resendApiKey) {
-      throw new Error('RESEND_API_KEY environment variable not set')
-    }
-
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: payload.email_from_name
-          ? `${payload.email_from_name} <notifications@youthsports.team>`
-          : 'notifications@youthsports.team',
-        to: job.email,
-        subject,
-        html: htmlContent,
-        text: textContent,
-      }),
+    const result = await sendEmailViaApiManager({
+      from: payload.email_from_name
+        ? `${payload.email_from_name} <notifications@youthsports.team>`
+        : 'notifications@youthsports.team',
+      to: job.email,
+      subject,
+      html: htmlContent,
+      text: textContent,
     })
-
-    if (!response.ok) {
-      const errorData = await response.text()
-      throw new Error(`Resend API error: ${response.status} ${errorData}`)
-    }
-
-    const result = await response.json()
 
     return {
       success: true,
-      emailId: result.id
+      emailId: result.providerMessageId
     }
 
   } catch (error) {
@@ -389,39 +415,19 @@ export async function sendNotificationEmail(
     // Generate plain text fallback
     const textContent = generatePlainText(htmlContent);
 
-    // Send email via Resend API
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    if (!resendApiKey) {
-      throw new Error('RESEND_API_KEY environment variable not set');
-    }
-
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: job.payload.email_from_name
-          ? `${job.payload.email_from_name} <notifications@youthsports.team>`
-          : 'notifications@youthsports.team',
-        to: job.email,
-        subject,
-        html: htmlContent,
-        text: textContent,
-      }),
+    const result = await sendEmailViaApiManager({
+      from: job.payload.email_from_name
+        ? `${job.payload.email_from_name} <notifications@youthsports.team>`
+        : 'notifications@youthsports.team',
+      to: job.email,
+      subject,
+      html: htmlContent,
+      text: textContent,
     });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      throw new Error(`Resend API error: ${response.status} ${errorData}`);
-    }
-
-    const result = await response.json();
 
     return {
       success: true,
-      emailId: result.id
+      emailId: result.providerMessageId
     };
 
   } catch (error) {

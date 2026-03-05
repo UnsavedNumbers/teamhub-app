@@ -85,21 +85,21 @@ export default function ChannelList({
         className={`w-full text-left px-3 py-2 rounded mb-1 transition-colors font-medium flex items-center justify-between group ${
           isSelected
             ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)]'
-            : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+            : 'hover:bg-gray-50 dark:hover:bg-neutral-900 text-gray-700 dark:text-gray-300'
         }`}
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <Icon 
             name={icon} 
             size="text-lg" 
-            className={isSelected ? 'text-[var(--org-link-color)]' : 'text-slate-400'} 
+            className={isSelected ? 'text-[var(--org-link-color)]' : 'text-gray-400'} 
           />
           <div className="min-w-0 flex-1">
             <span className="truncate block">{channelName}</span>
             {(threadRole || guardianVisible) && (
               <div className="mt-0.5 flex items-center gap-1">
                 {threadRole && (
-                  <span className="inline-flex rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                  <span className="inline-flex rounded bg-gray-100 dark:bg-neutral-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-gray-600 dark:text-gray-300">
                     {threadRole}
                   </span>
                 )}
@@ -124,7 +124,7 @@ export default function ChannelList({
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
       </div>
     )
   }
@@ -134,8 +134,8 @@ export default function ChannelList({
   if (!hasChannels) {
     return (
       <div className="text-center py-8 px-4">
-        <Icon name="chat_bubble" size="text-4xl" className="text-slate-300 mb-2" />
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+        <Icon name="chat_bubble" size="text-4xl" className="text-gray-300 mb-2" />
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           No channels available
         </p>
       </div>
@@ -148,7 +148,7 @@ export default function ChannelList({
       {teamChannels.length > 0 && (
         <div>
           <SectionHeader className="mb-3 px-2 flex items-center gap-2">
-            <Icon name="groups" size="text-base" className="text-slate-400" />
+            <Icon name="groups" size="text-base" className="text-gray-400" />
             Team Channels
           </SectionHeader>
           <div>
@@ -161,7 +161,7 @@ export default function ChannelList({
       {orgChannels.length > 0 && (
         <div>
           <SectionHeader className="mb-3 px-2 flex items-center gap-2">
-            <Icon name="business" size="text-base" className="text-slate-400" />
+            <Icon name="business" size="text-base" className="text-gray-400" />
             Organization
           </SectionHeader>
           <div>
@@ -174,7 +174,7 @@ export default function ChannelList({
       {dmChannels.length > 0 && (
         <div>
           <SectionHeader className="mb-3 px-2 flex items-center gap-2">
-            <Icon name="person" size="text-base" className="text-slate-400" />
+            <Icon name="person" size="text-base" className="text-gray-400" />
             Direct Messages
           </SectionHeader>
           <div>

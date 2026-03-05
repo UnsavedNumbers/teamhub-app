@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'
+﻿import { Link, useLocation } from 'react-router-dom'
 import {
   Home,
   Calendar,
@@ -108,7 +108,7 @@ function NavItem({
         'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
         isActive
           ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)] dark:bg-[var(--org-btn-primary-bg)]/20'
-          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
+          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100'
       )}
     >
       <Icon className="h-5 w-5 shrink-0" />
@@ -376,8 +376,8 @@ export default function PortalSidebar({
   )
 
   const baseClasses = cn(
-    'portal-workspace-sidebar flex flex-col border-r-2 border-gray-200 bg-white dark:border-gray-800 dark:bg-black',
-    collapsed ? 'w-0 min-w-0 overflow-hidden' : 'w-[260px] min-w-[260px]',
+    'portal-workspace-sidebar relative flex min-h-0 flex-col border-r-2 border-gray-200 bg-white dark:border-gray-800 dark:bg-black',
+    collapsed ? 'w-0 min-w-0 overflow-hidden' : 'w-[260px] min-w-[260px] overflow-y-auto overflow-x-hidden',
     isOverlay && 'fixed inset-y-0 left-0 z-50 w-[260px]'
   )
 
@@ -387,3 +387,4 @@ export default function PortalSidebar({
     </aside>
   )
 }
+

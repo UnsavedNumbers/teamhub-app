@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useUserContext } from '../hooks/useUserContext'
@@ -144,7 +144,7 @@ export default function Tryouts() {
     if (status === 'offered') return { label: 'Made Team - Offer Sent', tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' }
     if (status === 'accepted') return { label: 'Offer Accepted', tone: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' }
     if (status === 'declined') return { label: 'Not Selected / Declined', tone: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' }
-    return { label: status, tone: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400' }
+    return { label: status, tone: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' }
   }
 
   return (
@@ -156,14 +156,14 @@ export default function Tryouts() {
       >
         <div className="mb-8 sm:mb-12">
           <PageTitle>Tryouts</PageTitle>
-          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
+          <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
             View and register for upcoming tryouts.
           </p>
         </div>
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
           </div>
         ) : (
           <>
@@ -183,8 +183,8 @@ export default function Tryouts() {
                       <Card key={registration.id} className="p-4 sm:p-5">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
-                            <p className="font-black text-slate-900 dark:text-white">{tryout?.title || 'Tryout Registration'}</p>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">{athleteName}</p>
+                            <p className="font-black text-gray-900 dark:text-white">{tryout?.title || 'Tryout Registration'}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{athleteName}</p>
                           </div>
                           <span className={`inline-flex items-center self-start px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${statusMeta.tone}`}>
                             {statusMeta.label}
@@ -192,7 +192,7 @@ export default function Tryouts() {
                         </div>
 
                         {registration.notes && (
-                          <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">{registration.notes}</p>
+                          <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">{registration.notes}</p>
                         )}
 
                         {registration.status === 'offered' && (
@@ -280,33 +280,33 @@ export default function Tryouts() {
             </Card>
             {filteredTryouts.length === 0 ? (
               <Card className="text-center py-8 sm:py-12">
-                <Icon name="sports_soccer" size="text-5xl sm:text-6xl" className="text-slate-400 mb-4" />
+                <Icon name="sports_soccer" size="text-5xl sm:text-6xl" className="text-gray-400 mb-4" />
                 <CardTitle className="mb-2">No upcoming tryouts</CardTitle>
-                <p className="text-slate-500 dark:text-slate-400">Check back soon for new opportunities.</p>
+                <p className="text-gray-500 dark:text-gray-400">Check back soon for new opportunities.</p>
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {filteredTryouts.map((tryout) => (
                   <Card key={tryout.id} className="overflow-hidden hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 transition-all duration-300">
-                    <div className="h-24 sm:h-32 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
-                      <Icon name="sports_soccer" size="text-4xl sm:text-5xl" className="text-slate-400" />
+                    <div className="h-24 sm:h-32 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center">
+                      <Icon name="sports_soccer" size="text-4xl sm:text-5xl" className="text-gray-400" />
                     </div>
                     <div className="p-4 sm:p-6">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
-                        <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-3 py-1 text-xs font-bold uppercase tracking-widest rounded self-start">
+                        <span className="bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-3 py-1 text-xs font-bold uppercase tracking-widest rounded self-start">
                           {tryout.age_group}
                         </span>
                         <div className="text-left sm:text-right">
-                          <p className="font-black text-slate-900 dark:text-white text-sm sm:text-base">
+                          <p className="font-black text-gray-900 dark:text-white text-sm sm:text-base">
                             {formatDate(tryout.tryout_date || '')}
                           </p>
-                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
                             {formatTime(tryout.start_time || '')}
                           </p>
                         </div>
                       </div>
                       <CardTitle className="mb-2 text-base sm:text-lg break-words">{tryout.title}</CardTitle>
-                      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400 mb-3 sm:mb-4">
+                      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400 mb-3 sm:mb-4">
                         <Icon name="location_on" size="text-sm" className="flex-shrink-0" />
                         <span className="break-words">{tryout.location}</span>
                       </div>
@@ -332,14 +332,14 @@ export default function Tryouts() {
             )}
             
             {registrationContact && (
-                <Card className="mt-8 p-6 bg-slate-50 dark:bg-slate-800/50">
+                <Card className="mt-8 p-6 bg-gray-50 dark:bg-gray-800/50">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                            <Icon name="description" size="text-4xl" className="text-slate-400" />
+                            <Icon name="description" size="text-4xl" className="text-gray-400" />
                             <div>
                                 <CardTitle className="text-lg mb-1">Registration Questions?</CardTitle>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">
-                                    Contact <span className="font-bold text-slate-900 dark:text-white">{registrationContact.name}</span>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    Contact <span className="font-bold text-gray-900 dark:text-white">{registrationContact.name}</span>
                                 </p>
                             </div>
                         </div>
@@ -370,7 +370,7 @@ export default function Tryouts() {
             <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg">
               <Card className="w-full p-4 sm:p-6">
               <CardTitle className="mb-2 text-base sm:text-lg">Register for Tryout</CardTitle>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 sm:mb-6 break-words">{selectedTryout.title}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4 sm:mb-6 break-words">{selectedTryout.title}</p>
               
               <div className="mb-4 sm:mb-6">
                 <label className="form-label">Select Athlete</label>
@@ -397,3 +397,4 @@ export default function Tryouts() {
       </PortalLayout>
   )
 }
+

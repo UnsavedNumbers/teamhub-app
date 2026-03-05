@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
 import { useT } from '../../i18n/useI18n'
@@ -85,7 +85,7 @@ export default function TryoutRegistrations() {
     >
       <div className="mb-10">
         <PageTitle>{t('portal.tryouts.registrations.title' as TranslationKey)}</PageTitle>
-        <p className="text-slate-500 dark:text-slate-400">
+        <p className="text-gray-500 dark:text-gray-400">
           {t('portal.tryouts.registrations.subtitle' as TranslationKey)}
         </p>
       </div>
@@ -98,12 +98,12 @@ export default function TryoutRegistrations() {
 
       {loading ? (
         <Card className="p-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
         </Card>
       ) : rows.length === 0 ? (
         <Card className="p-10 text-center">
           <CardTitle>{t('portal.tryouts.registrations.emptyTitle' as TranslationKey)}</CardTitle>
-          <p className="mt-2 text-slate-500 dark:text-slate-400">
+          <p className="mt-2 text-gray-500 dark:text-gray-400">
             {t('portal.tryouts.registrations.emptyBody' as TranslationKey)}
           </p>
           <Button variant="primary" className="mt-5" onClick={() => navigate('/portal/tryouts')}>
@@ -124,13 +124,13 @@ export default function TryoutRegistrations() {
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                   <div>
                     <CardTitle className="text-lg">{title}</CardTitle>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{athlete}</p>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{athlete}</p>
                     {registration.notes && (
-                      <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{registration.notes}</p>
+                      <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{registration.notes}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    <span className="inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                       {t(`admin.tryouts.registrations.statuses.${registration.status}` as TranslationKey)}
                     </span>
                     <Button variant="secondary" onClick={() => navigate(`/portal/tryouts/${registration.tryout_id}`)}>
@@ -153,3 +153,4 @@ export default function TryoutRegistrations() {
     </PortalLayout>
   )
 }
+

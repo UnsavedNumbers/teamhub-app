@@ -53,7 +53,7 @@ export default function PortalWorkspaceLayout() {
   const showMenuButton = showSidebarAsDrawer
 
   return (
-    <AppPage className="oa-theme-active portal-neutral min-h-screen bg-gray-50 font-sans text-gray-900 dark:bg-black dark:text-gray-100 antialiased">
+    <AppPage className="oa-theme-active portal-neutral min-h-screen h-[100dvh] overflow-hidden bg-gray-50 font-sans text-gray-900 dark:bg-black dark:text-gray-100 antialiased">
       <div className="fixed inset-0 pointer-events-none opacity-[0.02] z-[-1] portal-grid-bg" />
 
       <PortalWorkspaceHeader
@@ -61,7 +61,7 @@ export default function PortalWorkspaceLayout() {
         showMenuButton={showMenuButton}
       />
 
-      <div className="flex">
+      <div className="flex min-h-0 flex-1">
         {showSidebarAsDrawer ? (
           <>
             {mobileSidebarOpen && (
@@ -87,7 +87,7 @@ export default function PortalWorkspaceLayout() {
           />
         )}
 
-        <main className="portal-workspace-main min-w-0 flex-1 overflow-y-auto">
+        <main className="portal-workspace-main min-h-0 min-w-0 flex-1 overflow-y-auto">
           <PageSection className="w-full p-4 sm:p-6 lg:p-8">
             <Outlet />
           </PageSection>

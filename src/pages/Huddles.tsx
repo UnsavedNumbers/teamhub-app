@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Huddles Page - Stream Chat Integration
  * 
  * Replaces the old Messages page with full Stream Chat functionality.
@@ -19,6 +19,7 @@ import 'stream-chat-react/dist/css/v2/index.css'
 
 import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
+import { useTheme } from '../hooks/useTheme'
 import { useT } from '../i18n/useI18n'
 import { getStreamToken } from '../data/services/huddlesService'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
@@ -49,7 +50,9 @@ export default function Huddles() {
   useDebugLifecycle('Huddles')
   const { user } = useAuth()
   const { context, isReady } = useUserContext()
+  const { resolvedTheme } = useTheme()
   const t = useT()
+  const chatTheme = resolvedTheme === 'dark' ? 'messaging dark' : 'messaging light'
 
   // Stream Chat state
   const [streamClient, setStreamClient] = useState<StreamChat | null>(null)
@@ -239,7 +242,7 @@ export default function Huddles() {
     return (
       <PortalLayout>
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
         </div>
       </PortalLayout>
     )
@@ -256,7 +259,7 @@ export default function Huddles() {
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <PageTitle>Huddles</PageTitle>
-        <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide mt-1">
+        <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide mt-1">
           Team and organization chat channels.
         </p>
       </div>
@@ -264,14 +267,14 @@ export default function Huddles() {
       {/* Two-column layout */}
       <div className="flex gap-6 h-[calc(100vh-280px)] min-h-[600px]">
         {/* Left: Channel List */}
-        <div className="w-[320px] flex-shrink-0 flex flex-col border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50">
+        <div className="w-[320px] flex-shrink-0 flex flex-col border border-gray-200 dark:border-neutral-700 bg-white dark:bg-black">
           {/* List Header */}
-          <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900 dark:text-white">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-900 dark:text-white">
                 Channels
               </h2>
-              <span className="text-xs font-bold text-slate-400">
+              <span className="text-xs font-bold text-gray-400">
                 {teamChannels.length + orgChannels.length}
               </span>
             </div>
@@ -282,14 +285,14 @@ export default function Huddles() {
             {streamLoading ? (
               <div className="p-4 space-y-3">
                 {[1, 2, 3].map(i => (
-                  <div key={i} className="h-16 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                  <div key={i} className="h-16 bg-gray-100 dark:bg-neutral-900 rounded animate-pulse" />
                 ))}
               </div>
             ) : !streamConnected || !streamClient ? (
               <div className="p-8">
                 <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto mb-2"></div>
-                  <p className="text-xs text-slate-500">{t('portal.huddles.connectingToChat')}</p>
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-gray-900 dark:border-white mx-auto mb-2"></div>
+                  <p className="text-xs text-gray-500">{t('portal.huddles.connectingToChat')}</p>
                 </div>
               </div>
             ) : teamChannels.length === 0 && orgChannels.length === 0 ? (
@@ -301,9 +304,9 @@ export default function Huddles() {
                 />
               </div>
             ) : (
-              <div className="divide-y divide-slate-200 dark:divide-slate-700">
+              <div className="divide-y divide-gray-200 dark:divide-neutral-700">
                 {streamClient && (
-                  <Chat client={streamClient}>
+                  <Chat client={streamClient} theme={chatTheme}>
                     <ChannelList
                       teamChannels={teamChannels}
                       orgChannels={orgChannels}
@@ -330,9 +333,9 @@ export default function Huddles() {
         </div>
 
         {/* Right: Chat Panel */}
-        <div className="flex-1 flex flex-col border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50">
+        <div className="flex-1 flex flex-col border border-gray-200 dark:border-neutral-700 bg-white dark:bg-black">
           {streamConnected && streamClient && selectedChannel ? (
-            <Chat client={streamClient}>
+            <Chat client={streamClient} theme={chatTheme}>
               <Channel channel={selectedChannel}>
                 <Window>
                   <PinnedMessages
@@ -365,3 +368,4 @@ export default function Huddles() {
     </PortalLayout>
   )
 }
+

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { useAuth } from '../hooks/useAuth'
@@ -18,7 +18,7 @@ import { getSeasonsForOrg } from '../data/fake/fakeTeams'
 // Minimal layout for unauthenticated users
 function MinimalLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-slate-100 antialiased relative">
+    <div className="min-h-screen bg-background-light dark:bg-background-dark font-impact text-gray-900 dark:text-gray-100 antialiased relative">
       <div 
         className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1]"
         style={{
@@ -26,7 +26,7 @@ function MinimalLayout({ children }: { children: React.ReactNode }) {
           backgroundSize: '100px 100px',
         }}
       />
-      <header className="py-6 px-6 border-b border-slate-200 dark:border-slate-700">
+      <header className="py-6 px-6 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-[1200px] mx-auto flex items-center">
           <span className="text-xl font-bold text-primary-600">YouthSports Team Hub</span>
         </div>
@@ -313,7 +313,7 @@ export default function JoinByLink() {
           {step === 'signin' && (
             <>
               <div className="text-center py-4">
-                <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.joinByLink.signInToJoin')}</p>
+                <p className="text-gray-500 dark:text-gray-400 mb-6">{t('portal.joinByLink.signInToJoin')}</p>
                 <div className="space-y-3">
                   <Button variant="primary" onClick={handleSignIn} className="w-full">
                     {t('portal.joinByLink.signIn')}
@@ -330,7 +330,7 @@ export default function JoinByLink() {
             <>
               {children.length === 0 ? (
                 <div className="text-center py-4">
-                  <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.joinTeam.addChildFirst')}</p>
+                  <p className="text-gray-500 dark:text-gray-400 mb-6">{t('portal.joinTeam.addChildFirst')}</p>
                   <Link to="/portal/athletes">
                     <Button variant="primary">
                       {t('portal.joinTeam.add')}
@@ -341,11 +341,11 @@ export default function JoinByLink() {
                 <>
                   <div className="space-y-4 mb-6">
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">{t('portal.joinTeam.selectChild')}</label>
+                      <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">{t('portal.joinTeam.selectChild')}</label>
                       <select
                         value={selectedChild}
                         onChange={(e) => setSelectedChild(e.target.value)}
-                        className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white"
+                        className="w-full bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded px-4 py-2 text-sm text-gray-900 dark:text-white"
                       >
                         <option value="">{t('portal.joinTeam.chooseChild')}</option>
                         {children.map((c) => (
@@ -356,11 +356,11 @@ export default function JoinByLink() {
 
                     {seasons.length > 0 && (
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">{t('portal.joinTeam.selectSeason')}</label>
+                        <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">{t('portal.joinTeam.selectSeason')}</label>
                         <select
                           value={selectedSeason}
                           onChange={(e) => setSelectedSeason(e.target.value)}
-                          className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white"
+                          className="w-full bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded px-4 py-2 text-sm text-gray-900 dark:text-white"
                         >
                           {seasons.map((s) => (
                             <option key={s.id} value={s.id}>{s.name}</option>
@@ -389,7 +389,7 @@ export default function JoinByLink() {
                 <Icon name="check_circle" size="text-4xl" className="text-emerald-500 dark:text-emerald-400" />
               </div>
               <CardTitle className="mb-2">{t('portal.joinByLink.requestApproved')}</CardTitle>
-              <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.joinByLink.approvedMessage')}</p>
+              <p className="text-gray-500 dark:text-gray-400 mb-6">{t('portal.joinByLink.approvedMessage')}</p>
               <Button variant="primary" onClick={() => navigate('/portal/dashboard')}>
                 {t('portal.joinTeam.goToDashboard')}
               </Button>
@@ -402,7 +402,7 @@ export default function JoinByLink() {
                 <Icon name="hourglass_empty" size="text-4xl" className="text-blue-500 dark:text-blue-400" />
               </div>
               <CardTitle className="mb-2">{t('portal.joinByLink.requestSubmitted')}</CardTitle>
-              <p className="text-slate-500 dark:text-slate-400 mb-6">{t('portal.joinByLink.pendingMessage')}</p>
+              <p className="text-gray-500 dark:text-gray-400 mb-6">{t('portal.joinByLink.pendingMessage')}</p>
               <Button variant="primary" onClick={() => navigate('/portal/dashboard')}>
                 {t('portal.joinTeam.goToDashboard')}
               </Button>
@@ -413,3 +413,4 @@ export default function JoinByLink() {
     </Layout>
   )
 }
+

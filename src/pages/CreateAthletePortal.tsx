@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CreateAthletePortal Component
  *
  * Portal version of athlete creation for parents/guardians.
@@ -39,26 +39,26 @@ const SportItem = memo(({
     const isInterestedSelected = selectedSports.some(s => s.sport_id === sport.id && s.sport_type === 'interested')
 
     return (
-        <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
-            <span className="text-sm font-medium text-slate-900 dark:text-white">{sport.name}</span>
+        <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-neutral-950 rounded-lg border border-gray-200 dark:border-neutral-700">
+            <span className="text-sm font-medium text-gray-900 dark:text-white">{sport.name}</span>
             <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                     <input
                         type="checkbox"
                         checked={isPlaysSelected}
                         onChange={() => onToggle(sport.id, 'plays')}
-                        className="w-4 h-4 text-[var(--org-link-color)] border-slate-300 rounded focus:ring-[var(--org-btn-primary-bg, #137fec)]"
+                        className="w-4 h-4 text-[var(--org-link-color)] border-gray-300 rounded focus:ring-[var(--org-btn-primary-bg, #137fec)]"
                     />
-                    <span className="text-sm text-slate-700 dark:text-slate-300">Plays</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Plays</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                     <input
                         type="checkbox"
                         checked={isInterestedSelected}
                         onChange={() => onToggle(sport.id, 'interested')}
-                        className="w-4 h-4 text-[var(--org-link-color)] border-slate-300 rounded focus:ring-[var(--org-btn-primary-bg, #137fec)]"
+                        className="w-4 h-4 text-[var(--org-link-color)] border-gray-300 rounded focus:ring-[var(--org-btn-primary-bg, #137fec)]"
                     />
-                    <span className="text-sm text-slate-700 dark:text-slate-300">Interested</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Interested</span>
                 </label>
             </div>
         </div>
@@ -382,7 +382,7 @@ export default function CreateAthletePortal() {
                         <p className="text-red-600 dark:text-red-400 font-bold mb-4">
                             Unable to create athlete: Your account email is missing.
                         </p>
-                        <p className="text-slate-500 dark:text-slate-400">
+                        <p className="text-gray-500 dark:text-gray-400">
                             Please contact support to resolve this issue.
                         </p>
                     </div>
@@ -402,13 +402,15 @@ export default function CreateAthletePortal() {
                 ]}
             >
                 <div className="flex justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
                 </div>
             </PortalLayout>
         )
     }
 
     const isFormValid = formData.first_name.trim() && formData.last_name.trim() && formData.date_of_birth
+    const portalFieldClass = 'w-full rounded border border-gray-200 bg-white px-4 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[var(--org-link-color)] focus:outline-none focus:ring-2 focus:ring-[var(--org-link-color)]/20 dark:border-neutral-700 dark:bg-black dark:text-white dark:placeholder:text-gray-500'
+    const portalSelectClass = 'w-full rounded border border-gray-200 bg-white px-4 py-2 text-sm text-gray-900 focus:border-[var(--org-link-color)] focus:outline-none focus:ring-2 focus:ring-[var(--org-link-color)]/20 dark:border-neutral-700 dark:bg-black dark:text-white'
 
     return (
         <PortalLayout
@@ -420,7 +422,7 @@ export default function CreateAthletePortal() {
         >
             <div className="mb-12">
                 <PageTitle>Add Athlete</PageTitle>
-                <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide">
+                <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide">
                     Create a new athlete profile. You will be automatically linked as a guardian.
                 </p>
             </div>
@@ -450,7 +452,7 @@ export default function CreateAthletePortal() {
 
                 {/* Profile Photo */}
                 <Card className="mb-6">
-                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">Profile Photo</h2>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Profile Photo</h2>
                     <AthletePhotoUpload
                         photoFile={photoFile}
                         photoUrl={null}
@@ -466,33 +468,33 @@ export default function CreateAthletePortal() {
 
                 {/* Basic Information */}
                 <Card className="p-6 mb-6">
-                    <h2 className="text-xl font-black text-slate-900 dark:text-white mb-6">
+                    <h2 className="text-xl font-black text-gray-900 dark:text-white mb-6">
                         Basic Information
                     </h2>
 
                     <div className="grid gap-4 md:grid-cols-2 mb-4">
                         <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                                 First Name *
                             </label>
                             <input
                                 type="text"
                                 value={formData.first_name}
                                 onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                                className={portalFieldClass}
                                 placeholder="First name"
                                 required
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                                 Last Name *
                             </label>
                             <input
                                 type="text"
                                 value={formData.last_name}
                                 onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                                className={portalFieldClass}
                                 placeholder="Last name"
                                 required
                             />
@@ -507,13 +509,13 @@ export default function CreateAthletePortal() {
                             required
                         />
                         <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                                 Gender
                             </label>
                             <select
                                 value={formData.gender}
                                 onChange={(e) => setFormData({ ...formData, gender: e.target.value as Gender })}
-                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white"
+                                className={portalSelectClass}
                             >
                                 <option value="">Select...</option>
                                 <option value="male">Male</option>
@@ -524,40 +526,40 @@ export default function CreateAthletePortal() {
                     </div>
 
                     <div className="mb-4">
-                        <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                        <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                             Preferred Name / Goes By
                         </label>
                         <input
                             type="text"
                             value={formData.preferred_name}
                             onChange={(e) => setFormData({ ...formData, preferred_name: e.target.value })}
-                            className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                            className={portalFieldClass}
                             placeholder="e.g. Mike, Johnny, etc."
                         />
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
                         <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                                 Phone Number
                             </label>
                             <input
                                 type="tel"
                                 value={formData.phone}
                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                                className={portalFieldClass}
                                 placeholder="(555) 123-4567"
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                                 Email Address
                             </label>
                             <input
                                 type="email"
                                 value={formData.email}
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                                className={portalFieldClass}
                                 placeholder="athlete@example.com"
                             />
                         </div>
@@ -566,39 +568,39 @@ export default function CreateAthletePortal() {
 
                 {/* Medical & Emergency */}
                 <Card className="p-6 mb-6">
-                    <h2 className="text-xl font-black text-slate-900 dark:text-white mb-6">
+                    <h2 className="text-xl font-black text-gray-900 dark:text-white mb-6">
                         Medical & Emergency
                     </h2>
 
                     <div className="mb-4">
-                        <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                        <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                             Medical Notes
                         </label>
                         <textarea
                             value={formData.medical_notes}
                             onChange={(e) => setFormData({ ...formData, medical_notes: e.target.value })}
-                            className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                            className={portalFieldClass}
                             placeholder="Any medical conditions coaches should know about"
                             rows={3}
                         />
                     </div>
 
                     <div className="mb-4">
-                        <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                        <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                             Allergies
                         </label>
                         <input
                             type="text"
                             value={formData.allergies}
                             onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
-                            className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                            className={portalFieldClass}
                             placeholder="List any allergies"
                         />
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
                         <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                                 Emergency Contact Name
                             </label>
                             <input
@@ -607,12 +609,12 @@ export default function CreateAthletePortal() {
                                 onChange={(e) =>
                                     setFormData({ ...formData, emergency_contact_name: e.target.value })
                                 }
-                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                                className={portalFieldClass}
                                 placeholder="Contact name"
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                                 Emergency Contact Phone
                             </label>
                             <input
@@ -621,7 +623,7 @@ export default function CreateAthletePortal() {
                                 onChange={(e) =>
                                     setFormData({ ...formData, emergency_contact_phone: e.target.value })
                                 }
-                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                                className={portalFieldClass}
                                 placeholder="(555) 123-4567"
                             />
                         </div>
@@ -630,21 +632,27 @@ export default function CreateAthletePortal() {
 
                 {/* Guardians */}
                 <Card className="p-6 mb-6">
-                    <h2 className="text-xl font-black text-slate-900 dark:text-white mb-2">Guardians</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                    <h2 className="text-xl font-black text-gray-900 dark:text-white mb-2">Guardians</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                         You will be automatically linked as a guardian. You can add one additional guardian below.
                     </p>
 
                     {/* Current User Info */}
-                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-                        <p className="text-sm text-blue-800 dark:text-blue-300 font-bold">
+                    <div
+                        className="rounded-lg border p-4 mb-6"
+                        style={{
+                            background: 'var(--org-highlight-bg, rgba(19, 127, 236, 0.12))',
+                            borderColor: 'var(--org-theme-border-accent, rgba(19, 127, 236, 0.3))',
+                        }}
+                    >
+                        <p className="text-sm font-bold text-[var(--org-link-color)]">
                             You ({context.email}) will be linked as a guardian (Parent)
                         </p>
                     </div>
 
                     {/* Additional Guardian */}
                     <div className="mb-4">
-                        <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                        <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                             Additional Guardian Email (Optional)
                         </label>
                         <div className="relative">
@@ -655,7 +663,7 @@ export default function CreateAthletePortal() {
                                     setFormData({ ...formData, additionalGuardianEmail: e.target.value })
                                     if (!emailTouched) setEmailTouched(true)
                                 }}
-                                className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                                className={portalFieldClass}
                                 placeholder="guardian@example.com"
                             />
                             {isCheckingGuardian && (
@@ -670,7 +678,7 @@ export default function CreateAthletePortal() {
                             <div className="mt-2">
                                 {guardianMatch.exists ? (
                                     <p className="text-sm text-green-600 dark:text-green-400 font-bold">
-                                        ✓ Account exists - will link
+                                        &#10003; Account exists - will link
                                     </p>
                                 ) : (
                                     <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded p-3 mt-2">
@@ -684,7 +692,7 @@ export default function CreateAthletePortal() {
                     </div>
 
                     <div>
-                        <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                        <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                             Relationship Type
                         </label>
                         <select
@@ -695,7 +703,7 @@ export default function CreateAthletePortal() {
                                     additionalGuardianRelationship: e.target.value as RelationshipType
                                 })
                             }
-                            className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2 text-sm text-slate-900 dark:text-white"
+                            className={portalSelectClass}
                         >
                             <option value="parent">Parent</option>
                             <option value="guardian">Guardian</option>
@@ -706,17 +714,17 @@ export default function CreateAthletePortal() {
 
                 {/* Sports Interests */}
                 <Card className="p-6 mb-6">
-                    <h2 className="text-xl font-black text-slate-900 dark:text-white mb-2">Sports Interests</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                    <h2 className="text-xl font-black text-gray-900 dark:text-white mb-2">Sports Interests</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                         Select sports this athlete plays or is interested in playing. This is optional.
                     </p>
 
                     {isLoadingSports ? (
                         <div className="flex justify-center py-8">
-                            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+                            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
                         </div>
                     ) : sports.length === 0 ? (
-                        <p className="text-sm text-slate-500 dark:text-slate-400">No sports available.</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">No sports available.</p>
                     ) : (
                         <div className="space-y-3">
                             {sports.map((sport) => (
@@ -749,3 +757,4 @@ export default function CreateAthletePortal() {
         </PortalLayout>
     )
 }
+

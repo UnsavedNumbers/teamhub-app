@@ -5,7 +5,7 @@ import {
   getNotifications,
   markNotificationRead,
   markAllNotificationsRead,
-} from '../../data/services/messagesService'
+} from '../../data/services/userNotificationsService'
 import { NotificationRecord } from '../../types/notifications'
 import {
   AdminPageHeader,

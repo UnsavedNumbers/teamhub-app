@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+﻿import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
@@ -31,7 +31,7 @@ export default function AnnouncementDetail() {
     }
   }, [])
 
-  // ── DEBUG LAYER 1: log every change in readiness + context ────────────────
+  // DEBUG LAYER 1: log every change in readiness + context
   useEffect(() => {
     debug.flow('AnnouncementDetail', 'Context/readiness changed', {
       isReady,
@@ -47,7 +47,7 @@ export default function AnnouncementDetail() {
     )
   }, [isReady, context, announcementId])
 
-  // ── DEBUG LAYER 2: stuck-loading detector (6 s timeout) ──────────────────
+  // DEBUG LAYER 2: stuck-loading detector (6 s timeout)
   useEffect(() => {
     if (!loading) return
     const timer = setTimeout(async () => {
@@ -65,9 +65,9 @@ export default function AnnouncementDetail() {
         contextUserId: (context as unknown as Record<string, unknown> | null)?.user_id ?? null,
         timestamp: new Date().toISOString(),
       }
-      debug.error('AnnouncementDetail', '⚠️ Still loading after 6 s — possible RLS block or missing context', snapshot)
+      debug.error('AnnouncementDetail', 'WARNING: Still loading after 6 s - possible RLS block or missing context', snapshot)
       console.warn(
-        '%c[AnnouncementDetail] ⚠️  STUCK at Loading after 6 s',
+        '%c[AnnouncementDetail] WARNING: STUCK at Loading after 6 s',
         'color:#f97316;font-weight:bold;font-size:13px',
         snapshot
       )
@@ -81,14 +81,14 @@ export default function AnnouncementDetail() {
 
   const fetchData = useCallback(async () => {
     if (!announcementId) {
-      debug.error('AnnouncementDetail', 'No announcementId — redirecting', {})
+      debug.error('AnnouncementDetail', 'No announcementId - redirecting', {})
       setLoading(false)
       navigate('/portal/announcements', { replace: true })
       return
     }
 
     if (!isReady) {
-      debug.flow('AnnouncementDetail', 'fetchData called but context not ready — waiting', {
+      debug.flow('AnnouncementDetail', 'fetchData called but context not ready - waiting', {
         isReady,
         announcementId,
         hasContext: !!context,
@@ -108,7 +108,7 @@ export default function AnnouncementDetail() {
     // Log auth session state right before the query
     const { data: sessionData } = await supabase.auth.getSession()
     console.log(
-      `%c[AnnouncementDetail] attempt #${attempt} — auth session`,
+      `%c[AnnouncementDetail] attempt #${attempt} - auth session`,
       'color:#6366f1;font-weight:bold',
       {
         hasSession: !!sessionData?.session,
@@ -134,7 +134,7 @@ export default function AnnouncementDetail() {
         announcementId,
       })
       console.log(
-        `%c[AnnouncementDetail] attempt #${attempt} — query result`,
+        `%c[AnnouncementDetail] attempt #${attempt} - query result`,
         'color:#10b981;font-weight:bold',
         { data, error }
       )
@@ -143,11 +143,11 @@ export default function AnnouncementDetail() {
         setLoading(false)
         const msg = error?.message ?? 'no data'
         const isNotFound = msg.includes('not found') || msg.includes('No rows') || msg.includes('PGRST116')
-        debug.error('AnnouncementDetail', isNotFound ? 'Announcement not found (404)' : 'Fetch error — redirecting', {
+        debug.error('AnnouncementDetail', isNotFound ? 'Announcement not found (404)' : 'Fetch error - redirecting', {
           attempt, error: msg, announcementId,
         })
         console.warn(
-          `%c[AnnouncementDetail] attempt #${attempt} — redirecting: ${isNotFound ? '404' : 'error'}`,
+          `%c[AnnouncementDetail] attempt #${attempt} - redirecting: ${isNotFound ? '404' : 'error'}`,
           'color:#f43f5e',
           { error }
         )
@@ -180,7 +180,7 @@ export default function AnnouncementDetail() {
     return (
       <PortalLayout>
         <div className="flex flex-col items-center py-12 gap-6">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
 
           {/* Dev-only stuck-state diagnostic overlay */}
           {import.meta.env.DEV && debugStuck && (
@@ -195,7 +195,7 @@ export default function AnnouncementDetail() {
               color: '#1e293b',
               textAlign: 'left',
             }}>
-              <strong style={{ color: '#f97316', fontSize: 13 }}>⚠️ DEV: Stuck at Loading ({'>'}6 s)</strong>
+              <strong style={{ color: '#f97316', fontSize: 13 }}>WARNING DEV: Stuck at Loading ({'>'}6 s)</strong>
               <p style={{ marginTop: 8, marginBottom: 4, color: '#64748b' }}>Check the console for full details. Snapshot:</p>
               <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                 {JSON.stringify(debugStuck, null, 2)}
@@ -284,44 +284,44 @@ export default function AnnouncementDetail() {
               {authorRole === 'coach' ? 'Coach' : authorRole === 'org_admin' ? 'Admin' : 'Parent'}
             </span>
             {authorEmail && (
-              <span className="text-sm text-slate-500 dark:text-slate-400">{authorEmail}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{authorEmail}</span>
             )}
           </div>
 
           {/* Team Name (if team-specific) or Org-Wide indicator */}
           {isOrgWide ? (
             <div className="flex items-center gap-3">
-              <Icon name="business" className="text-slate-400" />
-              <p className="font-bold text-slate-900 dark:text-white">All Teams</p>
+              <Icon name="business" className="text-gray-400" />
+              <p className="font-bold text-gray-900 dark:text-white">All Teams</p>
             </div>
           ) : teamName ? (
             <div className="flex items-center gap-3">
-              <Icon name="group" className="text-slate-400" />
-              <p className="font-bold text-slate-900 dark:text-white">{teamName}</p>
+              <Icon name="group" className="text-gray-400" />
+              <p className="font-bold text-gray-900 dark:text-white">{teamName}</p>
             </div>
           ) : null}
 
           {/* Dates */}
           <div className="flex items-center gap-3">
-            <Icon name="schedule" className="text-slate-400" />
+            <Icon name="schedule" className="text-gray-400" />
             <div>
-              <p className="font-black text-slate-900 dark:text-white">{formatDate(announcement.created_at)}</p>
-              <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{formatTime(announcement.created_at)}</p>
+              <p className="font-black text-gray-900 dark:text-white">{formatDate(announcement.created_at)}</p>
+              <p className="text-sm font-bold text-gray-500 dark:text-gray-400">{formatTime(announcement.created_at)}</p>
             </div>
           </div>
 
           {announcement.updated_at !== announcement.created_at && (
             <div className="flex items-center gap-3">
-              <Icon name="edit" className="text-slate-400" />
-              <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+              <Icon name="edit" className="text-gray-400" />
+              <p className="text-sm font-bold text-gray-500 dark:text-gray-400">
                 Updated {formatDate(announcement.updated_at)} at {formatTime(announcement.updated_at)}
               </p>
             </div>
           )}
 
           {/* Content */}
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-700 mt-4">
-            <p className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+            <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
               {announcement.content}
             </p>
           </div>
@@ -334,3 +334,4 @@ export default function AnnouncementDetail() {
     </PortalLayout>
   )
 }
+

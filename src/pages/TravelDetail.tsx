@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
@@ -576,7 +576,7 @@ export default function TravelDetail() {
         ]}
       >
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
         </div>
       </PortalLayout>
     )
@@ -594,7 +594,7 @@ export default function TravelDetail() {
         <Card className="text-center py-12">
           <Icon name="error" size="text-6xl" className="text-red-400 mb-4" />
           <CardTitle className="mb-2">Error loading travel plan</CardTitle>
-          <p className="text-slate-500 dark:text-slate-400 mb-4">
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
             {error?.message || 'Travel plan not found'}
           </p>
           <div className="flex gap-4 justify-center">
@@ -627,10 +627,10 @@ export default function TravelDetail() {
         <div className="flex items-start justify-between mb-4">
           <div>
             <PageTitle>{plan.title}</PageTitle>
-            <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
-              {plan.location} • {formatDateRange(plan.start_date, plan.end_date)}
+            <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide mt-2">
+              {plan.location} - {formatDateRange(plan.start_date, plan.end_date)}
             </p>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mt-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mt-2">
               {teamName}
             </p>
           </div>
@@ -642,24 +642,24 @@ export default function TravelDetail() {
         </div>
 
         {/* Quick Summary Banner */}
-        <Card className="bg-gradient-to-r from-[var(--org-btn-primary-bg, #137fec)]/5 to-slate-50 dark:to-slate-800/50 border-l-4 border-[var(--org-btn-primary-bg, #137fec)] p-6">
+        <Card className="bg-gradient-to-r from-[var(--org-btn-primary-bg, #137fec)]/5 to-gray-50 dark:to-gray-800/50 border-l-4 border-[var(--org-btn-primary-bg, #137fec)] p-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Duration</p>
-              <p className="text-lg font-black text-slate-900 dark:text-white">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Duration</p>
+              <p className="text-lg font-black text-gray-900 dark:text-white">
                 {Math.ceil((new Date(plan.end_date).getTime() - new Date(plan.start_date).getTime()) / (1000 * 60 * 60 * 24))} Days
               </p>
             </div>
             {plan.hotel_name && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Lodging</p>
-                <p className="text-lg font-black text-slate-900 dark:text-white truncate">{plan.hotel_name}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Lodging</p>
+                <p className="text-lg font-black text-gray-900 dark:text-white truncate">{plan.hotel_name}</p>
               </div>
             )}
             {tripEvents.length > 0 && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Events</p>
-                <p className="text-lg font-black text-slate-900 dark:text-white">{tripEvents.length} scheduled</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Events</p>
+                <p className="text-lg font-black text-gray-900 dark:text-white">{tripEvents.length} scheduled</p>
               </div>
             )}
           </div>
@@ -689,7 +689,7 @@ export default function TravelDetail() {
                       <>
                         <CardTitle className="text-xl mb-2">{venueHeader}</CardTitle>
                         {showAddress && (
-                          <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4">{plan.venue_address}</p>
+                          <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-4">{plan.venue_address}</p>
                         )}
                       </>
                     )
@@ -697,7 +697,7 @@ export default function TravelDetail() {
                 
                 {/* Smart Map Links */}
                 <div className="mb-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Open in Maps</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Open in Maps</p>
                   <div className="flex flex-wrap gap-2">
                     {googleMapsLink(plan.venue_address) ? (
                       <a href={googleMapsLink(plan.venue_address)!} target="_blank" rel="noreferrer">
@@ -755,7 +755,7 @@ export default function TravelDetail() {
 
                 {/* Ride-Share Shortcuts */}
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Need a Ride?</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Need a Ride?</p>
                   <div className="flex flex-wrap gap-2">
                     {uberLink(plan.venue_address) ? (
                       <a href={uberLink(plan.venue_address)!} target="_blank" rel="noreferrer">
@@ -805,8 +805,8 @@ export default function TravelDetail() {
                         <>
                           <div className="flex items-start justify-between">
                             <div>
-                              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Your Starting Point</p>
-                              <p className="text-sm font-bold text-slate-900 dark:text-white">{commuteStartLocation}</p>
+                              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Your Starting Point</p>
+                              <p className="text-sm font-bold text-gray-900 dark:text-white">{commuteStartLocation}</p>
                             </div>
                             <Button
                               variant="secondary"
@@ -836,8 +836,8 @@ export default function TravelDetail() {
                         </>
                       ) : (
                         <div>
-                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Set Your Starting Location</p>
-                          <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+                          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Set Your Starting Location</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                             Save your home, work, or any starting point to quickly get directions with current traffic conditions.
                           </p>
                           <Button
@@ -853,13 +853,13 @@ export default function TravelDetail() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Enter Your Starting Location</p>
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Enter Your Starting Location</p>
                       <input
                         type="text"
                         value={commuteInputValue}
                         onChange={(e) => setCommuteInputValue(e.target.value)}
                         placeholder="e.g., 123 Main St, City, State"
-                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)]"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)]"
                         autoFocus
                       />
                       <div className="flex gap-2">
@@ -910,9 +910,9 @@ export default function TravelDetail() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-3">{meeting.address}</p>
+                    <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3">{meeting.address}</p>
                     {meeting.notes && (
-                      <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 whitespace-pre-wrap bg-slate-50 dark:bg-slate-800/50 p-3 rounded">
+                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 whitespace-pre-wrap bg-gray-50 dark:bg-gray-800/50 p-3 rounded">
                         {meeting.notes}
                       </p>
                     )}
@@ -964,24 +964,24 @@ export default function TravelDetail() {
               ) : eventsError ? (
                 <div className="text-center py-8">
                   <Icon name="error" size="text-5xl" className="text-red-400 mb-3" />
-                  <p className="text-slate-500 dark:text-slate-400 mb-2">Error loading events</p>
+                  <p className="text-gray-500 dark:text-gray-400 mb-2">Error loading events</p>
                   <p className="text-xs text-red-500">{eventsError.message}</p>
                 </div>
               ) : tripEvents.length === 0 ? (
                 <div className="text-center py-8">
-                  <Icon name="event_busy" size="text-5xl" className="text-slate-300 dark:text-slate-600 mb-3" />
-                  <p className="text-slate-500 dark:text-slate-400">No events scheduled during these dates.</p>
+                  <Icon name="event_busy" size="text-5xl" className="text-gray-300 dark:text-gray-600 mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400">No events scheduled during these dates.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {tripEvents.map((event) => (
-                    <div key={event.id} className="border-b border-slate-200 dark:border-slate-700 pb-4 last:border-b-0 last:pb-0">
+                    <div key={event.id} className="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-b-0 last:pb-0">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <CardTitle className="text-lg mb-1">{event.title}</CardTitle>
-                          <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                          <p className="text-sm font-bold text-gray-500 dark:text-gray-400">
                             {new Date(event.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{' '}
-                            • {formatEventTime(event.start_time)}–{formatEventTime(event.end_time)}
+                            - {formatEventTime(event.start_time)}-{formatEventTime(event.end_time)}
                           </p>
                           {/* venue row removed (duplicate shown in VenueInsights header) */}
                         </div>
@@ -1026,7 +1026,7 @@ export default function TravelDetail() {
                   Additional Notes
                 </div>
                 <div className="pt-12">
-                  <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                     {plan.notes}
                   </p>
                 </div>
@@ -1039,25 +1039,25 @@ export default function TravelDetail() {
         <div className="space-y-6">
           {/* Single Contacts Card - iPhone contact list style */}
           {(emergencyContact?.phone || resolvedContacts || defaultContact || (orgFallbackContact && (orgFallbackContact.email || orgFallbackContact.phone))) && (
-            <Card className="p-0 overflow-hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-              <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+            <Card className="p-0 overflow-hidden bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
                 <CardTitle className="flex items-center gap-2 mb-0">
-                  <Icon name="contacts" size="text-xl" className="text-slate-500 dark:text-slate-400" />
+                  <Icon name="contacts" size="text-xl" className="text-gray-500 dark:text-gray-400" />
                   Contacts
                 </CardTitle>
               </div>
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {/* Emergency (Coach) - first row if present */}
                 {emergencyContact?.phone && (
-                  <div className="flex items-center gap-4 px-5 py-3.5 active:bg-slate-50 dark:active:bg-slate-800/50">
+                  <div className="flex items-center gap-4 px-5 py-3.5 active:bg-gray-50 dark:active:bg-gray-800/50">
                     <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center text-red-600 dark:text-red-400 font-semibold text-base">
                       {(emergencyContact.name || 'C').charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-slate-900 dark:text-white truncate">{emergencyContact.name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Emergency · Coach</p>
+                      <p className="font-semibold text-gray-900 dark:text-white truncate">{emergencyContact.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Emergency - Coach</p>
                     </div>
-                    <a href={`tel:${emergencyContact.phone}`} className="flex-shrink-0 p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Call">
+                    <a href={`tel:${emergencyContact.phone}`} className="flex-shrink-0 p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Call">
                       <Icon name="phone" size="text-lg" />
                     </a>
                   </div>
@@ -1075,22 +1075,22 @@ export default function TravelDetail() {
                     const fullName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || 'Contact'
                     const initial = fullName.charAt(0).toUpperCase() || '?'
                     return (
-                      <div key={`custom-${category}`} className="flex items-center gap-4 px-5 py-3.5 active:bg-slate-50 dark:active:bg-slate-800/50">
-                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-semibold text-base">
+                      <div key={`custom-${category}`} className="flex items-center gap-4 px-5 py-3.5 active:bg-gray-50 dark:active:bg-gray-800/50">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold text-base">
                           {initial}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-slate-900 dark:text-white truncate">{fullName}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{label}</p>
+                          <p className="font-semibold text-gray-900 dark:text-white truncate">{fullName}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{label}</p>
                         </div>
                         <div className="flex-shrink-0 flex items-center gap-1">
                           {contact.phone && (
-                            <a href={`tel:${contact.phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Call">
+                            <a href={`tel:${contact.phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Call">
                               <Icon name="phone" size="text-lg" />
                             </a>
                           )}
                           {contact.email && (
-                            <a href={`mailto:${contact.email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Email">
+                            <a href={`mailto:${contact.email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Email">
                               <Icon name="email" size="text-lg" />
                             </a>
                           )}
@@ -1112,22 +1112,22 @@ export default function TravelDetail() {
                     const fullName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || 'Contact'
                     const initial = fullName.charAt(0).toUpperCase() || '?'
                     return (
-                      <div key={category} className="flex items-center gap-4 px-5 py-3.5 active:bg-slate-50 dark:active:bg-slate-800/50">
-                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-semibold text-base">
+                      <div key={category} className="flex items-center gap-4 px-5 py-3.5 active:bg-gray-50 dark:active:bg-gray-800/50">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold text-base">
                           {initial}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-slate-900 dark:text-white truncate">{fullName}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{label}</p>
+                          <p className="font-semibold text-gray-900 dark:text-white truncate">{fullName}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{label}</p>
                         </div>
                         <div className="flex-shrink-0 flex items-center gap-1">
                           {contact.phone && (
-                            <a href={`tel:${contact.phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Call">
+                            <a href={`tel:${contact.phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Call">
                               <Icon name="phone" size="text-lg" />
                             </a>
                           )}
                           {contact.email && (
-                            <a href={`mailto:${contact.email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Email">
+                            <a href={`mailto:${contact.email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Email">
                               <Icon name="email" size="text-lg" />
                             </a>
                           )}
@@ -1137,7 +1137,7 @@ export default function TravelDetail() {
                   })
                 })()}
 
-                {/* Last row: Everything Else — org default contact or org details fallback (always shown when either has email/phone) */}
+                {/* Last row: Everything Else - org default contact or org details fallback (always shown when either has email/phone) */}
                 {(() => {
                   const hasDefault = defaultContact && (defaultContact.email || defaultContact.phone)
                   const hasFallback = orgFallbackContact && (orgFallbackContact.email || orgFallbackContact.phone)
@@ -1149,22 +1149,22 @@ export default function TravelDetail() {
                   const email = hasDefault ? defaultContact!.email : orgFallbackContact!.email
                   const phone = hasDefault ? defaultContact!.phone : orgFallbackContact!.phone
                   return (
-                    <div className="flex items-center gap-4 px-5 py-3.5 active:bg-slate-50 dark:active:bg-slate-800/50">
-                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-semibold text-base">
+                    <div className="flex items-center gap-4 px-5 py-3.5 active:bg-gray-50 dark:active:bg-gray-800/50">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold text-base">
                         {initial}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-slate-900 dark:text-white truncate">{displayName}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Everything Else</p>
+                        <p className="font-semibold text-gray-900 dark:text-white truncate">{displayName}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">Everything Else</p>
                       </div>
                       <div className="flex-shrink-0 flex items-center gap-1">
                         {phone && (
-                          <a href={`tel:${phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Call">
+                          <a href={`tel:${phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Call">
                             <Icon name="phone" size="text-lg" />
                           </a>
                         )}
                         {email && (
-                          <a href={`mailto:${email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Email">
+                          <a href={`mailto:${email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Email">
                             <Icon name="email" size="text-lg" />
                           </a>
                         )}
@@ -1184,15 +1184,15 @@ export default function TravelDetail() {
                   <Icon name="place" size="text-xl" />
                   Area Overview
                 </CardTitle>
-                <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
                   Google
                 </span>
               </div>
               {neighborhoodSummaryLoading ? (
                 <div className="animate-pulse space-y-3">
-                  <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-full" />
-                  <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-5/6" />
-                  <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-4/6" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-4/6" />
                 </div>
               ) : (() => {
                 const summaryData = neighborhoodSummaryResult?.data
@@ -1200,7 +1200,7 @@ export default function TravelDetail() {
                 if (!blocks || blocks.length === 0) {
                   const venueName = plan?.venue_name || summaryData?.name || 'this venue'
                   return (
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       {t('portal.travel.areaSummaryNotAvailable', { venueName })}
                     </p>
                   )
@@ -1210,11 +1210,11 @@ export default function TravelDetail() {
                     {blocks.map((block, idx) => (
                       <div key={idx}>
                         {block.topic !== 'overview' && (
-                          <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                          <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
                             {block.topic}
                           </p>
                         )}
-                        <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                           {block.content}
                         </p>
                       </div>
@@ -1261,9 +1261,9 @@ export default function TravelDetail() {
                 
                 return (
                   <>
-                    <p className="font-black text-slate-900 dark:text-white mb-1">{hotelHeader}</p>
+                    <p className="font-black text-gray-900 dark:text-white mb-1">{hotelHeader}</p>
                     {showAddress && (
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{plan.hotel_address}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{plan.hotel_address}</p>
                     )}
                   </>
                 )
@@ -1272,7 +1272,7 @@ export default function TravelDetail() {
               <div className="space-y-3 mb-4">
                 {plan.hotel_phone && (
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Phone</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Phone</p>
                     <a href={`tel:${plan.hotel_phone}`} className="text-[var(--org-link-color)] font-bold hover:underline">
                       {plan.hotel_phone}
                     </a>
@@ -1280,8 +1280,8 @@ export default function TravelDetail() {
                 )}
                 {plan.hotel_confirmation && (
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Confirmation</p>
-                    <p className="font-mono text-slate-900 dark:text-white font-bold">{plan.hotel_confirmation}</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Confirmation</p>
+                    <p className="font-mono text-gray-900 dark:text-white font-bold">{plan.hotel_confirmation}</p>
                   </div>
                 )}
               </div>
@@ -1348,7 +1348,7 @@ export default function TravelDetail() {
               <Icon name="wb_sunny" size="text-xl" />
               Weather
             </CardTitle>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               Check the forecast for {plan.location}
             </p>
             <a
@@ -1364,8 +1364,8 @@ export default function TravelDetail() {
           </Card>
 
           {/* Last Updated */}
-          <Card className="p-4 bg-slate-50 dark:bg-slate-800/50">
-            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <Card className="p-4 bg-gray-50 dark:bg-gray-800/50">
+            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
               <Icon name="info" size="text-sm" />
               <span>Last updated: {new Date(plan.updated_at || plan.created_at).toLocaleDateString()}</span>
             </div>
@@ -1375,3 +1375,4 @@ export default function TravelDetail() {
     </PortalLayout>
   )
 }
+

@@ -56,6 +56,29 @@ type CacheKey =
  * In-memory cache store
  */
 const memoryCache = new Map<string, CacheEntry<any>>()
+const inFlightRequests = new Map<string, Promise<{ data: unknown | null; error: Error | null }>>()
+
+async function fetchWithDedup<T>(
+  cacheKey: string,
+  fetcher: () => Promise<{ data: T | null; error: Error | null }>,
+): Promise<{ data: T | null; error: Error | null }> {
+  const existing = inFlightRequests.get(cacheKey) as Promise<{ data: T | null; error: Error | null }> | undefined
+  if (existing) {
+    debug.data('WordPressApiCacheService', 'Joining in-flight request', { cacheKey })
+    return existing
+  }
+
+  const requestPromise = (async () => {
+    try {
+      return await fetcher()
+    } finally {
+      inFlightRequests.delete(cacheKey)
+    }
+  })()
+
+  inFlightRequests.set(cacheKey, requestPromise as Promise<{ data: unknown | null; error: Error | null }>)
+  return requestPromise
+}
 
 /**
  * Generate cache key
@@ -165,11 +188,13 @@ export async function getCachedWordPressCategories(
   
   // No cache or too old, fetch fresh data
   debug.data('WordPressApiCacheService', 'Categories cache miss, fetching', { parentId })
-  const result = await getWordPressCategories(config, parentId)
-  
-  if (!result.error && result.data) {
-    setCached(cacheKey, result.data)
-  }
+  const result = await fetchWithDedup(cacheKey, async () => {
+    const response = await getWordPressCategories(config, parentId)
+    if (!response.error && response.data) {
+      setCached(cacheKey, response.data)
+    }
+    return response
+  })
   
   return result
 }
@@ -218,11 +243,13 @@ export async function getCachedWordPressPosts(
   
   // No cache or too old, fetch fresh data
   debug.data('WordPressApiCacheService', 'Posts cache miss, fetching', options)
-  const result = await getWordPressPosts(config, options)
-  
-  if (!result.error && result.data) {
-    setCached(cacheKey, result.data)
-  }
+  const result = await fetchWithDedup(cacheKey, async () => {
+    const response = await getWordPressPosts(config, options)
+    if (!response.error && response.data) {
+      setCached(cacheKey, response.data)
+    }
+    return response
+  })
   
   return result
 }
@@ -264,11 +291,13 @@ export async function getCachedWordPressTags(
   
   // No cache or too old, fetch fresh data
   debug.data('WordPressApiCacheService', 'Tags cache miss, fetching')
-  const result = await getWordPressTags(config)
-  
-  if (!result.error && result.data) {
-    setCached(cacheKey, result.data)
-  }
+  const result = await fetchWithDedup(cacheKey, async () => {
+    const response = await getWordPressTags(config)
+    if (!response.error && response.data) {
+      setCached(cacheKey, response.data)
+    }
+    return response
+  })
   
   return result
 }
@@ -310,11 +339,13 @@ export async function getCachedWordPressPages(
   
   // No cache or too old, fetch fresh data
   debug.data('WordPressApiCacheService', 'Pages cache miss, fetching')
-  const result = await getWordPressPages(config)
-  
-  if (!result.error && result.data) {
-    setCached(cacheKey, result.data)
-  }
+  const result = await fetchWithDedup(cacheKey, async () => {
+    const response = await getWordPressPages(config)
+    if (!response.error && response.data) {
+      setCached(cacheKey, response.data)
+    }
+    return response
+  })
   
   return result
 }
@@ -357,11 +388,13 @@ export async function getCachedWordPressPostBySlug(
   
   // No cache or too old, fetch fresh data
   debug.data('WordPressApiCacheService', 'Post by slug cache miss, fetching', { slug })
-  const result = await getWordPressPostBySlug(config, slug)
-  
-  if (!result.error && result.data) {
-    setCached(cacheKey, result.data)
-  }
+  const result = await fetchWithDedup(cacheKey, async () => {
+    const response = await getWordPressPostBySlug(config, slug)
+    if (!response.error && response.data) {
+      setCached(cacheKey, response.data)
+    }
+    return response
+  })
   
   return result
 }
@@ -404,11 +437,13 @@ export async function getCachedWordPressPageBySlug(
   
   // No cache or too old, fetch fresh data
   debug.data('WordPressApiCacheService', 'Page by slug cache miss, fetching', { slug })
-  const result = await getWordPressPageBySlug(config, slug)
-  
-  if (!result.error && result.data) {
-    setCached(cacheKey, result.data)
-  }
+  const result = await fetchWithDedup(cacheKey, async () => {
+    const response = await getWordPressPageBySlug(config, slug)
+    if (!response.error && response.data) {
+      setCached(cacheKey, response.data)
+    }
+    return response
+  })
   
   return result
 }

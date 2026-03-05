@@ -1,5 +1,8 @@
 import { automationOperations } from "./automation.ts"
 import { aiOperations } from "./ai.ts"
+import { emailOperations } from "./email.ts"
+import { wordpressOperations } from "./wordpress.ts"
+import { integrationOperations } from "./integrations.ts"
 import type { AuthorizationContext, AuthorizationRequirements } from "../core/authz.ts"
 
 export type PiiPolicy = "deny" | "allow"
@@ -11,7 +14,7 @@ export interface OperationLimits {
 
 export interface OperationDefinition {
   key: string
-  provider: "make" | "huggingface"
+  provider: "make" | "huggingface" | "resend" | "wordpress" | "google" | "onesignal"
   piiPolicy: PiiPolicy
   limits: OperationLimits
   idempotent: boolean
@@ -35,7 +38,13 @@ export interface OperationDefinition {
 // 3) src/services/contactService.ts -> automation.submitContact
 // 4) initial HF validation path -> ai.summarizeAnnouncement
 
-const allDefinitions = [...automationOperations, ...aiOperations]
+const allDefinitions = [
+  ...automationOperations,
+  ...aiOperations,
+  ...emailOperations,
+  ...wordpressOperations,
+  ...integrationOperations,
+]
 
 const operationMap = new Map<string, OperationDefinition>(
   allDefinitions.map((definition) => [definition.key, definition]),

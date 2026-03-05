@@ -775,15 +775,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // #region agent log
       if (event === 'SIGNED_IN' && session?.user) {
         const alreadyLoaded = currentProfile && currentProfile.id === session.user.id
-        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7451fa'},body:JSON.stringify({sessionId:'7451fa',location:'useAuth.tsx:751',message:'SIGNED_IN event - checking if should skip state updates',data:{event,alreadyLoaded,currentUserId:currentUser?.id,newUserId:session.user.id,currentSessionExists:!!latestUserRef.current?.id},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
         // Skip setSession/setUser if user already loaded — prevents unnecessary re-renders
         // that cause form state loss. Session token refresh happens in Supabase client.
         if (alreadyLoaded) {
-          fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7451fa'},body:JSON.stringify({sessionId:'7451fa',location:'useAuth.tsx:755',message:'Skipping setSession/setUser - already loaded',data:{userId:session.user.id},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
         } else {
           setSession(session)
           setUser(session.user)
-          fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7451fa'},body:JSON.stringify({sessionId:'7451fa',location:'useAuth.tsx:758',message:'Calling setSession/setUser - not loaded',data:{userId:session.user.id},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
         }
       } else {
         setSession(session)

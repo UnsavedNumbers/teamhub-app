@@ -251,7 +251,7 @@ export default function Invitations() {
         {
             key: 'team',
             header: t('admin.invitations.team'),
-            render: (invite) => invite.team_name || 'â€”',
+            render: (invite) => invite.team_name || '-',
         },
         {
             key: 'expires',

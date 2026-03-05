@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Messages Page
  *
  * Dedicated direct user-to-user messaging surface.
@@ -19,6 +19,7 @@ import 'stream-chat-react/dist/css/v2/index.css'
 
 import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
+import { useTheme } from '../hooks/useTheme'
 import { getStreamToken, startDirectMessage } from '../data/services/huddlesService'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import {
@@ -71,6 +72,7 @@ export default function Messages() {
   useDebugLifecycle('Messages')
   const { user } = useAuth()
   const { context, isReady } = useUserContext()
+  const { resolvedTheme } = useTheme()
 
   const [streamClient, setStreamClient] = useState<StreamChat | null>(null)
   const [streamConnected, setStreamConnected] = useState(false)
@@ -81,6 +83,7 @@ export default function Messages() {
   const [teams, setTeams] = useState<Team[]>([])
   const [actingRoleContext, setActingRoleContext] = useState<MessagingRoleContext>('parent')
   const [policyDecisionByChannelId, setPolicyDecisionByChannelId] = useState<Record<string, DmPolicyDecision>>({})
+  const chatTheme = resolvedTheme === 'dark' ? 'messaging dark' : 'messaging light'
 
   const hasInitializedStream = useRef(false)
   const seededDemoChannelIds = useRef<Set<string>>(new Set())
@@ -355,7 +358,7 @@ export default function Messages() {
     return (
       <PortalLayout>
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
         </div>
       </PortalLayout>
     )
@@ -370,31 +373,31 @@ export default function Messages() {
     >
       <div className="mb-6 sm:mb-8">
         <PageTitle>Messages</PageTitle>
-        <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide mt-1">
+        <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide mt-1">
           Direct messages between users.
         </p>
       </div>
 
       <div className="flex gap-6 h-[calc(100vh-280px)] min-h-[600px]">
-        <div className="w-[360px] flex-shrink-0 flex flex-col border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+        <div className="w-[360px] flex-shrink-0 flex flex-col border border-gray-200 dark:border-neutral-700 bg-white dark:bg-black">
+          <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900 dark:text-white">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-900 dark:text-white">
                 Direct Messages
               </h2>
-              <span className="text-xs font-bold text-slate-400">
+              <span className="text-xs font-bold text-gray-400">
                 {dmChannels.length}
               </span>
             </div>
 
-            <div className="mb-3 rounded border border-slate-200 dark:border-slate-700 px-3 py-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
+            <div className="mb-3 rounded border border-gray-200 dark:border-neutral-700 px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
                 Sending As
               </p>
               <select
                 value={actingRoleContext}
                 onChange={(event) => setActingRoleContext(event.target.value as MessagingRoleContext)}
-                className="w-full text-sm rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1"
+                className="w-full text-sm rounded border border-gray-300 dark:border-neutral-700 bg-white dark:bg-black px-2 py-1"
               >
                 {roleContextOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -414,10 +417,10 @@ export default function Messages() {
                   <button
                     key={recipient.id}
                     onClick={() => handleStartDemoDirectMessage(recipient)}
-                    className="w-full text-left px-3 py-2 rounded border border-slate-200 dark:border-slate-700 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                    className="w-full text-left px-3 py-2 rounded border border-gray-200 dark:border-neutral-700 text-sm hover:bg-gray-50 dark:hover:bg-neutral-900 transition-colors"
                   >
-                    <p className="font-semibold text-slate-900 dark:text-white">{recipient.name}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{recipient.teamName}</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">{recipient.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{recipient.teamName}</p>
                   </button>
                 ))}
               </div>
@@ -428,14 +431,14 @@ export default function Messages() {
             {streamLoading ? (
               <div className="p-4 space-y-3">
                 {[1, 2, 3].map((index) => (
-                  <div key={index} className="h-16 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                  <div key={index} className="h-16 bg-gray-100 dark:bg-neutral-900 rounded animate-pulse" />
                 ))}
               </div>
             ) : !streamConnected || !streamClient ? (
               <div className="p-8">
                 <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto mb-2"></div>
-                  <p className="text-xs text-slate-500">Connecting to messages...</p>
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-gray-900 dark:border-white mx-auto mb-2"></div>
+                  <p className="text-xs text-gray-500">Connecting to messages...</p>
                 </div>
               </div>
             ) : dmChannels.length === 0 ? (
@@ -447,8 +450,8 @@ export default function Messages() {
                 />
               </div>
             ) : (
-              <div className="divide-y divide-slate-200 dark:divide-slate-700">
-                <Chat client={streamClient}>
+              <div className="divide-y divide-gray-200 dark:divide-neutral-700">
+                <Chat client={streamClient} theme={chatTheme}>
                   <ChannelList
                     teamChannels={[]}
                     orgChannels={[]}
@@ -463,17 +466,17 @@ export default function Messages() {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50">
+        <div className="flex-1 flex flex-col border border-gray-200 dark:border-neutral-700 bg-white dark:bg-black">
           {streamConnected && streamClient && selectedChannel ? (
-            <Chat client={streamClient}>
+            <Chat client={streamClient} theme={chatTheme}>
               <Channel channel={selectedChannel}>
                 <Window>
-                  <div className="px-4 py-2 border-b border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-between">
+                  <div className="px-4 py-2 border-b border-gray-200 dark:border-neutral-700 text-xs text-gray-600 dark:text-gray-300 flex items-center justify-between">
                     <span>
                       Active role: <strong>{roleContextOptions.find((option) => option.value === actingRoleContext)?.label ?? actingRoleContext}</strong>
                     </span>
                     {Boolean((selectedChannel.data as Record<string, unknown> | undefined)?.created_by_role_context) && (
-                      <span className="uppercase tracking-wide text-[10px] text-slate-500">
+                      <span className="uppercase tracking-wide text-[10px] text-gray-500">
                         Thread role: {String((selectedChannel.data as Record<string, unknown>).created_by_role_context)}
                       </span>
                     )}
@@ -503,3 +506,4 @@ export default function Messages() {
     </PortalLayout>
   )
 }
+

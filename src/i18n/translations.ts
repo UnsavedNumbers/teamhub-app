@@ -1668,6 +1668,16 @@ export const en = {
                 followingButton: 'Following',
                 unfollowButton: 'Unfollow',
             },
+            discoverOrgs: {
+                title: 'Browse Organizations',
+                description: 'Discover and follow organizations in your area.',
+                searchPlaceholder: 'Search organizations by name or location...',
+                results: 'Search Results',
+                emptyTitle: 'Discover Organizations',
+                emptyDescription: 'Search for organizations by name or location to discover new teams and organizations in your area.',
+                noResultsTitle: 'No organizations found',
+                noResultsDescription: 'No organizations found matching "{{query}}". Try a different search term.',
+            },
             // Profile Page
             profile: {
                 title: 'Profile',
@@ -8701,6 +8711,16 @@ export const es = {
                 getPurchasesFailed: 'Error al obtener compras',
                 getTeamsFailed: 'Error al cargar equipos',
                 getMediaFailed: 'Error al cargar medios',
+            },
+            discoverOrgs: {
+                title: 'Explorar Organizaciones',
+                description: 'Descubre y sigue organizaciones en tu ?rea.',
+                searchPlaceholder: 'Busca organizaciones por nombre o ubicaci?n...',
+                results: 'Resultados de b?squeda',
+                emptyTitle: 'Descubrir Organizaciones',
+                emptyDescription: 'Busca organizaciones por nombre o ubicaci?n para descubrir nuevos equipos y organizaciones en tu ?rea.',
+                noResultsTitle: 'No se encontraron organizaciones',
+                noResultsDescription: 'No se encontraron organizaciones que coincidan con "{{query}}". Prueba con otro t?rmino de b?squeda.',
             },
             // Organization Profile Page
             orgProfile: {

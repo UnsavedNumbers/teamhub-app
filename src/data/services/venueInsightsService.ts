@@ -8,6 +8,7 @@
 import { supabase } from '../../lib/supabase'
 import { debug } from '../../lib/debug'
 import { USE_FAKE_DATA } from '../config'
+import { invokeApiOperation } from '../../services/apiManagerService'
 import type { VenueInsights, PlaceDetailsResponse } from '../../types/venueInsights'
 import { mapVenueInsightsRow } from '../../types/venueInsights'
 import { getDemoVenueInsightImages } from '../../utils/demoImagePlaceholders'
@@ -367,40 +368,25 @@ export async function fetchNeighborhoodSummaryDirect(
     }
   }
 
-  const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY
-  if (!apiKey) {
-    debug.perf.end('venueInsightsService.fetchNeighborhoodSummaryDirect')
-    debug.error('VenueInsightsService.fetchNeighborhoodSummaryDirect', 'API key not configured', { placeId })
-    console.groupEnd()
-    return { data: null, error: new Error('Google Places API key not configured') }
-  }
-
   try {
-    const fields = ['displayName', 'neighborhoodSummary']
-    const url = `https://places.googleapis.com/v1/places/${placeId}`
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': fields.join(','),
+    const gatewayResponse = await invokeApiOperation<{ providerResponse: any }>({
+      operation: 'places.getNeighborhoodSummary',
+      input: {
+        placeId,
       },
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
+    if (!gatewayResponse.ok || !gatewayResponse.data?.providerResponse) {
       debug.perf.end('venueInsightsService.fetchNeighborhoodSummaryDirect')
-      debug.error('VenueInsightsService.fetchNeighborhoodSummaryDirect', 'API error', { status: response.status, placeId })
+      debug.error('VenueInsightsService.fetchNeighborhoodSummaryDirect', 'API error', { placeId })
       console.groupEnd()
-      console.error('Google Places API error:', response.status, errorText)
       return {
-        data: { name: null, area_summary: null, error: `API error: ${response.status}` },
+        data: { name: null, area_summary: null, error: gatewayResponse.ok ? 'API error' : gatewayResponse.error.message },
         error: null,
       }
     }
 
-    const data = await response.json()
+    const data = gatewayResponse.data.providerResponse
 
     // Map neighborhoodSummary to our area_summary shape
     const ns = data.neighborhoodSummary

@@ -34,61 +34,43 @@ interface OneSignalNotificationResult {
 }
 
 async function sendOneSignalPushNotification(
-  appId: string,
-  restApiKey: string,
   targetUserId: string,
   payload: Record<string, unknown>
 ): Promise<OneSignalNotificationResult> {
-  const title = typeof payload.title === 'string' ? payload.title.trim() : ''
-  const body = typeof payload.body === 'string' ? payload.body.trim() : ''
-  const linkUrl = typeof payload.link_url === 'string' ? payload.link_url : undefined
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  const internalToken = Deno.env.get('API_MANAGER_INTERNAL_TOKEN')
 
-  if (!title || !body) {
-    return { success: false, error: 'Push payload must include title and body' }
+  if (!supabaseUrl || !serviceRoleKey || !internalToken) {
+    return { success: false, error: 'API manager internal configuration is missing' }
   }
 
-  const requestBody: Record<string, unknown> = {
-    app_id: appId,
-    include_aliases: {
-      external_id: [targetUserId],
-    },
-    target_channel: 'push',
-    headings: { en: title },
-    contents: { en: body },
-    data: payload,
-  }
-
-  if (linkUrl) {
-    requestBody.url = linkUrl
-  }
-
-  const response = await fetch('https://onesignal.com/api/v1/notifications', {
+  const functionsBaseUrl = supabaseUrl.replace('/rest/v1', '')
+  const response = await fetch(`${functionsBaseUrl}/functions/v1/api`, {
     method: 'POST',
     headers: {
-      Authorization: `Basic ${restApiKey}`,
       'Content-Type': 'application/json',
+      Authorization: `Bearer ${serviceRoleKey}`,
     },
-    body: JSON.stringify(requestBody),
+    body: JSON.stringify({
+      operation: 'push.onesignal.send',
+      input: {
+        targetUserId,
+        payload,
+        internalToken,
+      },
+    }),
   })
 
-  const responseText = await response.text()
-  let parsed: Record<string, unknown> | null = null
-
-  try {
-    parsed = responseText ? (JSON.parse(responseText) as Record<string, unknown>) : null
-  } catch {
-    parsed = null
-  }
-
-  if (!response.ok) {
-    const apiError = parsed && typeof parsed.errors === 'object' ? JSON.stringify(parsed.errors) : responseText
+  const data = await response.json().catch(() => null)
+  if (!response.ok || !data?.ok) {
     return {
       success: false,
-      error: apiError || `Push provider responded with status ${response.status}`,
+      error: data?.error?.message || `Push provider responded with status ${response.status}`,
     }
   }
 
-  const messageId = parsed && typeof parsed.id === 'string' ? parsed.id : undefined
+  const messageId = typeof data?.data?.providerMessageId === 'string' ? data.data.providerMessageId : undefined
   return { success: true, messageId }
 }
 
@@ -319,68 +301,45 @@ serve(async (req) => {
       .limit(20)
 
     if (!pushOutboxError && pushOutboxEntries && pushOutboxEntries.length > 0) {
-      const oneSignalAppId = Deno.env.get('ONESIGNAL_APP_ID')
-      const oneSignalRestApiKey = Deno.env.get('ONESIGNAL_REST_API_KEY')
+      for (const entry of pushOutboxEntries) {
+        try {
+          const payload = (entry.payload_json ?? {}) as Record<string, unknown>
+          const pushResult = await sendOneSignalPushNotification(entry.target_user_id, payload)
 
-      if (!oneSignalAppId || !oneSignalRestApiKey) {
-        for (const entry of pushOutboxEntries) {
-          await supabase
-            .from('notifications_outbox')
-            .update({
-              status: 'failed',
-              error_message: 'Push provider is not configured',
-              processed_at: new Date().toISOString(),
-            })
-            .eq('id', entry.id)
-
-          results.push({ id: entry.id, status: 'failed', error: 'Push provider is not configured' })
-        }
-      } else {
-        for (const entry of pushOutboxEntries) {
-          try {
-            const payload = (entry.payload_json ?? {}) as Record<string, unknown>
-            const pushResult = await sendOneSignalPushNotification(
-              oneSignalAppId,
-              oneSignalRestApiKey,
-              entry.target_user_id,
-              payload
-            )
-
-            if (pushResult.success) {
-              await supabase
-                .from('notifications_outbox')
-                .update({
-                  status: 'sent',
-                  processed_at: new Date().toISOString(),
-                })
-                .eq('id', entry.id)
-
-              results.push({ id: entry.id, status: 'sent', pushId: pushResult.messageId })
-            } else {
-              await supabase
-                .from('notifications_outbox')
-                .update({
-                  status: 'failed',
-                  error_message: pushResult.error || 'Push send failed',
-                  processed_at: new Date().toISOString(),
-                })
-                .eq('id', entry.id)
-
-              results.push({ id: entry.id, status: 'failed', error: pushResult.error || 'Push send failed' })
-            }
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown push error'
+          if (pushResult.success) {
             await supabase
               .from('notifications_outbox')
               .update({
-                status: 'failed',
-                error_message: errorMessage,
+                status: 'sent',
                 processed_at: new Date().toISOString(),
               })
               .eq('id', entry.id)
 
-            results.push({ id: entry.id, status: 'failed', error: errorMessage })
+            results.push({ id: entry.id, status: 'sent', pushId: pushResult.messageId })
+          } else {
+            await supabase
+              .from('notifications_outbox')
+              .update({
+                status: 'failed',
+                error_message: pushResult.error || 'Push send failed',
+                processed_at: new Date().toISOString(),
+              })
+              .eq('id', entry.id)
+
+            results.push({ id: entry.id, status: 'failed', error: pushResult.error || 'Push send failed' })
           }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown push error'
+          await supabase
+            .from('notifications_outbox')
+            .update({
+              status: 'failed',
+              error_message: errorMessage,
+              processed_at: new Date().toISOString(),
+            })
+            .eq('id', entry.id)
+
+          results.push({ id: entry.id, status: 'failed', error: errorMessage })
         }
       }
     }

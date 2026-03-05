@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import MegaMenu from '../common/MegaMenu'
 import ThemeToggle from './ThemeToggle'
@@ -625,8 +625,8 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
 
         {/* Role indicator */}
         {currentOrganization && (
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/50">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800/50">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
               {currentOrganization.name}
             </span>
             <span className="text-xs font-semibold text-primary-600 dark:text-primary-400">
@@ -689,3 +689,4 @@ function CoachTeamSwitcher({ context: _context }: { context: any }) {
     />
   )
 }
+

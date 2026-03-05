@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+﻿import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { useT } from '../i18n/useI18n'
@@ -65,7 +65,7 @@ export default function TryoutDetail() {
         <PortalHeader />
         <PortalLayout>
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
           </div>
         </PortalLayout>
       </>
@@ -111,50 +111,50 @@ export default function TryoutDetail() {
           <h3 className="text-lg font-black mb-4">{t('portal.tryouts.detail.infoTitle' as TranslationKey)}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-bold uppercase text-slate-400">{t('common.date')}</label>
+              <label className="text-xs font-bold uppercase text-gray-400">{t('common.date')}</label>
               <p className="font-bold">{formatDate(tryout.tryout_date, t('common.tbd'))}</p>
             </div>
             <div>
-              <label className="text-xs font-bold uppercase text-slate-400">{t('portal.tryouts.detail.fields.time' as TranslationKey)}</label>
+              <label className="text-xs font-bold uppercase text-gray-400">{t('portal.tryouts.detail.fields.time' as TranslationKey)}</label>
               <p className="font-bold">{tryout.start_time ?? t('common.tbd')}</p>
             </div>
             <div>
-              <label className="text-xs font-bold uppercase text-slate-400">{t('portal.tryouts.detail.fields.location' as TranslationKey)}</label>
+              <label className="text-xs font-bold uppercase text-gray-400">{t('portal.tryouts.detail.fields.location' as TranslationKey)}</label>
               <p className="font-bold">{tryout.location ?? t('common.tbd')}</p>
             </div>
             <div>
-              <label className="text-xs font-bold uppercase text-slate-400">{t('portal.tryouts.detail.fields.ageGroup' as TranslationKey)}</label>
+              <label className="text-xs font-bold uppercase text-gray-400">{t('portal.tryouts.detail.fields.ageGroup' as TranslationKey)}</label>
               <p className="font-bold">{tryout.age_group}</p>
             </div>
             <div>
-              <label className="text-xs font-bold uppercase text-slate-400">{t('portal.tryouts.detail.fields.fee' as TranslationKey)}</label>
+              <label className="text-xs font-bold uppercase text-gray-400">{t('portal.tryouts.detail.fields.fee' as TranslationKey)}</label>
               <p className="font-bold">${((tryout.entry_fee || 0) / 100).toFixed(2)}</p>
             </div>
             <div>
-              <label className="text-xs font-bold uppercase text-slate-400">{t('admin.tryouts.registrations.columns.status' as TranslationKey)}</label>
+              <label className="text-xs font-bold uppercase text-gray-400">{t('admin.tryouts.registrations.columns.status' as TranslationKey)}</label>
               <p className="font-bold">{t(`admin.tryouts.status.${tryout.status}` as TranslationKey)}</p>
             </div>
           </div>
 
           <div className="mt-6">
-            <h4 className="text-sm font-black uppercase tracking-wide text-slate-400 mb-2">
+            <h4 className="text-sm font-black uppercase tracking-wide text-gray-400 mb-2">
               {t('portal.tryouts.detail.descriptionTitle' as TranslationKey)}
             </h4>
-            <p className="text-slate-600 dark:text-slate-300">
+            <p className="text-gray-600 dark:text-gray-300">
               {tryout.description || t('portal.tryouts.detail.defaultDescription' as TranslationKey)}
             </p>
           </div>
 
           {sessions.length > 0 && (
             <div className="mt-6">
-              <h4 className="text-sm font-black uppercase tracking-wide text-slate-400 mb-2">
+              <h4 className="text-sm font-black uppercase tracking-wide text-gray-400 mb-2">
                 {t('portal.tryouts.detail.sessionsTitle' as TranslationKey)}
               </h4>
               <div className="space-y-2">
                 {sessions.map((session) => (
-                  <div key={session.id} className="rounded-lg bg-slate-50 dark:bg-slate-800/60 p-3 text-sm">
+                  <div key={session.id} className="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3 text-sm">
                     <p className="font-bold">{session.session_date} {session.start_time}</p>
-                    <p className="text-slate-500 dark:text-slate-400">{session.location || t('common.unknown')}</p>
+                    <p className="text-gray-500 dark:text-gray-400">{session.location || t('common.unknown')}</p>
                   </div>
                 ))}
               </div>
@@ -170,3 +170,4 @@ export default function TryoutDetail() {
     </PortalLayout>
   )
 }
+

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Discover Organizations Page
  * 
  * Allows guardians to browse and discover organizations.
@@ -110,9 +110,9 @@ export default function DiscoverOrgs() {
   return (
     <PortalLayout>
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <PageTitle>{t('portal.fan.discoverOrgs.title' as any) || 'Browse Organizations'}</PageTitle>
+        <PageTitle>{t('portal.fan.discoverOrgs.title')}</PageTitle>
         <p className="text-gray-600 dark:text-gray-400 mb-6">
-          {t('portal.fan.discoverOrgs.description' as any) || 'Discover and follow organizations in your area'}
+          {t('portal.fan.discoverOrgs.description')}
         </p>
 
         {/* Search Input */}
@@ -123,8 +123,8 @@ export default function DiscoverOrgs() {
               type="text"
               value={searchQuery}
               onChange={handleInputChange}
-              placeholder={t('portal.fan.discoverOrgs.searchPlaceholder' as any) || 'Search organizations by name or location...'}
-              className="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder={t('portal.fan.discoverOrgs.searchPlaceholder')}
+              className="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           {searchQuery.trim().length > 0 && searchQuery.trim().length < 2 && (
@@ -150,7 +150,7 @@ export default function DiscoverOrgs() {
         {!isLoading && hasSearched && searchResults.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-              {t('portal.fan.discoverOrgs.results' as any) || 'Search Results'} ({searchResults.length})
+              {t('portal.fan.discoverOrgs.results')} ({searchResults.length})
             </h2>
             {searchResults.map((entity) => (
               <Card key={entity.id} className="p-6 transition-shadow hover:shadow-md">
@@ -212,8 +212,8 @@ export default function DiscoverOrgs() {
           <Card>
             <EmptyState
               icon="explore"
-              title={t('portal.fan.discoverOrgs.emptyTitle' as any) || 'Discover Organizations'}
-              description={t('portal.fan.discoverOrgs.emptyDescription' as any) || 'Search for organizations by name or location to discover new teams and organizations in your area.'}
+              title={t('portal.fan.discoverOrgs.emptyTitle')}
+              description={t('portal.fan.discoverOrgs.emptyDescription')}
             />
           </Card>
         )}
@@ -223,8 +223,8 @@ export default function DiscoverOrgs() {
           <Card>
             <EmptyState
               icon="search_off"
-              title={t('portal.fan.discoverOrgs.noResultsTitle' as any) || 'No organizations found'}
-              description={t('portal.fan.discoverOrgs.noResultsDescription' as any) || `No organizations found matching "${searchQuery}". Try a different search term.`}
+              title={t('portal.fan.discoverOrgs.noResultsTitle')}
+              description={t('portal.fan.discoverOrgs.noResultsDescription', { query: searchQuery })}
             />
           </Card>
         )}
@@ -232,3 +232,4 @@ export default function DiscoverOrgs() {
     </PortalLayout>
   )
 }
+

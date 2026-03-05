@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Gallery View Page
  *
  * Displays a single gallery with photos in a grid layout, with selection, tagging,
@@ -366,10 +366,10 @@ export default function PhotosGallery() {
         ]}
       >
         <div className="animate-pulse">
-          <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-64 mb-4"></div>
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-64 mb-4"></div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div key={i} className="aspect-square bg-slate-200 dark:bg-slate-700 rounded"></div>
+              <div key={i} className="aspect-square bg-gray-200 dark:bg-gray-700 rounded"></div>
             ))}
           </div>
         </div>
@@ -406,11 +406,11 @@ export default function PhotosGallery() {
       {/* Header Section */}
       <section className="mb-16">
         <div className="flex flex-col gap-4">
-          <h1 className="text-6xl md:text-7xl font-[900] tracking-tighter text-slate-900 dark:text-white leading-none">
+          <h1 className="text-6xl md:text-7xl font-[900] tracking-tighter text-gray-900 dark:text-white leading-none">
             {gallery.name}
           </h1>
 
-          <div className="flex items-center justify-between mt-8 pt-8 border-t border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-8">
               {/* Action buttons */}
               {gallery.require_approval && (
@@ -420,7 +420,7 @@ export default function PhotosGallery() {
               )}
               {!isManageMode && canModerate && (
                 <Link to={getLink('portal.photosGalleryManage', { id: gallery.id })}>
-                  <button className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-black dark:hover:text-white transition-colors">
+                  <button className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-black dark:hover:text-white transition-colors">
                     <Icon name="edit" size="text-sm" />
                     {t('photos.galleryView.manage')}
                   </button>
@@ -429,7 +429,7 @@ export default function PhotosGallery() {
               {!isManageMode && gallery.allow_contributions && canUpload && (
                 <button
                   onClick={() => setShowParentUpload(!showParentUpload)}
-                  className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-black dark:hover:text-white transition-colors"
+                  className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-black dark:hover:text-white transition-colors"
                 >
                   <Icon name="add" size="text-sm" />
                   {t('photos.galleryView.addYourPhotos')}
@@ -438,7 +438,7 @@ export default function PhotosGallery() {
               {canModerate && (
                 <button
                   onClick={() => setShowEditModal(true)}
-                  className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-black dark:hover:text-white transition-colors"
+                  className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-black dark:hover:text-white transition-colors"
                 >
                   <Icon name="edit" size="text-sm" />
                   {t('photos.galleryView.updateAlbum')}
@@ -446,7 +446,7 @@ export default function PhotosGallery() {
               )}
             </div>
 
-            <div className="text-sm font-medium text-slate-400 italic">
+            <div className="text-sm font-medium text-gray-400 italic">
               {t('photos.galleryView.showingCount', { count: displayPhotos.length, label: showingLabel })}
             </div>
           </div>
@@ -530,8 +530,8 @@ export default function PhotosGallery() {
       {displayPhotos.length === 0 ? (
         <Card>
           <div className="text-center py-12">
-            <Icon name="photo_library" size="text-6xl" className="text-slate-300 dark:text-slate-600 mb-4 mx-auto" />
-            <p className="text-slate-500 dark:text-slate-400 text-lg">
+            <Icon name="photo_library" size="text-6xl" className="text-gray-300 dark:text-gray-600 mb-4 mx-auto" />
+            <p className="text-gray-500 dark:text-gray-400 text-lg">
               {t('photos.galleryView.empty')}
             </p>
           </div>
@@ -543,7 +543,7 @@ export default function PhotosGallery() {
             <div className="space-y-12 mb-32">
               {photosByAlbum.unassigned.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-widest mb-4">
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-4">
                     {t('photos.albums.unassigned')}
                   </h3>
                   <PortalGalleryView
@@ -572,7 +572,7 @@ export default function PhotosGallery() {
                 if (items.length === 0) return null
                 return (
                   <div key={album.id}>
-                    <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-widest mb-4">
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-4">
                       {album.name}
                     </h3>
                     <PortalGalleryView
@@ -670,7 +670,7 @@ export default function PhotosGallery() {
           )}
 
           {loadingMore && (
-            <div className="text-center text-sm text-slate-500 mb-12">
+            <div className="text-center text-sm text-gray-500 mb-12">
               {t('common.loading')}
             </div>
           )}
@@ -678,14 +678,14 @@ export default function PhotosGallery() {
           {/* Bottom Action Bar - Fixed when photos are selected */}
           {selectedPhotos.size > 0 && (
             <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-[60]">
-              <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-2xl px-8 py-4 rounded-full shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)] border border-slate-200 dark:border-slate-700 flex items-center gap-10">
-                <div className="flex items-center gap-4 border-r border-slate-200 dark:border-slate-700 pr-10">
+              <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-2xl px-8 py-4 rounded-full shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)] border border-gray-200 dark:border-gray-700 flex items-center gap-10">
+                <div className="flex items-center gap-4 border-r border-gray-200 dark:border-gray-700 pr-10">
                   <span className="text-black dark:text-white font-black text-sm">
                     {t('photos.selection.count', { count: selectedPhotos.size, label: selectedLabel })}
                   </span>
                   <button
                     onClick={() => setSelectedPhotos(new Set())}
-                    className="text-slate-400 hover:text-red-500 transition-colors"
+                    className="text-gray-400 hover:text-red-500 transition-colors"
                   >
                     <span className="material-symbols-outlined text-xl">close</span>
                   </button>
@@ -784,3 +784,4 @@ export default function PhotosGallery() {
     </PortalLayout>
   )
 }
+

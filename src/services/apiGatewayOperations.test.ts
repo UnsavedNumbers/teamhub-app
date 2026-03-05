@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getOperationDefinition } from '../operations/registry.ts'
-import { resolveAuthorizationContext } from '../core/authz.ts'
-import { ApiManagerError } from '../core/errors.ts'
+import { getOperationDefinition } from '../../supabase/functions/api/operations/registry.ts'
+import { resolveAuthorizationContext } from '../../supabase/functions/api/core/authz.ts'
+import { ApiManagerError } from '../../supabase/functions/api/core/errors.ts'
 
-vi.mock('../providers/make.ts', () => ({
+vi.mock('../../supabase/functions/api/providers/make.ts', () => ({
   runScenario: vi.fn(async () => ({ status: 200, body: { ok: true } })),
 }))
 
-vi.mock('../providers/huggingface.ts', () => ({
+vi.mock('../../supabase/functions/api/providers/huggingface.ts', () => ({
   infer: vi.fn(async () => ({ output: [{ summary_text: 'Short summary' }] })),
 }))
 
@@ -76,6 +76,74 @@ describe('api gateway operation registry', () => {
     })
 
     expect(result).toMatchObject({ summary: 'Short summary' })
+  })
+
+  it('has a WordPress operation definition with valid input', () => {
+    const operation = getOperationDefinition('content.wordpress.getPosts')
+    expect(operation).not.toBeNull()
+
+    const validation = operation?.validateInput({
+      config: {
+        apiUrl: 'https://example.com/wp-json/wp/v2',
+        authMethod: 'public',
+      },
+      options: {
+        perPage: 10,
+        page: 1,
+      },
+    })
+
+    expect(validation?.ok).toBe(true)
+    if (!operation) {
+      throw new Error('Expected WordPress operation to exist')
+    }
+    expect(operation.provider).toBe('wordpress')
+  })
+
+  it('validates resend email operation and rejects missing token', () => {
+    const operation = getOperationDefinition('email.resend.send')
+    expect(operation).not.toBeNull()
+
+    const validation = operation?.validateInput({
+      to: 'test@example.com',
+      from: 'notifications@youthsports.team',
+      subject: 'Hello',
+      text: 'World',
+    })
+
+    expect(validation?.ok).toBe(false)
+    if (!operation) {
+      throw new Error('Expected resend operation to exist')
+    }
+    expect(operation.provider).toBe('resend')
+  })
+
+  it('has a geocode operation definition with valid input', () => {
+    const operation = getOperationDefinition('geo.geocodeZip')
+    expect(operation).not.toBeNull()
+
+    const validation = operation?.validateInput({ zip: '95814' })
+    expect(validation?.ok).toBe(true)
+    if (!operation) {
+      throw new Error('Expected geocode operation to exist')
+    }
+    expect(operation.provider).toBe('google')
+  })
+
+  it('validates onesignal push operation and rejects missing token', () => {
+    const operation = getOperationDefinition('push.onesignal.send')
+    expect(operation).not.toBeNull()
+
+    const validation = operation?.validateInput({
+      targetUserId: 'user-1',
+      payload: { title: 'Hello', body: 'World' },
+    })
+
+    expect(validation?.ok).toBe(false)
+    if (!operation) {
+      throw new Error('Expected push operation to exist')
+    }
+    expect(operation.provider).toBe('onesignal')
   })
 })
 
@@ -149,7 +217,7 @@ describe('api gateway authz guardrails', () => {
       memberRow: {
         org_id: 'org-1',
         role: 'staff',
-        permissions: { can_manage_messages: false },
+        permissions: { can_use_ai_tools: false },
         is_active: true,
       },
     })
@@ -162,7 +230,7 @@ describe('api gateway authz guardrails', () => {
           requireAuth: true,
           orgScoped: true,
           allowedRoles: ['staff'],
-          requiredStaffFlags: ['can_manage_messages'],
+          requiredStaffFlags: ['can_use_ai_tools'],
           allowPlatformAdmin: false,
         },
         'org-1',

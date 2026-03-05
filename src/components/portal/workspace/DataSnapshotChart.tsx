@@ -1,4 +1,4 @@
-import {
+﻿import {
   AreaChart,
   Area,
   XAxis,
@@ -36,8 +36,8 @@ export function DataSnapshotChart({
   const color = 'var(--org-btn-primary-bg)'
   const id = gradientId(title)
   return (
-    <section className={cn('rounded-xl bg-slate-50 p-5 dark:bg-slate-900/70', className)}>
-      {!hideTitle && <h3 className="mb-4 text-base font-black uppercase tracking-wide text-slate-900 dark:text-slate-100">{title}</h3>}
+    <section className={cn('rounded-xl bg-gray-50 p-5 dark:bg-gray-900/70', className)}>
+      {!hideTitle && <h3 className="mb-4 text-base font-black uppercase tracking-wide text-gray-900 dark:text-gray-100">{title}</h3>}
       <div className="h-[160px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
@@ -87,3 +87,4 @@ export function DataSnapshotChart({
     </section>
   )
 }
+

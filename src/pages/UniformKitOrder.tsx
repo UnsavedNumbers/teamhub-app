@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { 
@@ -262,7 +262,7 @@ export default function UniformKitOrder() {
         ]}
       >
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
         </div>
       </PortalLayout>
     )
@@ -302,7 +302,7 @@ export default function UniformKitOrder() {
       <div className="mb-12">
         <PageTitle>{kit.name}</PageTitle>
         {kit.description && (
-          <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
+          <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide mt-2">
             {kit.description}
           </p>
         )}
@@ -310,7 +310,7 @@ export default function UniformKitOrder() {
           <p className={`text-sm mt-2 ${
             new Date((kit as any).deadline_at || (kit as any).deadline || '') < new Date() 
               ? 'text-red-600 dark:text-red-400' 
-              : 'text-slate-600 dark:text-slate-300'
+              : 'text-gray-600 dark:text-gray-300'
           }`}>
             <Icon name="schedule" size="text-sm" className="inline mr-1" />
             Order deadline: {new Date((kit as any).deadline_at || (kit as any).deadline || '').toLocaleDateString()}
@@ -335,7 +335,7 @@ export default function UniformKitOrder() {
 
       {children.length === 0 ? (
         <Card className="text-center py-12">
-          <p className="text-slate-500 dark:text-slate-400 mb-6">
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
             {t('portal.uniforms.addChildrenFirst')}
           </p>
           <Button variant="primary" onClick={() => navigate('/portal/athletes')}>
@@ -361,7 +361,7 @@ export default function UniformKitOrder() {
                           ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                           : submissionStatus === 'fulfilled'
                           ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                       }`}>
                         {submissionStatus === 'not_submitted' ? 'Not Submitted' : submissionStatus}
                       </span>
@@ -375,7 +375,7 @@ export default function UniformKitOrder() {
                     const selectedSize = selections[child.id]?.[item.id] || ''
 
                     return (
-                      <div key={item.id} className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                      <div key={item.id} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-800 last:border-0">
                         <div className="flex-1">
                           <label className="form-label">
                             {item.name}
@@ -415,7 +415,7 @@ export default function UniformKitOrder() {
 
                 <div className="mt-6 flex justify-end">
                   {isLocked ? (
-                    <div className="text-sm text-slate-500 dark:text-slate-400">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
                       {isKitLocked() ? (
                         <p>This kit is locked and no longer accepting submissions.</p>
                       ) : isKitExpired() ? (
@@ -442,3 +442,4 @@ export default function UniformKitOrder() {
     </PortalLayout>
   )
 }
+

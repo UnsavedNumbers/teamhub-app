@@ -1816,3 +1816,94 @@ html.dark .oa-theme-active.portal-neutral .portal-workspace-header.pwa-neutral .
 html.dark .oa-theme-active.portal-neutral .portal-workspace-header.pwa-neutral .gn-util-btn--active {
     color: var(--org-link-hover, #bfdbfe);
 }
+
+/* Stream chat neutral dark-mode surfaces (Huddles/Messages right pane, thread, input) */
+html.dark .oa-theme-active.portal-neutral .str-chat {
+    --str-chat__background-color: #000000;
+    --str-chat__secondary-background-color: #0a0a0a;
+    --str-chat__surface-color: #171717;
+    --str-chat__secondary-surface-color: #171717;
+    --str-chat__tertiary-surface-color: #262626;
+    --str-chat__primary-surface-color: #171717;
+    --str-chat__primary-surface-color-low-emphasis: #1f1f1f;
+    --str-chat__overlay-color: rgba(0, 0, 0, 0.75);
+    --str-chat__secondary-overlay-color: rgba(0, 0, 0, 0.65);
+    --str-chat__text-color: #f5f5f5;
+    --str-chat__text-low-emphasis-color: #a3a3a3;
+    --str-chat__on-disabled-color: #e5e5e5;
+}
+
+html.dark .oa-theme-active.portal-neutral .str-chat,
+html.dark .oa-theme-active.portal-neutral .str-chat__container,
+html.dark .oa-theme-active.portal-neutral .str-chat__channel,
+html.dark .oa-theme-active.portal-neutral .str-chat__main-panel,
+html.dark .oa-theme-active.portal-neutral .str-chat__main-panel-inner,
+html.dark .oa-theme-active.portal-neutral .str-chat__list,
+html.dark .oa-theme-active.portal-neutral .str-chat__message-list,
+html.dark .oa-theme-active.portal-neutral .str-chat__message-list-scroll,
+html.dark .oa-theme-active.portal-neutral .str-chat__virtual-list,
+html.dark .oa-theme-active.portal-neutral .str-chat__thread,
+html.dark .oa-theme-active.portal-neutral .str-chat__thread-container,
+html.dark .oa-theme-active.portal-neutral .str-chat__thread-list {
+    background-color: #000000 !important;
+    color: #f5f5f5 !important;
+}
+
+html.dark .oa-theme-active.portal-neutral .str-chat__channel-header,
+html.dark .oa-theme-active.portal-neutral .str-chat__message-input,
+html.dark .oa-theme-active.portal-neutral .str-chat__message-input-flat,
+html.dark .oa-theme-active.portal-neutral .str-chat__message-input-inner,
+html.dark .oa-theme-active.portal-neutral .str-chat__thread-header {
+    background-color: #0a0a0a !important;
+    border-color: #27272a !important;
+    color: #f5f5f5 !important;
+}
+
+html.dark .oa-theme-active.portal-neutral .str-chat__message-simple__content,
+html.dark .oa-theme-active.portal-neutral .str-chat__quoted-message,
+html.dark .oa-theme-active.portal-neutral .str-chat__textarea,
+html.dark .oa-theme-active.portal-neutral .str-chat__message-textarea,
+html.dark .oa-theme-active.portal-neutral .str-chat__message-textarea-with-emoji-picker textarea {
+    background-color: #171717 !important;
+    border-color: #3f3f46 !important;
+    color: #f5f5f5 !important;
+}
+
+html.dark .oa-theme-active.portal-neutral .str-chat__message-simple__text,
+html.dark .oa-theme-active.portal-neutral .str-chat__message-text,
+html.dark .oa-theme-active.portal-neutral .str-chat__message-text-inner,
+html.dark .oa-theme-active.portal-neutral .str-chat__channel-header-title,
+html.dark .oa-theme-active.portal-neutral .str-chat__header-hamburger,
+html.dark .oa-theme-active.portal-neutral .str-chat__header-livestream-left,
+html.dark .oa-theme-active.portal-neutral .str-chat__header-livestream-right {
+    color: #f5f5f5 !important;
+}
+
+/* Remap legacy dark gray/slate utility classes to neutral black/gray inside portal */
+html.dark .oa-theme-active.portal-neutral .dark\:bg-gray-900 {
+    background-color: #000000 !important;
+}
+
+html.dark .oa-theme-active.portal-neutral .dark\:bg-gray-900\/50 {
+    background-color: rgba(10, 10, 10, 0.78) !important;
+}
+
+html.dark .oa-theme-active.portal-neutral .dark\:bg-gray-900\/30 {
+    background-color: rgba(17, 17, 17, 0.6) !important;
+}
+
+html.dark .oa-theme-active.portal-neutral .dark\:bg-gray-800 {
+    background-color: #171717 !important;
+}
+
+html.dark .oa-theme-active.portal-neutral .dark\:border-gray-700 {
+    border-color: #3f3f46 !important;
+}
+
+html.dark .oa-theme-active.portal-neutral .dark\:hover\:bg-gray-900:hover {
+    background-color: #171717 !important;
+}
+
+html.dark .oa-theme-active.portal-neutral .dark\:hover\:bg-gray-800:hover {
+    background-color: #262626 !important;
+}

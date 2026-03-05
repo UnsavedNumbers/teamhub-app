@@ -172,14 +172,14 @@ export default function PortalWorkspaceHeader({
                   }
                 }}
                 className={cn(
-                  'w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-500',
+                  'w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 dark:border-neutral-800 dark:bg-black dark:text-gray-100 dark:placeholder-gray-500',
                   'focus:border-[var(--org-link-color)] focus:ring-[var(--org-link-color)]',
                 )}
               />
             </form>
 
             {showSearchResults && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 max-h-96 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-neutral-950 z-50">
+              <div className="absolute top-full left-0 right-0 mt-1 max-h-96 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-950 z-50">
                 {searchResults.map((result) => (
                   <Link
                     key={`${result.entityType}-${result.id}`}
@@ -208,7 +208,7 @@ export default function PortalWorkspaceHeader({
             )}
 
             {showSearchResults && searchQuery && searchResults.length === 0 && !searching && (
-              <div className="absolute top-full left-0 right-0 mt-1 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-neutral-950 z-50">
+              <div className="absolute top-full left-0 right-0 mt-1 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-950 z-50">
                 <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                   No results found for "{searchQuery}"
                 </div>
@@ -220,7 +220,7 @@ export default function PortalWorkspaceHeader({
         <div className="hidden shrink-0 items-center gap-2 sm:flex">
           {currentOrganization && (
             <span className={cn(
-              'rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-900 dark:text-gray-300 md:inline',
+              'rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-neutral-950 dark:text-gray-300 md:inline',
             )}>
               {roleLabel}
             </span>

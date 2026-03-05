@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Ticketed Events List Page
  * 
  * Portal page showing upcoming ticketed events from:
@@ -92,7 +92,7 @@ export default function TicketEventList() {
       {/* Header Section */}
       <div className="mb-6 sm:mb-8">
         <PageTitle>{t('nav.tickets')}</PageTitle>
-        <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide mt-1">
+        <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide mt-1">
           {t('portal.fan.tickets.subtitle')}
         </p>
       </div>
@@ -100,11 +100,11 @@ export default function TicketEventList() {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden animate-pulse">
-              <div className="w-full h-48 bg-slate-200 dark:bg-slate-700"></div>
+            <div key={i} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden animate-pulse">
+              <div className="w-full h-48 bg-gray-200 dark:bg-gray-700"></div>
               <div className="p-5">
-                <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
-                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-2/3"></div>
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
               </div>
             </div>
           ))}
@@ -183,7 +183,7 @@ function EventCard({ event }: { event: TicketedEvent }) {
           : 'bg-white dark:bg-[#1c2630] hover:shadow-md'
       }`}
     >
-      {/* Image — 4:3 ratio enforced via padding-bottom */}
+      {/* Image - 4:3 ratio enforced via padding-bottom */}
       <div className="relative w-full flex-shrink-0" style={{ paddingBottom: '75%' }}>
         <div className="absolute inset-0 bg-center bg-no-repeat bg-cover">
           {event.cover_image_path ? (
@@ -210,7 +210,7 @@ function EventCard({ event }: { event: TicketedEvent }) {
         </h3>
         <div className="flex items-center gap-2 text-[#617589] dark:text-gray-400 text-sm font-medium mb-6">
           <span className="material-symbols-outlined text-[16px]">schedule</span>
-          <p>{dayName}, {dateStr} • {timeStr}</p>
+          <p>{dayName}, {dateStr} - {timeStr}</p>
         </div>
         <div className="mt-auto flex items-center justify-between gap-4 border-t border-gray-100 dark:border-gray-800 pt-5">
           {minPrice !== null && !ticketStateLabel ? (
@@ -236,3 +236,4 @@ function EventCard({ event }: { event: TicketedEvent }) {
     </Link>
   )
 }
+

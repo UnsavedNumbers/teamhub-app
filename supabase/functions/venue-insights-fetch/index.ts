@@ -47,6 +47,42 @@ async function fetchWithTimeout(
   }
 }
 
+async function invokeApiManagerOperation<T>(
+  operation: string,
+  input: Record<string, unknown>
+): Promise<T> {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  const internalToken = Deno.env.get('API_MANAGER_INTERNAL_TOKEN')
+
+  if (!supabaseUrl || !serviceRoleKey || !internalToken) {
+    throw new Error('API manager is not configured')
+  }
+
+  const functionsBaseUrl = supabaseUrl.replace('/rest/v1', '')
+  const response = await fetch(`${functionsBaseUrl}/functions/v1/api`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${serviceRoleKey}`,
+    },
+    body: JSON.stringify({
+      operation,
+      input: {
+        ...input,
+        internalToken,
+      },
+    }),
+  })
+
+  const payload = await response.json().catch(() => null)
+  if (!response.ok || !payload?.ok) {
+    throw new Error(payload?.error?.message || `API manager request failed (${response.status})`)
+  }
+
+  return payload.data as T
+}
+
 /**
  * Fetch photo from Google Places API and upload to Supabase Storage
  * Returns the public URL of the uploaded photo
@@ -311,11 +347,6 @@ serve(async (req) => {
 
         if (canFetch) {
           try {
-            const placesApiKey = Deno.env.get('GOOGLE_PLACES_API_KEY')
-            if (!placesApiKey) {
-              throw new Error('GOOGLE_PLACES_API_KEY not configured')
-            }
-
             const fields = [
               'id',
               'displayName',
@@ -332,43 +363,14 @@ serve(async (req) => {
               'location',
               'neighborhoodSummary', // Area/neighborhood AI summary (overview + description)
             ]
-
-            const url = `https://places.googleapis.com/v1/places/${place_id}`
-
-            const response = await fetchWithTimeout(
-              url,
+            const placeDetailsResult = await invokeApiManagerOperation<{ providerResponse: any }>(
+              'places.getDetails',
               {
-                method: 'GET',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'X-Goog-Api-Key': placesApiKey,
-                  'X-Goog-FieldMask': fields.join(','),
-                  'User-Agent': 'YouthSports.team/1.0',
-                },
-              },
-              PLACE_DETAILS_TIMEOUT_MS
+                placeId: place_id,
+                fieldMask: fields.join(','),
+              }
             )
-
-            if (!response.ok) {
-              const errorText = await response.text()
-
-              // Log error to event_logs
-              await supabaseClient.rpc('log_event', {
-                p_category: 'EVENT',
-                p_event_type: 'VENUE_INSIGHTS_PLACE_DETAILS_ERROR',
-                p_actor_user_id: user.id,
-                p_actor_role: 'system',
-                p_metadata: {
-                  place_id,
-                  error: errorText,
-                  status: response.status,
-                },
-              } as any)
-
-              throw new Error(`Place Details API error: ${response.status} ${errorText}`)
-            }
-
-            const placeDetailsData = await response.json()
+            const placeDetailsData = placeDetailsResult?.providerResponse
 
             // Transform to match our expected format
             // Use the full photo resource name as the reference
@@ -561,8 +563,7 @@ serve(async (req) => {
 
         if (canFetch) {
           try {
-            const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
-            if (!geminiApiKey) {
+            if (!Deno.env.get('GEMINI_API_KEY')) {
               throw new Error('GEMINI_API_KEY not configured')
             }
 
@@ -616,89 +617,59 @@ Output format: Markdown bullet list (each tip on a new line starting with -)`
 
             // Call Gemini API in parallel for both prompts
             const [summaryResult, tipsResult] = await Promise.allSettled([
-              fetchWithTimeout(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'YouthSports.team/1.0',
-                  },
-                  body: JSON.stringify({
-                    contents: [{ parts: [{ text: summaryPrompt }] }],
-                    generationConfig: {
-                      maxOutputTokens: 200,
-                      temperature: 0.7,
-                    },
-                  }),
-                },
-                GEMINI_TIMEOUT_MS
-              ),
-              fetchWithTimeout(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'YouthSports.team/1.0',
-                  },
-                  body: JSON.stringify({
-                    contents: [{ parts: [{ text: tipsPrompt }] }],
-                    generationConfig: {
-                      maxOutputTokens: 300,
-                      temperature: 0.7,
-                    },
-                  }),
-                },
-                GEMINI_TIMEOUT_MS
-              ),
+              invokeApiManagerOperation<{ providerResponse: any }>('ai.gemini.generateContent', {
+                prompt: summaryPrompt,
+                maxOutputTokens: 200,
+                temperature: 0.7,
+                model: 'gemini-pro',
+              }),
+              invokeApiManagerOperation<{ providerResponse: any }>('ai.gemini.generateContent', {
+                prompt: tipsPrompt,
+                maxOutputTokens: 300,
+                temperature: 0.7,
+                model: 'gemini-pro',
+              }),
             ])
 
             // Process summary result
             if (summaryResult.status === 'fulfilled') {
-              const summaryResponse = summaryResult.value
-              if (summaryResponse.ok) {
-                const summaryData = await summaryResponse.json()
-                const candidates = summaryData.candidates?.[0]?.content?.parts?.[0]?.text
-                if (candidates && typeof candidates === 'string') {
-                  aiSummary = candidates.trim().substring(0, 500) // Max 500 chars
+              const summaryData = summaryResult.value?.providerResponse
+              const candidates = summaryData?.candidates?.[0]?.content?.parts?.[0]?.text
+              if (candidates && typeof candidates === 'string') {
+                aiSummary = candidates.trim().substring(0, 500) // Max 500 chars
 
-                  // Log successful AI generation
-                  await supabaseClient.rpc('log_event', {
-                    p_category: 'EVENT',
-                    p_event_type: 'VENUE_INSIGHTS_AI_SUMMARY_GENERATED',
-                    p_actor_user_id: user.id,
-                    p_actor_role: 'system',
-                    p_metadata: {
-                      place_id,
-                      summary_length: aiSummary.length,
-                    },
-                  } as any)
-                }
+                // Log successful AI generation
+                await supabaseClient.rpc('log_event', {
+                  p_category: 'EVENT',
+                  p_event_type: 'VENUE_INSIGHTS_AI_SUMMARY_GENERATED',
+                  p_actor_user_id: user.id,
+                  p_actor_role: 'system',
+                  p_metadata: {
+                    place_id,
+                    summary_length: aiSummary.length,
+                  },
+                } as any)
               }
             }
 
             // Process tips result
             if (tipsResult.status === 'fulfilled') {
-              const tipsResponse = tipsResult.value
-              if (tipsResponse.ok) {
-                const tipsData = await tipsResponse.json()
-                const candidates = tipsData.candidates?.[0]?.content?.parts?.[0]?.text
-                if (candidates && typeof candidates === 'string') {
-                  aiWhatToExpect = candidates.trim().substring(0, 1000) // Max 1000 chars
+              const tipsData = tipsResult.value?.providerResponse
+              const candidates = tipsData?.candidates?.[0]?.content?.parts?.[0]?.text
+              if (candidates && typeof candidates === 'string') {
+                aiWhatToExpect = candidates.trim().substring(0, 1000) // Max 1000 chars
 
-                  // Log successful AI generation
-                  await supabaseClient.rpc('log_event', {
-                    p_category: 'EVENT',
-                    p_event_type: 'VENUE_INSIGHTS_AI_TIPS_GENERATED',
-                    p_actor_user_id: user.id,
-                    p_actor_role: 'system',
-                    p_metadata: {
-                      place_id,
-                      tips_length: aiWhatToExpect.length,
-                    },
-                  } as any)
-                }
+                // Log successful AI generation
+                await supabaseClient.rpc('log_event', {
+                  p_category: 'EVENT',
+                  p_event_type: 'VENUE_INSIGHTS_AI_TIPS_GENERATED',
+                  p_actor_user_id: user.id,
+                  p_actor_role: 'system',
+                  p_metadata: {
+                    place_id,
+                    tips_length: aiWhatToExpect.length,
+                  },
+                } as any)
               }
             }
 

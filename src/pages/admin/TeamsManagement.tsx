@@ -320,8 +320,8 @@ export default function TeamsManagement() {
             const program = programById.get(row.program_id || '')
             return (
                 <div className="oa-flex oa-flex-col">
-                    <span className="oa-text-sm oa-font-medium oa-text-slate-700">{program?.name || 'â€”'}</span>
-                    <span className="oa-text-xs oa-text-slate-400">{sport?.name || 'â€”'}</span>
+                    <span className="oa-text-sm oa-font-medium oa-text-slate-700">{program?.name || '-'}</span>
+                    <span className="oa-text-xs oa-text-slate-400">{sport?.name || '-'}</span>
                 </div>
             )
         }
@@ -334,7 +334,7 @@ export default function TeamsManagement() {
             const level = levelById.get(row.level_id ?? '')
             return (
                 <Badge variant="neutral">
-                    {level?.name || 'â€”'}
+                    {level?.name || '-'}
                 </Badge>
             )
         }
@@ -345,7 +345,7 @@ export default function TeamsManagement() {
         sortable: true,
         render: (row) => (
             <span className="oa-text-sm oa-text-slate-500 oa-font-medium">
-                {row.max_roster_size ? `${row.max_roster_size} max` : 'â€”'}
+                {row.max_roster_size ? `${row.max_roster_size} max` : '-'}
             </span>
         )
     },
@@ -402,7 +402,7 @@ export default function TeamsManagement() {
     )
   }
 
-  // Show empty state if prerequisites don't exist (check full chain: programs â†’ levels â†’ teams)
+  // Show empty state if prerequisites don't exist (check full chain: programs -> levels -> teams)
   if (programs.length === 0) {
     return (
       <div className="oa-root">

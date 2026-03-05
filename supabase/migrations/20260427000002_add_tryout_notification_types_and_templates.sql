@@ -71,7 +71,7 @@ INSERT INTO public.email_templates (
     'Your tryout registration is confirmed.',
     'Sent after guardian registration submission succeeds.',
     '["recipient_name","athlete_name","tryout_name","session_date","session_time","location"]'::jsonb,
-    true,
+    false,
     (SELECT id FROM public.notification_types WHERE key = 'tryout_registration_confirmed')
   ),
   (
@@ -85,7 +85,7 @@ INSERT INTO public.email_templates (
     'Your tryout payment has been received.',
     'Sent when tryout payment is successful.',
     '["recipient_name","athlete_name","tryout_name","amount","receipt_id"]'::jsonb,
-    true,
+    false,
     (SELECT id FROM public.notification_types WHERE key = 'tryout_payment_received')
   ),
   (
@@ -99,7 +99,7 @@ INSERT INTO public.email_templates (
     'You are currently on the waitlist.',
     'Sent when a registration moves to waitlist.',
     '["recipient_name","athlete_name","tryout_name"]'::jsonb,
-    true,
+    false,
     (SELECT id FROM public.notification_types WHERE key = 'tryout_waitlisted')
   ),
   (
@@ -113,7 +113,7 @@ INSERT INTO public.email_templates (
     'A tryout spot is now available.',
     'Sent when waitlisted registration is promoted.',
     '["recipient_name","athlete_name","tryout_name","response_deadline"]'::jsonb,
-    true,
+    false,
     (SELECT id FROM public.notification_types WHERE key = 'tryout_promoted_from_waitlist')
   ),
   (
@@ -127,7 +127,7 @@ INSERT INTO public.email_templates (
     'Tryout reminder.',
     'Scheduled reminder several days in advance.',
     '["athlete_name","tryout_name","days_until","session_date","session_time","location"]'::jsonb,
-    true,
+    false,
     (SELECT id FROM public.notification_types WHERE key = 'tryout_reminder_x_days')
   ),
   (
@@ -141,7 +141,7 @@ INSERT INTO public.email_templates (
     'Your tryout is tomorrow.',
     'Reminder sent one day before.',
     '["athlete_name","tryout_name","session_date","session_time","location"]'::jsonb,
-    true,
+    false,
     (SELECT id FROM public.notification_types WHERE key = 'tryout_reminder_day_before')
   ),
   (
@@ -155,7 +155,7 @@ INSERT INTO public.email_templates (
     'Your tryout is today.',
     'Reminder sent on the day of tryout.',
     '["athlete_name","tryout_name","session_time","location"]'::jsonb,
-    true,
+    false,
     (SELECT id FROM public.notification_types WHERE key = 'tryout_day_of_reminder')
   ),
   (
@@ -169,7 +169,7 @@ INSERT INTO public.email_templates (
     'Tryout results are now available.',
     'Sent when results are published.',
     '["athlete_name","tryout_name","result_status"]'::jsonb,
-    true,
+    false,
     (SELECT id FROM public.notification_types WHERE key = 'tryout_results_published')
   ),
   (
@@ -183,7 +183,7 @@ INSERT INTO public.email_templates (
     'New evaluator assignment.',
     'Sent to coaches when assigned as evaluators.',
     '["tryout_name","session_date","session_time"]'::jsonb,
-    true,
+    false,
     (SELECT id FROM public.notification_types WHERE key = 'tryout_evaluator_assigned')
   ),
   (
@@ -197,7 +197,7 @@ INSERT INTO public.email_templates (
     'Pending tryout evaluations need completion.',
     'Reminder for incomplete evaluator scorecards.',
     '["tryout_name","pending_count","due_at"]'::jsonb,
-    true,
+    false,
     (SELECT id FROM public.notification_types WHERE key = 'tryout_evaluation_due')
   )
 ON CONFLICT (slug) DO UPDATE
