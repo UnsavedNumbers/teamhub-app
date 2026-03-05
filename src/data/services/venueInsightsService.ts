@@ -199,26 +199,6 @@ export async function getCachedVenueInsights(
   if (USE_FAKE_DATA) {
     const mock = buildMockVenueInsights(placeId)
     const timestamp = new Date().toISOString()
-    return {
-      data: {
-        id: `venue-insights-${placeId}`,
-        place_id: placeId,
-        place_details: mock.place_details,
-        photos: [],
-        ai_summary: mock.ai_summary,
-        ai_what_to_expect: mock.ai_what_to_expect,
-        ai_generated_at: timestamp,
-        ai_validation_status: 'valid',
-        place_details_fetched_at: timestamp,
-        last_place_details_call_at: timestamp,
-        last_gemini_call_at: timestamp,
-        fetch_in_progress: false,
-        place_id_valid: true,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      error: null,
-    }
     debug.perf.end('venueInsightsService.getCachedVenueInsights')
     debug.data('VenueInsightsService.getCachedVenueInsights', 'Response (fake)', { placeId })
     console.groupEnd()
@@ -319,31 +299,19 @@ export interface NeighborhoodSummaryResponse {
 export async function fetchNeighborhoodSummaryDirect(
   placeId: string
 ): Promise<{ data: NeighborhoodSummaryResponse | null; error: Error | null }> {
+  console.groupCollapsed(`%cfetchNeighborhoodSummaryDirect: ${placeId}`, 'color: #666; font-weight: bold;');
+  debug.data('VenueInsightsService.fetchNeighborhoodSummaryDirect', 'Request', { placeId })
+  debug.perf.start('venueInsightsService.fetchNeighborhoodSummaryDirect')
+
   if (!placeId) {
+    debug.perf.end('venueInsightsService.fetchNeighborhoodSummaryDirect')
+    debug.error('VenueInsightsService.fetchNeighborhoodSummaryDirect', 'place_id is required', { placeId })
+    console.groupEnd()
     return { data: null, error: new Error('place_id is required') }
   }
 
   if (USE_FAKE_DATA) {
     const mock = buildMockVenueInsights(placeId)
-    return {
-      data: {
-        name: mock.place_details?.name || 'Demo Venue',
-        area_summary: {
-          content_blocks: [
-            {
-              topic: 'overview',
-              content: mock.ai_summary || 'Popular youth sports destination with family-oriented amenities.',
-            },
-            {
-              topic: 'description',
-              content: mock.ai_what_to_expect || 'Plan for early arrival and event-day pedestrian traffic around entry gates.',
-            },
-          ],
-        },
-        error: null,
-      },
-      error: null,
-    }
     debug.perf.end('venueInsightsService.fetchNeighborhoodSummaryDirect')
     debug.data('VenueInsightsService.fetchNeighborhoodSummaryDirect', 'Response (fake)', { placeId })
     console.groupEnd()

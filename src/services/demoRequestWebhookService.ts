@@ -5,6 +5,7 @@
  */
 
 import { getBaseUrl } from '../utils/host'
+import { getLink, RouteKeys } from '../utils/routes'
 import { invokeApiOperation } from './apiManagerService'
 
 // ============================================================================
@@ -90,5 +91,5 @@ export function buildReviewUrl(demoOrgId: string): string {
     ? serverHost.trim()
     : getBaseUrl()
   
-  return `${baseUrl}/platform-admin/demo-management?highlight=${demoOrgId}`
+  return `${baseUrl}${getLink(RouteKeys.PLATFORM_DEMO_MANAGEMENT)}?highlight=${demoOrgId}`
 }

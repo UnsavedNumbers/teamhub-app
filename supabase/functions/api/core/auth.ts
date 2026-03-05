@@ -49,7 +49,7 @@ export async function resolveAuthContext(
 
   const { data, error } = await supabase.auth.getUser()
   if (error || !data.user) {
-    if (allowAnonymous && !hasAuthorization) {
+    if (allowAnonymous) {
       return {
         userId: null,
         isAuthenticated: false,

@@ -11,17 +11,18 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { transferTicket } from '../../data/services/fanService'
-import { getMyTicketOrders, getTicketsForOrder } from '../../data/services/ticketingService'
+import { getMyTicketOrders, getTicketsForOrder, requestTicketWalletPass } from '../../data/services/ticketingService'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import { showError, showSuccess } from '../../utils/toast'
 import { QRCodeSVG } from 'qrcode.react'
 import { getLink, RouteKeys } from '../../utils/routes'
+import { useOffline } from '../../hooks/useOffline'
 import { useT } from '../../i18n/useI18n'
 import '../../styles/fan.css'
 import '../../styles/fan-layouts.css'
 import type { TicketOrder } from '../../types/ticketing'
 
-type TicketTab = 'upcoming' | 'past'
+type TicketTab = 'upcoming' | 'past' | 'transferred'
 type TicketStatus = 'valid' | 'used' | 'expired' | 'transferred' | 'pending'
 
 interface FanTicket {
@@ -55,6 +56,17 @@ const QR_REFRESH_INTERVAL = 30000
 
 const generateQRPayload = (qrCodeData: string, _timestamp: number): string => qrCodeData
 
+const getPreferredWalletType = (): 'apple' | 'google' => {
+  if (typeof navigator === 'undefined') {
+    return 'google'
+  }
+
+  const ua = navigator.userAgent || ''
+  const iOSLike = /iPad|iPhone|iPod/i.test(ua)
+  const iPadDesktopMode = /Macintosh/i.test(ua) && navigator.maxTouchPoints > 1
+  return iOSLike || iPadDesktopMode ? 'apple' : 'google'
+}
+
 const isActiveUpcomingTicket = (ticket: FanTicket, now: Date): boolean => {
   const eventDate = new Date(ticket.event_start_time)
   return eventDate >= now && ticket.status === 'valid'
@@ -78,9 +90,12 @@ const mapRawTicketToFanTicket = (rawTicket: any, t: FanTranslate): FanTicket => 
   const hasValidUsedAt = usedAt !== null && !Number.isNaN(usedAt.getTime()) && usedAt <= now
   const isUsed = hasValidUsedAt && eventDate <= now
   const isPast = eventDate < now
+  const rawStatus = typeof rawTicket.status === 'string' ? rawTicket.status : null
 
   let status: TicketStatus = 'valid'
-  if (isUsed) status = 'used'
+  if (rawStatus === 'transferred') status = 'transferred'
+  else if (rawStatus === 'pending') status = 'pending'
+  else if (isUsed) status = 'used'
   else if (isPast) status = 'expired'
 
   return {
@@ -174,7 +189,8 @@ export default function FanTickets() {
     // Tab filter
     const matchesTab =
       (activeTab === 'upcoming' && isActive) ||
-      (activeTab === 'past' && isPast)
+      (activeTab === 'past' && isPast) ||
+      (activeTab === 'transferred' && ticket.status === 'transferred')
     
     // Search filter
     const matchesSearch = searchQuery === '' || 
@@ -210,11 +226,21 @@ export default function FanTickets() {
 
   // Navigate to ticket detail
   const handleTicketClick = (ticket: FanTicket) => {
-    navigate(`/fan/tickets/${ticket.ticket_id}`)
+    navigate(getLink(RouteKeys.FAN_TICKET_DETAIL, { ticketId: ticket.ticket_id }))
   }
 
   // Count tickets for wallet display
   const totalActiveTickets = tickets.filter(t => isActiveUpcomingTicket(t, new Date())).length
+  const firstTransferableTicket = tickets.find((ticket) => ticket.status === 'valid') ?? null
+
+  const openTransferForTicket = () => {
+    if (!firstTransferableTicket) {
+      showError(t('ticketing.wallet.noTransferableTicket'))
+      return
+    }
+    setSelectedTicket(firstTransferableTicket)
+    setShowTransferModal(true)
+  }
 
   if (loading) {
     return (
@@ -257,7 +283,10 @@ export default function FanTickets() {
           >
             Past
           </button>
-          <button className="fan-tickets-tab">
+          <button
+            className={`fan-tickets-tab ${activeTab === 'transferred' ? 'active' : ''}`}
+            onClick={() => setActiveTab('transferred')}
+          >
             Transferred
           </button>
         </div>
@@ -273,13 +302,18 @@ export default function FanTickets() {
                 <span className="material-symbols-outlined">confirmation_number</span>
               </div>
               <h3 className="fan-tickets-empty-title">
-                {activeTab === 'upcoming' ? 'No upcoming tickets' : 'No past tickets'}
+                {activeTab === 'upcoming'
+                  ? 'No upcoming tickets'
+                  : activeTab === 'past'
+                    ? 'No past tickets'
+                    : 'No transferred tickets'}
               </h3>
               <p className="fan-tickets-empty-text">
-                {activeTab === 'upcoming' 
+                {activeTab === 'upcoming'
                   ? 'When you purchase tickets, they will appear here'
-                  : 'Your past event tickets will be shown here'
-                }
+                  : activeTab === 'past'
+                    ? 'Your past event tickets will be shown here'
+                    : 'Transferred tickets will appear here'}
               </p>
             </div>
           ) : (
@@ -308,12 +342,22 @@ export default function FanTickets() {
               </div>
             </div>
             <div className="fan-wallet-actions">
-              <button className="fan-wallet-action">
+              <button
+                className="fan-wallet-action"
+                onClick={openTransferForTicket}
+                disabled={!firstTransferableTicket}
+                type="button"
+              >
                 <span className="material-symbols-outlined">move_up</span>
                 <span>Transfer Ticket</span>
                 <span className="material-symbols-outlined fan-wallet-arrow">east</span>
               </button>
-              <button className="fan-wallet-action">
+              <button
+                className="fan-wallet-action"
+                onClick={openTransferForTicket}
+                disabled={!firstTransferableTicket}
+                type="button"
+              >
                 <span className="material-symbols-outlined">redeem</span>
                 <span>Send as Gift</span>
                 <span className="material-symbols-outlined fan-wallet-arrow">east</span>
@@ -327,7 +371,13 @@ export default function FanTickets() {
             <p className="fan-help-text">
               Having trouble with your mobile tickets? Contact our stadium support team for immediate assistance.
             </p>
-            <button className="fan-help-button">Support Center</button>
+            <button
+              className="fan-help-button"
+              type="button"
+              onClick={() => navigate(getLink(RouteKeys.PORTAL_HELP))}
+            >
+              Support Center
+            </button>
           </div>
         </aside>
       </div>
@@ -427,12 +477,14 @@ export function FanTicketDetail() {
   const t = useT()
   const { ticketId } = useParams<{ ticketId: string }>()
   const navigate = useNavigate()
+  const { isOffline } = useOffline()
   const [eventTickets, setEventTickets] = useState<FanTicket[]>([])
   const [activeTicketIndex, setActiveTicketIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [qrTimestamp, setQrTimestamp] = useState(Date.now())
   const [refreshCountdown, setRefreshCountdown] = useState(30)
   const [showTransferModal, setShowTransferModal] = useState(false)
+  const [isPreparingWallet, setIsPreparingWallet] = useState(false)
   const carouselRef = useRef<HTMLDivElement | null>(null)
   const activeTicket = eventTickets[activeTicketIndex] ?? null
 
@@ -520,6 +572,65 @@ export function FanTicketDetail() {
       showSuccess('Ticket transferred successfully')
       setShowTransferModal(false)
       navigate(getLink(RouteKeys.FAN_TICKETS))
+    }
+  }
+
+  const handleAddToWallet = async () => {
+    if (!activeTicket) {
+      showError(t('ticketing.wallet.ticketNotFound'))
+      return
+    }
+
+    const walletType = getPreferredWalletType()
+    setIsPreparingWallet(true)
+    try {
+      const response = await requestTicketWalletPass({
+        ticket_id: activeTicket.ticket_id,
+        wallet_type: walletType,
+        entry_code: activeTicket.order_confirmation_code,
+        event_title: activeTicket.event_name,
+        event_starts_at: activeTicket.event_start_time,
+        venue_name: activeTicket.venue_name ?? activeTicket.event_location ?? null,
+        venue_city: activeTicket.venue_city ?? null,
+        venue_state: activeTicket.venue_state ?? null,
+      })
+
+      if (response.error || !response.data) {
+        throw response.error ?? new Error('Unable to generate wallet pass')
+      }
+
+      if (typeof window !== 'undefined') {
+        if (response.data.action === 'download') {
+          const anchor = document.createElement('a')
+          anchor.href = response.data.url
+          if (response.data.filename) {
+            anchor.download = response.data.filename
+          }
+          anchor.rel = 'noopener noreferrer'
+          document.body.appendChild(anchor)
+          anchor.click()
+          anchor.remove()
+        } else {
+          const openedWindow = window.open(response.data.url, '_blank', 'noopener,noreferrer')
+          if (!openedWindow) {
+            throw new Error('Unable to open wallet pass. Please allow pop-ups and try again.')
+          }
+        }
+      }
+
+      if (response.data.is_fallback) {
+        showSuccess(
+          walletType === 'google'
+            ? t('ticketing.wallet.fallbackGoogle')
+            : t('ticketing.wallet.fallbackApple'),
+        )
+      } else {
+        showSuccess(t('ticketing.wallet.walletOpened'))
+      }
+    } catch (error) {
+      showError(error instanceof Error ? error.message : t('ticketing.wallet.walletOpenFailed'))
+    } finally {
+      setIsPreparingWallet(false)
     }
   }
 
@@ -761,9 +872,19 @@ export function FanTicketDetail() {
           )}
 
           <article className="fan-ticket-detail-section fan-ticket-detail-actions">
-            <button className="fan-btn fan-btn-primary">
+            {isOffline && (
+              <div className="fan-ticket-offline-banner">
+                <span className="material-symbols-outlined">wifi_off</span>
+                <span>{t('ticketing.wallet.offlineFallbackBanner')}</span>
+              </div>
+            )}
+            <button
+              className="fan-btn fan-btn-primary"
+              onClick={handleAddToWallet}
+              disabled={isPreparingWallet}
+            >
               <span className="material-symbols-outlined">add_to_photos</span>
-              Add to Wallet
+              {isPreparingWallet ? t('ticketing.wallet.preparingWallet') : t('ticketing.wallet.addToWallet')}
             </button>
             {activeTicket.status === 'valid' && (
               <button

@@ -450,62 +450,78 @@ export default function AthleteProfilePage() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex gap-8">
+      <div className="mb-6">
+        <div
+          className="grid grid-cols-2 gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-900/40 sm:grid-cols-3 lg:grid-cols-5"
+          role="tablist"
+          aria-label="Athlete profile sections"
+        >
           <button
             onClick={() => setActiveTab('universal')}
-            className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
+            role="tab"
+            aria-selected={activeTab === 'universal'}
+            className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-center text-xs font-semibold leading-tight transition-colors sm:text-sm ${
               activeTab === 'universal'
-                ? 'border-[var(--org-btn-primary-bg, #137fec)] text-[var(--org-btn-primary-bg, #137fec)]'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                ? 'bg-white text-[var(--org-btn-primary-bg, #137fec)] shadow-sm dark:bg-gray-800'
+                : 'text-gray-600 hover:bg-white/80 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/70 dark:hover:text-gray-200'
             }`}
           >
-            <Icon name="person" size="text-sm" className="mr-2 inline-block" />
-            Basic Info
+            <Icon name="person" size="text-sm" className="shrink-0" />
+            <span className="min-w-0">Basic Info</span>
           </button>
-          <button            onClick={() => setActiveTab('physical')}
-            className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
+          <button
+            onClick={() => setActiveTab('physical')}
+            role="tab"
+            aria-selected={activeTab === 'physical'}
+            className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-center text-xs font-semibold leading-tight transition-colors sm:text-sm ${
               activeTab === 'physical'
-                ? 'border-[var(--org-btn-primary-bg, #137fec)] text-[var(--org-btn-primary-bg, #137fec)]'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                ? 'bg-white text-[var(--org-btn-primary-bg, #137fec)] shadow-sm dark:bg-gray-800'
+                : 'text-gray-600 hover:bg-white/80 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/70 dark:hover:text-gray-200'
             }`}
           >
-            <Icon name="fitness_center" size="text-sm" className="mr-2 inline-block" />
-            Physical Info
+            <Icon name="fitness_center" size="text-sm" className="shrink-0" />
+            <span className="min-w-0">Physical Info</span>
           </button>
-          <button            onClick={() => setActiveTab('sports')}
-            className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
+          <button
+            onClick={() => setActiveTab('sports')}
+            role="tab"
+            aria-selected={activeTab === 'sports'}
+            className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-center text-xs font-semibold leading-tight transition-colors sm:text-sm ${
               activeTab === 'sports'
-                ? 'border-[var(--org-btn-primary-bg, #137fec)] text-[var(--org-btn-primary-bg, #137fec)]'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                ? 'bg-white text-[var(--org-btn-primary-bg, #137fec)] shadow-sm dark:bg-gray-800'
+                : 'text-gray-600 hover:bg-white/80 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/70 dark:hover:text-gray-200'
             }`}
           >
-            <Icon name="sports" size="text-sm" className="mr-2 inline-block" />
-            Sport Profiles
+            <Icon name="sports" size="text-sm" className="shrink-0" />
+            <span className="min-w-0">Sport Profiles</span>
           </button>
           {medicalGate.allowed && !medicalGate.loading && (
             <button
               onClick={() => setActiveTab('medical')}
-              className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
+              role="tab"
+              aria-selected={activeTab === 'medical'}
+              className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-center text-xs font-semibold leading-tight transition-colors sm:text-sm ${
                 activeTab === 'medical'
-                  ? 'border-[var(--org-btn-primary-bg, #137fec)] text-[var(--org-btn-primary-bg, #137fec)]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                  ? 'bg-white text-[var(--org-btn-primary-bg, #137fec)] shadow-sm dark:bg-gray-800'
+                  : 'text-gray-600 hover:bg-white/80 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/70 dark:hover:text-gray-200'
               }`}
             >
-              <Icon name="medical_services" size="text-sm" className="mr-2 inline-block" />
-              Medical Info
+              <Icon name="medical_services" size="text-sm" className="shrink-0" />
+              <span className="min-w-0">Medical Info</span>
             </button>
           )}
           <button
             onClick={() => setActiveTab('teams')}
-            className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
+            role="tab"
+            aria-selected={activeTab === 'teams'}
+            className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-center text-xs font-semibold leading-tight transition-colors sm:text-sm ${
               activeTab === 'teams'
-                ? 'border-[var(--org-btn-primary-bg, #137fec)] text-[var(--org-btn-primary-bg, #137fec)]'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                ? 'bg-white text-[var(--org-btn-primary-bg, #137fec)] shadow-sm dark:bg-gray-800'
+                : 'text-gray-600 hover:bg-white/80 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/70 dark:hover:text-gray-200'
             }`}
           >
-            <Icon name="groups" size="text-sm" className="mr-2 inline-block" />
-            {t('portal.athleteProfile.tabs.teams' as any)}
+            <Icon name="groups" size="text-sm" className="shrink-0" />
+            <span className="min-w-0">{t('portal.athleteProfile.tabs.teams' as any)}</span>
           </button>
         </div>
       </div>

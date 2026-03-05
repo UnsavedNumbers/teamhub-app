@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { USE_FAKE_DATA } from '../data/config'
 
 export interface ApiManagerErrorPayload {
   code: string
@@ -25,6 +26,16 @@ interface InvokeApiOperationArgs {
   input: Record<string, unknown>
   orgId?: string
   idempotencyKey?: string
+}
+
+const DEMO_MODE_BLOCKED_OPERATION_PREFIXES = ['automation.', 'email.', 'push.'] as const
+
+function isOffline(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine === false
+}
+
+function isDemoBlockedOperation(operation: string): boolean {
+  return DEMO_MODE_BLOCKED_OPERATION_PREFIXES.some((prefix) => operation.startsWith(prefix))
 }
 
 function isApiManagerSuccess<TData>(value: unknown): value is ApiManagerSuccess<TData> {
@@ -55,6 +66,28 @@ function isApiManagerFailure(value: unknown): value is ApiManagerFailure {
 }
 
 export async function invokeApiOperation<TData>(args: InvokeApiOperationArgs): Promise<ApiManagerResponse<TData>> {
+  if (isOffline()) {
+    return {
+      ok: false,
+      traceId: 'offline',
+      error: {
+        code: 'OFFLINE',
+        message: 'You appear to be offline. Please reconnect and try again.',
+      },
+    }
+  }
+
+  if (USE_FAKE_DATA && isDemoBlockedOperation(args.operation)) {
+    return {
+      ok: false,
+      traceId: 'demo-mode',
+      error: {
+        code: 'DEMO_MODE_BLOCKED',
+        message: 'This action is unavailable in demo mode. Sign in to a live organization to continue.',
+      },
+    }
+  }
+
   const { data, error } = await supabase.functions.invoke('api', {
     body: {
       operation: args.operation,

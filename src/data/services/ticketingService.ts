@@ -55,6 +55,180 @@ const FUNCTIONS_URL = `${SUPABASE_URL.replace('/rest/v1', '')}/functions/v1`
 const FAN_VISIBLE_EVENT_OR_FILTER = 'visibility.eq.public,visibility.is.null'
 const SEAT_MAP_CHART_BUCKET = 'ticketing-seat-maps'
 
+export type TicketWalletType = 'google' | 'apple'
+
+export interface RequestTicketWalletPassRequest {
+  ticket_id: string
+  wallet_type: TicketWalletType
+  entry_code?: string | null
+  event_title?: string | null
+  event_starts_at?: string | null
+  venue_name?: string | null
+  venue_city?: string | null
+  venue_state?: string | null
+}
+
+export interface RequestTicketWalletPassResponse {
+  wallet_type: TicketWalletType
+  action: 'open' | 'download'
+  url: string
+  filename?: string
+  is_fallback: boolean
+}
+
+function extractWalletPassErrorMessage(
+  payload: RequestTicketWalletPassResponse | { error?: string } | null,
+  fallbackMessage: string,
+): string {
+  if (payload && typeof payload === 'object' && 'error' in payload && typeof payload.error === 'string' && payload.error.trim().length > 0) {
+    return payload.error
+  }
+  return fallbackMessage
+}
+
+function isLikelyNetworkFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false
+  }
+  const message = error.message.toLowerCase()
+  return (
+    message.includes('failed to fetch') ||
+    message.includes('networkerror') ||
+    message.includes('network request failed') ||
+    message.includes('load failed')
+  )
+}
+
+function escapeHtml(value: string | null | undefined): string {
+  const source = value ?? ''
+  return source
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function buildVenueLabel(input: RequestTicketWalletPassRequest): string {
+  const parts = [input.venue_name, input.venue_city, input.venue_state]
+    .map((value) => (value ?? '').trim())
+    .filter((value) => value.length > 0)
+
+  return parts.length > 0 ? parts.join(', ') : 'Venue TBD'
+}
+
+function buildDateLabel(startsAt: string | null | undefined): string {
+  if (!startsAt) return 'Date TBD'
+  const parsed = new Date(startsAt)
+  if (Number.isNaN(parsed.getTime())) return 'Date TBD'
+  return parsed.toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
+function toDataUrl(mimeType: string, content: string): string {
+  return `data:${mimeType};charset=utf-8,${encodeURIComponent(content)}`
+}
+
+function buildCalendarIcsContent(input: RequestTicketWalletPassRequest): string {
+  const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+  const startsAt = input.event_starts_at ? new Date(input.event_starts_at) : null
+  const startUtc = startsAt && !Number.isNaN(startsAt.getTime())
+    ? startsAt.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+    : ''
+  const endUtc = startsAt && !Number.isNaN(startsAt.getTime())
+    ? new Date(startsAt.getTime() + (2 * 60 * 60 * 1000)).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+    : ''
+  const title = (input.event_title ?? 'Event Ticket').replace(/\r?\n/g, ' ').trim()
+  const location = buildVenueLabel(input).replace(/\r?\n/g, ' ').trim()
+  const entryCode = (input.entry_code ?? '').trim()
+  const description = entryCode.length > 0
+    ? `Entry code: ${entryCode}\\nPresent your QR code at entry.`
+    : 'Present your QR code at entry.'
+
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//YouthSports Team//Ticket Wallet//EN',
+    'BEGIN:VEVENT',
+    `UID:ticket-${input.ticket_id}@youthsports.team`,
+    `DTSTAMP:${now}`,
+    startUtc ? `DTSTART:${startUtc}` : '',
+    endUtc ? `DTEND:${endUtc}` : '',
+    `SUMMARY:${title}`,
+    `LOCATION:${location}`,
+    `DESCRIPTION:${description}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].filter((line) => line.length > 0).join('\r\n')
+}
+
+function buildWalletPreviewHtml(input: RequestTicketWalletPassRequest): string {
+  const entryCode = (input.entry_code ?? '').trim()
+  const qrValue = entryCode.length > 0 ? entryCode : input.ticket_id
+  const qrUrl = `https://chart.googleapis.com/chart?cht=qr&chs=280x280&chl=${encodeURIComponent(qrValue)}`
+  const venue = escapeHtml(buildVenueLabel(input))
+  const eventTitle = escapeHtml((input.event_title ?? 'Event Ticket').trim() || 'Event Ticket')
+  const dateLabel = escapeHtml(buildDateLabel(input.event_starts_at))
+  const entryCodeLabel = escapeHtml(entryCode || 'Available in ticket details')
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${eventTitle} - Mobile Pass</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#0b1220; color:#f8fafc; margin:0; padding:24px; }
+    .card { max-width:460px; margin:0 auto; background:#111827; border:1px solid #1f2937; border-radius:16px; padding:20px; }
+    .label { font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#93c5fd; margin:0 0 8px; }
+    h1 { margin:0 0 10px; font-size:24px; line-height:1.2; }
+    p { margin:0 0 8px; color:#cbd5e1; }
+    .qr { margin:16px auto 12px; display:block; width:280px; height:280px; background:#fff; border-radius:12px; padding:8px; }
+    .code { display:inline-block; margin-top:8px; font-weight:700; letter-spacing:0.08em; font-size:16px; color:#e2e8f0; }
+    .note { margin-top:14px; font-size:13px; color:#94a3b8; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <p class="label">Digital Ticket Pass</p>
+    <h1>${eventTitle}</h1>
+    <p>${dateLabel}</p>
+    <p>${venue}</p>
+    <img class="qr" src="${qrUrl}" alt="Ticket QR code" />
+    <div class="code">Entry Code: ${entryCodeLabel}</div>
+    <p class="note">Present this pass at entry. This preview is optimized for demo and fallback flows.</p>
+  </main>
+</body>
+</html>`
+}
+
+function createFallbackWalletPass(input: RequestTicketWalletPassRequest): RequestTicketWalletPassResponse {
+  if (input.wallet_type === 'apple') {
+    const calendarContent = buildCalendarIcsContent(input)
+    const eventSlug = (input.event_title ?? 'event-ticket').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    return {
+      wallet_type: 'apple',
+      action: 'download',
+      url: toDataUrl('text/calendar', calendarContent),
+      filename: `${eventSlug || 'event-ticket'}.ics`,
+      is_fallback: true,
+    }
+  }
+
+  return {
+    wallet_type: 'google',
+    action: 'open',
+    url: toDataUrl('text/html', buildWalletPreviewHtml(input)),
+    is_fallback: true,
+  }
+}
+
 async function shouldUseFakeTicketReads(): Promise<boolean> {
   if (USE_FAKE_DATA || isInDemoSession()) return true
 
@@ -2412,6 +2586,97 @@ export async function getTicketsByAccessToken(token: string, orgId: string) {
   }
 
   return getTicketsForOrder(accessLink.order_id)
+}
+
+export async function requestTicketWalletPass(
+  request: RequestTicketWalletPassRequest,
+): Promise<{ data: RequestTicketWalletPassResponse | null; error: Error | null }> {
+  const normalizedWalletType = request.wallet_type === 'apple' ? 'apple' : 'google'
+  const normalizedRequest: RequestTicketWalletPassRequest = {
+    ...request,
+    wallet_type: normalizedWalletType,
+  }
+
+  if (!normalizedRequest.ticket_id || normalizedRequest.ticket_id.trim().length === 0) {
+    return createServiceResponse<RequestTicketWalletPassResponse>(null, new ValidationError('Ticket ID is required'))
+  }
+
+  if (await shouldUseFakeTicketReads()) {
+    return createServiceResponse<RequestTicketWalletPassResponse>(createFallbackWalletPass(normalizedRequest), null)
+  }
+
+  try {
+    const sessionResult = await supabase.auth.getSession()
+    const accessToken = sessionResult.data.session?.access_token ?? ''
+
+    if (!accessToken) {
+      return createServiceResponse<RequestTicketWalletPassResponse>(null, new ValidationError('Authentication required'))
+    }
+
+    const response = await fetch(`${FUNCTIONS_URL}/tickets-wallet-pass`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(normalizedRequest),
+    })
+
+    const payload = await response.json().catch(() => null) as RequestTicketWalletPassResponse | { error?: string } | null
+    if (!response.ok) {
+      const errorMessage = extractWalletPassErrorMessage(payload, 'Unable to generate wallet pass')
+      if (response.status === 401) {
+        return createServiceResponse<RequestTicketWalletPassResponse>(null, new ValidationError('Authentication required'))
+      }
+      if (response.status === 403) {
+        return createServiceResponse<RequestTicketWalletPassResponse>(null, new Error('You do not have access to this ticket'))
+      }
+      if (response.status === 400) {
+        return createServiceResponse<RequestTicketWalletPassResponse>(null, new Error(errorMessage))
+      }
+
+      if (response.status === 404 || response.status >= 500) {
+        const fallback = createFallbackWalletPass(normalizedRequest)
+        debug.data('TicketingService.requestTicketWalletPass', 'Wallet pass function returned non-OK response; falling back', {
+          ticketId: normalizedRequest.ticket_id,
+          walletType: normalizedRequest.wallet_type,
+          status: response.status,
+          error: errorMessage,
+        })
+        return createServiceResponse<RequestTicketWalletPassResponse>(fallback, null)
+      }
+
+      return createServiceResponse<RequestTicketWalletPassResponse>(null, new Error(errorMessage))
+    }
+
+    if (!payload || typeof payload !== 'object' || !('url' in payload) || typeof payload.url !== 'string') {
+      const fallback = createFallbackWalletPass(normalizedRequest)
+      return createServiceResponse<RequestTicketWalletPassResponse>(fallback, null)
+    }
+
+    const walletPass = payload as RequestTicketWalletPassResponse
+    if (!walletPass.action || (walletPass.action !== 'open' && walletPass.action !== 'download')) {
+      const fallback = createFallbackWalletPass(normalizedRequest)
+      return createServiceResponse<RequestTicketWalletPassResponse>(fallback, null)
+    }
+
+    return createServiceResponse<RequestTicketWalletPassResponse>(walletPass, null)
+  } catch (error: unknown) {
+    if (isLikelyNetworkFailure(error) || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+      const fallback = createFallbackWalletPass(normalizedRequest)
+      debug.data('TicketingService.requestTicketWalletPass', 'Wallet pass request failed; using fallback', {
+        ticketId: normalizedRequest.ticket_id,
+        walletType: normalizedRequest.wallet_type,
+        error,
+      })
+      return createServiceResponse<RequestTicketWalletPassResponse>(fallback, null)
+    }
+
+    return createServiceResponse<RequestTicketWalletPassResponse>(
+      null,
+      error instanceof Error ? error : new Error('Unable to generate wallet pass'),
+    )
+  }
 }
 
 async function hashToken(token: string): Promise<string> {

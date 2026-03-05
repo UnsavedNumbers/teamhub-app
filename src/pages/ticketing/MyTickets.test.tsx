@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import MyTickets from '@/pages/ticketing/MyTickets'
@@ -8,11 +10,13 @@ import { createMockTicket, createMockTicketOrder, createMockTicketedEvent } from
 const mockGetMyTicketOrders = vi.fn()
 const mockGetTicketsForOrder = vi.fn()
 const mockResendTickets = vi.fn()
+const mockRequestTicketWalletPass = vi.fn()
 
 vi.mock('@/data/services', () => ({
   getMyTicketOrders: (...args: unknown[]) => mockGetMyTicketOrders(...args),
   getTicketsForOrder: (...args: unknown[]) => mockGetTicketsForOrder(...args),
   resendTickets: (...args: unknown[]) => mockResendTickets(...args),
+  requestTicketWalletPass: (...args: unknown[]) => mockRequestTicketWalletPass(...args),
 }))
 
 vi.mock('@/components/ticketing/TicketCard', () => ({
@@ -26,6 +30,14 @@ vi.mock('@/utils/toast', () => ({
 
 vi.mock('@/components/common/FullScreenLoader', () => ({
   default: () => <div data-testid="fullscreen-loader" />,
+}))
+
+vi.mock('@/components/portal/PortalLayout', () => ({
+  default: ({ children }: { children: ReactNode }) => <div data-testid="portal-layout">{children}</div>,
+}))
+
+vi.mock('@/components/portal/Typography', () => ({
+  PageTitle: ({ children }: { children: ReactNode }) => <h1>{children}</h1>,
 }))
 
 vi.mock('@/utils/routes', () => ({
@@ -56,6 +68,16 @@ describe('MyTickets', () => {
       data: { success: true, message: 'Tickets resent', tickets_resent: 1 },
       error: null,
     })
+    mockRequestTicketWalletPass.mockResolvedValue({
+      data: {
+        wallet_type: 'google',
+        action: 'open',
+        url: 'https://pay.google.com/mock-pass',
+        is_fallback: false,
+      },
+      error: null,
+    })
+    vi.stubGlobal('open', vi.fn())
   })
 
   test('[TE-E2E-022] keeps historical ticket records visible after event completion', async () => {
@@ -130,6 +152,45 @@ describe('MyTickets', () => {
     expect(screen.getByRole('button', { name: /Add to Apple Wallet/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Print Ticket/i })).toBeInTheDocument()
     expect(screen.getAllByTestId('my-ticket-card')).toHaveLength(2)
+  })
+
+  test('opens wallet pass link when Add to Google Wallet is clicked', async () => {
+    const user = userEvent.setup()
+    const event = createMockTicketedEvent({
+      id: 'event-wallet',
+      title: 'Wallet Matchup',
+      starts_at: '2026-04-21T18:30:00.000Z',
+    })
+    const order = createMockTicketOrder({
+      id: 'order-wallet',
+      ticketed_event_id: event.id,
+    })
+    const ticket = {
+      ...createMockTicket({
+        id: 'ticket-wallet',
+        order_id: order.id,
+        ticketed_event_id: event.id,
+        entry_code: 'WALLET123456',
+      }),
+      ticketed_events: event,
+    }
+
+    mockGetMyTicketOrders.mockResolvedValue([order])
+    mockGetTicketsForOrder.mockResolvedValue([ticket])
+
+    renderPage()
+
+    await screen.findByText('Wallet Matchup')
+    await user.click(screen.getByRole('button', { name: /Add to Google Wallet/i }))
+
+    expect(mockRequestTicketWalletPass).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ticket_id: 'ticket-wallet',
+        wallet_type: 'google',
+        entry_code: 'WALLET123456',
+      }),
+    )
+    expect(window.open).toHaveBeenCalledWith('https://pay.google.com/mock-pass', '_blank', 'noopener,noreferrer')
   })
 
   test('[TE-E2E-022] shows empty lifecycle state when no records exist', async () => {

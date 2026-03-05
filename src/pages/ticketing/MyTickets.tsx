@@ -7,13 +7,15 @@
 
 import { useMemo, useRef, useState, type UIEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { getMyTicketOrders, getTicketsForOrder, resendTickets } from '@/data/services'
+import { getMyTicketOrders, getTicketsForOrder, requestTicketWalletPass, resendTickets } from '@/data/services'
 import TicketCard from '@/components/ticketing/TicketCard'
 import { useRouteLink } from '@/utils/routes'
+import { useOffline } from '@/hooks/useOffline'
 import FullScreenLoader from '@/components/common/FullScreenLoader'
 import { showSuccess, showError } from '@/utils/toast'
 import PortalLayout from '@/components/portal/PortalLayout'
 import { PageTitle } from '@/components/portal/Typography'
+import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
 import type { Ticket, TicketOrder, TicketType, TicketedEvent } from '@/types/ticketing'
 
 const MY_TICKETS_BREADCRUMBS = [
@@ -120,8 +122,10 @@ function getGroupStatusClass(orders: TicketOrder[]): string {
 
 function EventTicketCarousel({ group }: { group: EventTicketGroup }) {
   const [isResending, setIsResending] = useState(false)
+  const [walletLoading, setWalletLoading] = useState<'Google' | 'Apple' | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const carouselRef = useRef<HTMLDivElement | null>(null)
+  const { isOffline } = useOffline()
 
   const ticketCount = group.tickets.length
   const activeTicket = group.tickets[Math.min(activeIndex, ticketCount - 1)]
@@ -207,8 +211,68 @@ function EventTicketCarousel({ group }: { group: EventTicketGroup }) {
     }
   }
 
-  const handleWalletClick = (walletType: 'Google' | 'Apple') => {
-    showError(`${walletType} Wallet integration is not available yet. Use the QR code for entry.`)
+  const handleWalletClick = async (walletType: 'Google' | 'Apple') => {
+    if (!activeTicket) {
+      showError('No active ticket available for wallet pass.')
+      return
+    }
+
+    setWalletLoading(walletType)
+    try {
+      const response = await requestTicketWalletPass({
+        ticket_id: activeTicket.id,
+        wallet_type: walletType === 'Google' ? 'google' : 'apple',
+        entry_code: activeTicket.entry_code,
+        event_title: event?.title ?? null,
+        event_starts_at: event?.starts_at ?? null,
+        venue_name: event?.venue_name ?? null,
+        venue_city: event?.venue_city ?? null,
+        venue_state: event?.venue_state ?? null,
+      })
+
+      if (response.error || !response.data) {
+        throw response.error ?? new Error('Unable to generate wallet pass')
+      }
+
+      if (typeof window === 'undefined') {
+        return
+      }
+
+      if (response.data.action === 'download') {
+        const anchor = document.createElement('a')
+        anchor.href = response.data.url
+        if (response.data.filename) {
+          anchor.download = response.data.filename
+        }
+        anchor.rel = 'noopener noreferrer'
+        document.body.appendChild(anchor)
+        anchor.click()
+        anchor.remove()
+      } else {
+        const openedWindow = window.open(response.data.url, '_blank', 'noopener,noreferrer')
+        if (!openedWindow) {
+          throw new Error('Unable to open wallet pass. Please allow pop-ups and try again.')
+        }
+      }
+
+      if (response.data.is_fallback) {
+        showSuccess(
+          walletType === 'Google'
+            ? 'Opened a digital pass preview. Google Wallet is not configured in this environment.'
+            : 'Downloaded an event pass file. Apple Wallet direct integration is not configured in this environment.',
+        )
+      } else {
+        showSuccess(
+          walletType === 'Google'
+            ? 'Google Wallet pass opened.'
+            : 'Apple Wallet pass opened.',
+        )
+      }
+    } catch (walletError) {
+      showError(walletError instanceof Error ? walletError.message : 'Unable to open wallet pass')
+    } finally {
+      setWalletLoading(null)
+    }
   }
 
   const handlePrint = () => {
@@ -328,22 +392,29 @@ function EventTicketCarousel({ group }: { group: EventTicketGroup }) {
         )}
 
         <div className="flex flex-col gap-3 py-6 pr-2">
+          {isOffline && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+              You are offline. Wallet actions will use an offline-compatible fallback pass.
+            </div>
+          )}
           <button
             type="button"
             onClick={() => handleWalletClick('Google')}
+            disabled={walletLoading !== null}
             className="flex min-w-0 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-[#137fec] text-white text-lg font-bold leading-normal tracking-[0.015em] w-full shadow-lg shadow-[#137fec]/20 hover:bg-blue-600 transition-colors"
           >
             <span className="material-symbols-outlined">add_to_home_screen</span>
-            <span className="truncate uppercase">Add to Google Wallet</span>
+            <span className="truncate uppercase">{walletLoading === 'Google' ? 'Opening Google Wallet...' : 'Add to Google Wallet'}</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleWalletClick('Apple')}
+            disabled={walletLoading !== null}
             className="flex min-w-0 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 px-5 bg-white dark:bg-gray-800 border-2 border-[#f0f2f4] dark:border-gray-700 text-[#111418] dark:text-white text-base font-bold leading-normal tracking-[0.015em] w-full hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <span className="material-symbols-outlined">phone_iphone</span>
-            <span className="truncate">Add to Apple Wallet</span>
+            <span className="truncate">{walletLoading === 'Apple' ? 'Preparing Apple Wallet...' : 'Add to Apple Wallet'}</span>
           </button>
 
           <button
@@ -367,8 +438,6 @@ function EventTicketCarousel({ group }: { group: EventTicketGroup }) {
     </div>
   )
 }
-
-import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
 
 export default function MyTickets() {
   useDebugLifecycle('MyTickets')
