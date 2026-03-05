@@ -81,7 +81,7 @@ export function HeatmapChart({
   }
 
   return (
-    <div className={`oa-chart-heatmap ${className}`} style={{ height: `${height}px`, width: '100%' }}>
+    <div className={`oa-chart-heatmap overflow-safe-page ${className}`} style={{ height: `${height}px`, width: '100%', minWidth: 0, overflow: 'hidden' }}>
       {title && (
         <h3
           style={{
@@ -95,14 +95,16 @@ export function HeatmapChart({
           {title}
         </h3>
       )}
-      <div
-        style={{
+      <div className="overflow-safe-scroll">
+        <div
+          style={{
           display: 'grid',
           gridTemplateColumns: `auto repeat(${data.xLabels.length}, 1fr)`,
           gridTemplateRows: `auto repeat(${data.yLabels.length}, 1fr)`,
           gap: '2px',
           height: title ? height - 80 : height - 40,
           width: '100%',
+          minWidth: 0,
         }}
       >
         {/* Empty corner */}
@@ -172,6 +174,7 @@ export function HeatmapChart({
             ))}
           </div>
         ))}
+        </div>
       </div>
       
       {/* Legend */}

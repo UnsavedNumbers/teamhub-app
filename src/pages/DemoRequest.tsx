@@ -260,7 +260,7 @@ export default function DemoRequest() {
   // Show pending message if request is pending
   if (pendingRequest) {
     return (
-      <div className="h-screen w-screen overflow-hidden bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-white antialiased relative flex">
+      <div className="min-h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-white antialiased relative flex">
         <div className="flex-1 flex flex-col px-6 py-8 lg:px-20 xl:px-24 bg-white dark:bg-slate-900/50 overflow-y-auto items-center justify-center">
           <div className="mx-auto w-full max-w-md text-center">
             <div className="mb-8">
@@ -286,7 +286,7 @@ export default function DemoRequest() {
   // Show success message after submission
   if (submitted) {
     return (
-      <div className="h-screen w-screen overflow-hidden bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-white antialiased relative flex">
+      <div className="min-h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-white antialiased relative flex">
         <div className="flex-1 flex flex-col px-6 py-8 lg:px-20 xl:px-24 bg-white dark:bg-slate-900/50 overflow-y-auto items-center justify-center">
           <div className="mx-auto w-full max-w-md text-center">
             <div className="mb-8">
@@ -310,7 +310,7 @@ export default function DemoRequest() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-white antialiased relative flex">
+    <div className="min-h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-white antialiased relative flex">
       {/* Background Field Markings */}
       <div 
         className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1]"

@@ -12,6 +12,12 @@ import { registerServiceWorker } from './lib/pwa/registerServiceWorker'
 // Initialize debug logging system (localhost only)
 if (import.meta.env.DEV) {
   import('./lib/debug')
+
+  if (import.meta.env.VITE_DEBUG_OVERFLOW !== 'false') {
+    import('./dev/overflowDebug').then(({ initOverflowDebug }) => {
+      initOverflowDebug()
+    })
+  }
 }
 
 // Create React Query client

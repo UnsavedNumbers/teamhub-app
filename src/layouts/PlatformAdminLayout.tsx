@@ -14,6 +14,7 @@ import GlobalNav from '../components/common/GlobalNav'
 import MobileMenu from '../components/common/MobileMenu'
 import type { NavSection as MobileNavSection } from '@/types/menu'
 import { getLink, getPath, RouteKeys } from '@/utils/routes'
+import { AppPage } from '../components/shared/AppPage'
 
 // Navigation structure per design spec
 type NavSection = {
@@ -353,7 +354,7 @@ export default function PlatformAdminLayout() {
   }
 
   return (
-    <div className="pa-root pa-app">
+    <AppPage className="pa-root pa-app">
       {/* Mobile hamburger button */}
       {isMobile && (
         <button
@@ -444,12 +445,12 @@ export default function PlatformAdminLayout() {
       )}
 
       {/* Main */}
-      <div className="pa-main">
+      <div className="pa-main min-w-0">
         {/* Global Navigation */}
         <GlobalNav variant="platform-admin" />
 
         {/* Content */}
-        <main className="pa-content">
+        <main className="pa-content min-w-0">
           <Outlet />
         </main>
       </div>
@@ -464,6 +465,6 @@ export default function PlatformAdminLayout() {
           brandSubtitle="Youth Sports"
         />
       )}
-    </div>
+    </AppPage>
   )
 }

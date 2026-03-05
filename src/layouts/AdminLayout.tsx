@@ -18,6 +18,7 @@ import SidebarOrganizationSwitcher from '../components/admin/SidebarOrganization
 import MobileMenu from '../components/common/MobileMenu'
 import GlobalNav from '../components/common/GlobalNav'
 import { DemoGuideIntegration } from '../components/demo/DemoGuideIntegration'
+import { AppPage } from '../components/shared/AppPage'
 import type { NavSection } from '@/types/menu'
 import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
 import { useQuery } from '@tanstack/react-query'
@@ -345,7 +346,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="oa-root oa-app oa-theme-active">
+    <AppPage className="oa-root oa-app oa-theme-active">
       {/* Mobile header - shown when viewport ≤1023px (matches CSS) */}
       {showMobileNav && (
         <header className="oa-mobile-header">
@@ -566,7 +567,7 @@ export default function AdminLayout() {
       )}
 
       {/* Main */}
-      <div className="oa-main">
+      <div className="oa-main min-w-0">
         {/* Global Navigation Header - Hidden on paywall route */}
         {!isPaywallRoute && <GlobalNav variant="admin" />}
 
@@ -579,7 +580,7 @@ export default function AdminLayout() {
         )}
 
         {/* Content */}
-        <main className="oa-content" data-testid="app-shell">
+        <main className="oa-content min-w-0" data-testid="app-shell">
           <Outlet />
         </main>
       </div>
@@ -664,7 +665,7 @@ export default function AdminLayout() {
           </div>
         )
       })()}
-    </div>
+    </AppPage>
   )
 }
 

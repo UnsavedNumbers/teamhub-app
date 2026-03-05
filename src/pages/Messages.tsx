@@ -29,7 +29,7 @@ import {
   getUserDMChannels,
 } from '../lib/streamChat'
 import { getTeamsForParent, getTeams } from '../data/services/teamsService'
-import { USE_FAKE_DATA } from '../data/config'
+import { DEMO_USER_IDS, USE_FAKE_DATA } from '../data/config'
 import {
   DEFAULT_ORG_MESSAGING_SETTINGS,
   evaluateDmAttempt,
@@ -50,15 +50,21 @@ interface Team {
 
 interface DemoRecipient {
   id: string
+  userId: string
   name: string
   teamName: string
+  roleContext: MessagingRoleContext
 }
 
-const DEMO_CONTACT_NAMES = [
-  'Coach Jordan Reed',
-  'Coach Mia Carter',
-  'Team Manager Alex Lee',
-  'Coach Sam Patel',
+const DEMO_DIRECT_MESSAGE_RECIPIENTS: Array<{
+  userId: string
+  name: string
+  roleContext: MessagingRoleContext
+}> = [
+  { userId: DEMO_USER_IDS['coach-only@example.com'], name: 'Coach Jordan Reed', roleContext: 'coach' },
+  { userId: DEMO_USER_IDS['parent-coach@example.com'], name: 'Coach Mia Carter', roleContext: 'coach' },
+  { userId: DEMO_USER_IDS['admin-only@example.com'], name: 'Admin Alex Lee', roleContext: 'org_admin' },
+  { userId: DEMO_USER_IDS['staff-only@example.com'], name: 'Team Manager Sam Patel', roleContext: 'staff' },
 ]
 
 export default function Messages() {
@@ -81,12 +87,17 @@ export default function Messages() {
 
   const demoRecipients = useMemo<DemoRecipient[]>(() => {
     if (!USE_FAKE_DATA || teams.length === 0) return []
-    return teams.slice(0, 4).map((team, index) => ({
-      id: `demo-recipient-${team.id}`,
-      name: DEMO_CONTACT_NAMES[index] ?? `Coach ${team.name}`,
-      teamName: team.name,
-    }))
-  }, [teams])
+    return teams.slice(0, DEMO_DIRECT_MESSAGE_RECIPIENTS.length).map((team, index) => {
+      const recipient = DEMO_DIRECT_MESSAGE_RECIPIENTS[index]
+      return {
+        id: `demo-recipient-${recipient.userId}-${team.id}`,
+        userId: recipient.userId,
+        name: recipient.name,
+        teamName: team.name,
+        roleContext: recipient.roleContext,
+      }
+    }).filter((recipient) => recipient.userId !== user?.id)
+  }, [teams, user?.id])
 
   const roleContextOptions = useMemo<Array<{ value: MessagingRoleContext; label: string }>>(() => {
     const options: Array<{ value: MessagingRoleContext; label: string }> = []
@@ -212,7 +223,7 @@ export default function Messages() {
 
       if (USE_FAKE_DATA && channels.length === 0 && demoRecipients.length > 0) {
         for (const recipient of demoRecipients) {
-          const channel = await getDMChannel(user.id, recipient.id, {
+          const channel = await getDMChannel(user.id, recipient.userId, {
             name: `${recipient.name} - ${recipient.teamName}`,
           })
           await seedDemoChannel(channel, recipient)
@@ -241,6 +252,10 @@ export default function Messages() {
 
   const handleStartDemoDirectMessage = useCallback(async (recipient: DemoRecipient) => {
     if (!user) return
+    if (!streamConnected || !streamClient) {
+      showError('Messages are still connecting. Please try again in a moment.')
+      return
+    }
 
     setStreamLoading(true)
     try {
@@ -251,11 +266,11 @@ export default function Messages() {
       if (USE_FAKE_DATA) {
         decision = evaluateDmAttempt({
           actor_user_id: user.id,
-          recipient_user_id: recipient.id,
+          recipient_user_id: recipient.userId,
           org_id: context.orgId,
           channel_mode: 'dm',
           acting_role_context: actingRoleContext,
-          recipient_role_context: 'coach',
+          recipient_role_context: recipient.roleContext,
           org_settings: {
             org_id: context.orgId,
             ...DEFAULT_ORG_MESSAGING_SETTINGS,
@@ -265,11 +280,11 @@ export default function Messages() {
       } else {
         const dmResult = await startDirectMessage({
           actor_user_id: user.id,
-          recipient_user_id: recipient.id,
+          recipient_user_id: recipient.userId,
           org_id: context.orgId,
           acting_role_context: actingRoleContext,
-          recipient_role_context: 'coach',
-          idempotency_key: `messages:${user.id}:${recipient.id}:${Date.now()}`,
+          recipient_role_context: recipient.roleContext,
+          idempotency_key: `messages:${user.id}:${recipient.userId}:${Date.now()}`,
         })
 
         if ('error' in dmResult) {
@@ -291,7 +306,7 @@ export default function Messages() {
         return
       }
 
-      const channel = await getDMChannel(user.id, recipient.id, {
+      const channel = await getDMChannel(user.id, recipient.userId, {
         name: `${recipient.name} - ${recipient.teamName}`,
         channelId: channelIdOverride,
         members,
@@ -320,7 +335,7 @@ export default function Messages() {
     } finally {
       setStreamLoading(false)
     }
-  }, [user, seedDemoChannel, loadDirectMessageChannels, context.orgId, actingRoleContext])
+  }, [user, streamConnected, streamClient, seedDemoChannel, loadDirectMessageChannels, context.orgId, actingRoleContext])
 
   const selectedChannelPolicyNotice = useMemo(() => {
     if (!selectedChannel?.id) return null

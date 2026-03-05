@@ -70,7 +70,7 @@ export function BarChart({
   }
 
   return (
-    <div className={`oa-chart-bar ${className}`} style={{ height: `${height}px`, width: '100%' }}>
+    <div className={`oa-chart-bar overflow-safe-page ${className}`} style={{ height: `${height}px`, width: '100%', minWidth: 0, overflow: 'hidden' }}>
       {title && (
         <h3
           style={{
@@ -84,7 +84,7 @@ export function BarChart({
           {title}
         </h3>
       )}
-      <ResponsiveContainer width="100%" height={title ? height - 40 : height}>
+      <ResponsiveContainer width="100%" minWidth={0} height={title ? height - 40 : height}>
         <RechartsBarChart
           data={chartData}
           layout={orientation === 'horizontal' ? 'vertical' : 'horizontal'}

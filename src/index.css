@@ -198,12 +198,25 @@ body {
   overflow-x: hidden;
 }
 
+@supports (overflow: clip) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+
 #root {
   min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+}
+
+@supports (overflow: clip) {
+  #root {
+    overflow-x: clip;
+  }
 }
 
 main,
@@ -223,6 +236,51 @@ canvas,
 iframe {
   max-width: 100%;
   height: auto;
+}
+
+svg {
+  max-width: 100%;
+}
+
+table {
+  max-width: 100%;
+}
+
+.overflow-safe-page,
+.overflow-safe-section {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.overflow-safe-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.overflow-safe-grid {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: repeat(var(--overflow-grid-cols, 1), minmax(0, 1fr));
+  gap: var(--overflow-grid-gap, 1rem);
+}
+
+.overflow-safe-scroll {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.overflow-safe-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 @media (max-width: 767px) {

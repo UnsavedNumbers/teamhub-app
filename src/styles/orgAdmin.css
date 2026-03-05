@@ -3442,6 +3442,9 @@ html.dark .oa-theme-active .pa-table-pagination .pa-body-s {
 /* Table wrapper for scrolling */
 .oa-table-desktop {
     display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
@@ -3886,6 +3889,9 @@ html.dark .oa-select:focus {
     }
 
     .oa-table-scroll-wrap {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
         overflow-x: auto;
         overflow-y: hidden;
         -webkit-overflow-scrolling: touch;
@@ -3924,6 +3930,9 @@ html.dark .oa-select:focus {
     }
 
     .oa-table-scroll-wrap {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
         overflow-x: auto;
         overflow-y: hidden;
         -webkit-overflow-scrolling: touch;
