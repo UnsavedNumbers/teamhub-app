@@ -7,6 +7,7 @@ import { useMobile } from '../hooks/useMobile'
 import { ADMIN_LAYOUT_MOBILE_NAV_QUERY } from '../config/breakpoints'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { DemoGuideIntegration } from '../components/demo/DemoGuideIntegration'
+import { AppPage, PageSection } from '../components/shared/AppPage'
 import '../styles/portal.css'
 
 /**
@@ -52,7 +53,7 @@ export default function PortalWorkspaceLayout() {
   const showMenuButton = showSidebarAsDrawer
 
   return (
-    <div className="oa-theme-active min-h-screen bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased">
+    <AppPage className="oa-theme-active portal-neutral min-h-screen h-[100dvh] overflow-hidden bg-gray-50 font-sans text-gray-900 dark:bg-black dark:text-gray-100 antialiased">
       <div className="fixed inset-0 pointer-events-none opacity-[0.02] z-[-1] portal-grid-bg" />
 
       <PortalWorkspaceHeader
@@ -60,7 +61,7 @@ export default function PortalWorkspaceLayout() {
         showMenuButton={showMenuButton}
       />
 
-      <div className="flex">
+      <div className="flex min-h-0 flex-1">
         {showSidebarAsDrawer ? (
           <>
             {mobileSidebarOpen && (
@@ -86,14 +87,14 @@ export default function PortalWorkspaceLayout() {
           />
         )}
 
-        <main className="portal-workspace-main min-w-0 flex-1 overflow-auto">
-          <div className="w-full p-4 sm:p-6 lg:p-8">
+        <main className="portal-workspace-main min-h-0 min-w-0 flex-1 overflow-y-auto">
+          <PageSection className="w-full p-4 sm:p-6 lg:p-8">
             <Outlet />
-          </div>
+          </PageSection>
         </main>
       </div>
 
       <DemoGuideIntegration />
-    </div>
+    </AppPage>
   )
 }

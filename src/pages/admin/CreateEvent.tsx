@@ -470,7 +470,7 @@ export default function CreateEvent() {
     }
   }, [formValues, showLocationDetails, showRecurring])
 
-  // Cascade: Sport â†’ Program â†’ Season â†’ Team. Each step populates the next dropdown.
+  // Cascade: Sport -> Program -> Season -> Team. Each step populates the next dropdown.
 
   const fetchProgramsForSport = useCallback(async (sportId: string) => {
     if (!isReady || !context?.orgId) return

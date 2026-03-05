@@ -7,6 +7,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useSearchParams, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useOffline } from '../../hooks/useOffline'
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 import { debug } from '../../lib/debug'
@@ -21,6 +22,7 @@ import { AdminPageHeader, Select, ConfirmDialog, Button, Card, Badge, InlineNoti
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
 import { useI18n } from '../../i18n/useI18n'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import './Programs.css'
 import '../../styles/orgAdmin.css'
 
@@ -30,11 +32,13 @@ export default function Programs() {
   const { t } = useI18n()
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const { isOffline } = useOffline()
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
   const params = useParams<{ sport_slug?: string }>()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -552,37 +556,39 @@ export default function Programs() {
                       </div>
                     </div>
                     
-                    <div className="oa-stacked-list-row-actions">
-                      <Button
-                        variant="ghost"
-                        size="dense"
-                        onClick={() => handleNavigateToEditProgram(program.id)}
-                        disabled={loading || deletingProgramId === program.id}
-                        icon="edit"
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="dense"
-                        onClick={() => handleNavigateToAddLevel(program.id, program.sport_id)}
-                        disabled={loading || isOffline || USE_FAKE_DATA || deletingProgramId === program.id}
-                        icon="add"
-                      >
-                        Add Level
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="dense"
-                        onClick={() => handleDeleteProgram(program.id, program.name)}
-                        disabled={deletingProgramId === program.id || loading || isOffline || USE_FAKE_DATA || levelCount > 0}
-                        loading={deletingProgramId === program.id}
-                        icon="delete"
-                        className="oa-text-danger hover:oa-bg-danger-surface"
-                      >
-                         Delete
-                      </Button>
-                    </div>
+                    {isOrgAdmin && (
+                      <div className="oa-stacked-list-row-actions">
+                        <Button
+                          variant="ghost"
+                          size="dense"
+                          onClick={() => handleNavigateToEditProgram(program.id)}
+                          disabled={loading || deletingProgramId === program.id}
+                          icon="edit"
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="dense"
+                          onClick={() => handleNavigateToAddLevel(program.id, program.sport_id)}
+                          disabled={loading || isOffline || USE_FAKE_DATA || deletingProgramId === program.id}
+                          icon="add"
+                        >
+                          Add Level
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="dense"
+                          onClick={() => handleDeleteProgram(program.id, program.name)}
+                          disabled={deletingProgramId === program.id || loading || isOffline || USE_FAKE_DATA || levelCount > 0}
+                          loading={deletingProgramId === program.id}
+                          icon="delete"
+                          className="oa-text-danger hover:oa-bg-danger-surface"
+                        >
+                           Delete
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )

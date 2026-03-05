@@ -1,4 +1,4 @@
-
+﻿
 import { useState, useEffect } from 'react'
 import { CardTitle } from './Typography'
 import Button from './Button'
@@ -94,16 +94,16 @@ export default function CreateAnnouncementModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div 
-        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
         onClick={handleClose}
       />
-      <div className="relative bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
-        <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+      <div className="relative bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-200 dark:border-gray-800 animate-in fade-in zoom-in duration-200">
+        <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/50">
           <CardTitle>New Announcement</CardTitle>
           <button 
             onClick={handleClose}
             disabled={loading}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Icon name="close" size="text-xl" />
           </button>
@@ -117,14 +117,14 @@ export default function CreateAnnouncementModal({
           )}
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">
               Team
             </label>
             <select
               value={teamId}
               onChange={(e) => setTeamId(e.target.value)}
               disabled={loading}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="" disabled>Select a team</option>
               {teams.map(t => (
@@ -134,7 +134,7 @@ export default function CreateAnnouncementModal({
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">
               Title
             </label>
             <input
@@ -142,20 +142,20 @@ export default function CreateAnnouncementModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               disabled={loading}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all font-bold placeholder:font-normal disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all font-bold placeholder:font-normal disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="Announcement title"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">
               Type
             </label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value as AnnouncementType)}
               disabled={loading}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {getAnnouncementTypeOptions().map(opt => (
                 <option key={opt.value} value={opt.value}>
@@ -166,7 +166,7 @@ export default function CreateAnnouncementModal({
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">
               Content
             </label>
             <textarea
@@ -174,14 +174,14 @@ export default function CreateAnnouncementModal({
               onChange={(e) => setContent(e.target.value)}
               rows={8}
               disabled={loading}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all font-medium placeholder:font-normal resize-y disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)]/20 focus:border-[var(--org-btn-primary-bg, #137fec)] outline-none transition-all font-medium placeholder:font-normal resize-y disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="What do you want to announce?"
               style={{ minHeight: '120px' }}
             />
           </div>
 
           <div>
-             <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">
+             <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">
               Priority
             </label>
             <div className="flex gap-4">
@@ -195,10 +195,10 @@ export default function CreateAnnouncementModal({
                   disabled={loading}
                   className="hidden"
                 />
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${priority === 'normal' ? 'border-[var(--org-btn-primary-bg, #137fec)]' : 'border-slate-300 dark:border-slate-600'}`}>
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${priority === 'normal' ? 'border-[var(--org-btn-primary-bg, #137fec)]' : 'border-gray-300 dark:border-gray-600'}`}>
                   {priority === 'normal' && <div className="w-2 h-2 rounded-full bg-[var(--org-btn-primary-bg)]" />}
                 </div>
-                <span className={`text-sm font-bold ${priority === 'normal' ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>Normal</span>
+                <span className={`text-sm font-bold ${priority === 'normal' ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>Normal</span>
               </label>
 
               <label className="flex items-center gap-2 cursor-pointer group">
@@ -211,10 +211,10 @@ export default function CreateAnnouncementModal({
                   disabled={loading}
                   className="hidden"
                 />
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${priority === 'urgent' ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}`}>
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${priority === 'urgent' ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'}`}>
                    {priority === 'urgent' && <div className="w-2 h-2 rounded-full bg-red-500" />}
                 </div>
-                <span className={`text-sm font-bold ${priority === 'urgent' ? 'text-red-500' : 'text-slate-500'}`}>Urgent</span>
+                <span className={`text-sm font-bold ${priority === 'urgent' ? 'text-red-500' : 'text-gray-500'}`}>Urgent</span>
               </label>
             </div>
           </div>
@@ -232,3 +232,4 @@ export default function CreateAnnouncementModal({
     </div>
   )
 }
+

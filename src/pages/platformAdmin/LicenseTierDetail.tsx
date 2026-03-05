@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { PageHeader, Card, Button, Input, Select, Badge, Checkbox, ConfirmDialog, ErrorState, Accordion } from '../../components/platformAdmin'
 import type { LicenseTier, FeatureEntitlement, TierFeatureAssignment, StripePriceVerification } from '../../types/licenseTiers.types'
@@ -30,15 +30,6 @@ import { useI18n } from '../../i18n/useI18n'
 
 export default function LicenseTierDetail() {
   const { id } = useParams<{ id: string }>()
-  // #region agent log
-  const mountId = useRef(Math.random().toString(36).substr(2, 9))
-  useEffect(() => {
-    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7451fa'},body:JSON.stringify({sessionId:'7451fa',location:'LicenseTierDetail.tsx:31',message:'LicenseTierDetail mounted',data:{mountId:mountId.current,id},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-    return () => {
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7451fa'},body:JSON.stringify({sessionId:'7451fa',location:'LicenseTierDetail.tsx:36',message:'LicenseTierDetail unmounted',data:{mountId:mountId.current,id},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-    }
-  }, [id])
-  // #endregion
   const navigate = useNavigate()
   const location = useLocation()
   const hashFeatureId = location.hash?.startsWith('#feature-') ? location.hash.slice('#feature-'.length) : null
@@ -762,7 +753,7 @@ export default function LicenseTierDetail() {
                   <div 
                     className="pa-card" 
                     style={{ 
-                      background: 'linear-gradient(135deg, var(--pa-success-bg) 0%, rgba(34, 197, 94, 0.05) 100%)',
+                      background: 'var(--pa-success-bg)',
                       border: '1px solid var(--pa-success)',
                       borderRadius: 'var(--pa-radius-lg)',
                       padding: 'var(--pa-space-5)',

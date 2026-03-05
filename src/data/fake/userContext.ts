@@ -11,8 +11,9 @@
 import { DEMO_USER_IDS, DEMO_ORG_A_ID, USER_CONTEXT_TIMEOUT_MS, USE_FAKE_DATA } from '../config'
 import type { OrgMemberRole } from '../../contexts/OrganizationContext'
 import { getUserByEmail, getUserOrganizations } from './fakeUsers'
-import { getAssignedTeamsForCoach } from './relationships'
+import { getAssignedTeamsForCoach, getChildrenForUserId, getTeamsForStaff, ATHLETE_USER_SELF_MAP } from './relationships'
 import { supabase } from '../../lib/supabase'
+import { getDemoUserByEmail } from '@/demo/demoUsers'
 
 // ============================================================================
 // Types
@@ -154,9 +155,30 @@ export function calculatePermissions(
  */
 export async function getCoachTeamIds(context: UserContext): Promise<string[]> {
     if (USE_FAKE_DATA) {
-        return getAssignedTeamsForCoach(context.userId)  // Keep fake fallback
+        // Try by the userId directly first (matches when USE_FAKE_DATA userId === DEMO_USER_IDS value)
+        const byId = getAssignedTeamsForCoach(context.userId)
+        if (byId.length > 0) return byId
+
+        // Fallback: resolve the canonical demo userId from email, then look up teams.
+        // This handles the case where the real Supabase auth userId differs from
+        // DEMO_USER_IDS (e.g. when entering via a demo code with a live org ID).
+        if (context.email) {
+            const canonicalId = DEMO_USER_IDS[context.email.toLowerCase().trim()]
+            if (canonicalId) {
+                const byEmail = getAssignedTeamsForCoach(canonicalId)
+                if (byEmail.length > 0) return byEmail
+            }
+        }
+
+        // Last resort: any user with the 'coach' role gets the default demo coach teams
+        if (context.roles.includes('coach')) {
+            const defaultCoachId = DEMO_USER_IDS['coach-only@example.com']
+            if (defaultCoachId) return getAssignedTeamsForCoach(defaultCoachId)
+        }
+
+        return []
     }
-    
+
     try {
         const { data, error } = await (supabase as any)
             .rpc('coach_team_ids', { check_user_id: context.userId })
@@ -171,6 +193,80 @@ export async function getCoachTeamIds(context: UserContext): Promise<string[]> {
         console.warn('Error getting coach team IDs:', err)
         return []
     }
+}
+
+/**
+ * Resolve the canonical demo user ID for guardian/parent child lookups.
+ * When USE_FAKE_DATA is true and the session userId differs from DEMO_USER_IDS
+ * (e.g. real Supabase auth), resolves by email or role so guardians see their demo children.
+ */
+export function getGuardianCanonicalUserId(context: UserContext): string {
+    if (!USE_FAKE_DATA) return context.userId
+
+    if (getChildrenForUserId(context.userId).length > 0) return context.userId
+    if (context.email) {
+        const canonicalId = DEMO_USER_IDS[context.email.toLowerCase().trim()]
+        if (canonicalId && getChildrenForUserId(canonicalId).length > 0) return canonicalId
+    }
+    const isGuardian = context.roles.includes('parent') || context.roles.includes('guardian')
+    if (isGuardian) {
+        const defaultParentId = DEMO_USER_IDS['parent-only@example.com']
+        if (defaultParentId) return defaultParentId
+    }
+    return context.userId
+}
+
+/**
+ * Resolve the athlete record ID for an athlete-role user.
+ * In demo mode, maps the athlete user's session ID to their own child record.
+ */
+export function getAthleteCanonicalChildId(context: UserContext): string | null {
+    if (!USE_FAKE_DATA) return null
+
+    // Direct mapping
+    if (ATHLETE_USER_SELF_MAP[context.userId]) return ATHLETE_USER_SELF_MAP[context.userId]
+
+    // Email-based fallback
+    if (context.email) {
+        const canonicalId = DEMO_USER_IDS[context.email.toLowerCase().trim()]
+        if (canonicalId && ATHLETE_USER_SELF_MAP[canonicalId]) return ATHLETE_USER_SELF_MAP[canonicalId]
+    }
+
+    // Role-based fallback: any athlete user gets Emma Johnson's record
+    if (context.roles.includes('athlete')) {
+        const defaultAthleteId = DEMO_USER_IDS['athlete-only@example.com']
+        if (defaultAthleteId && ATHLETE_USER_SELF_MAP[defaultAthleteId]) {
+            return ATHLETE_USER_SELF_MAP[defaultAthleteId]
+        }
+    }
+
+    return null
+}
+
+/**
+ * Get staff team IDs for a staff-role user in demo mode.
+ */
+export function getStaffTeamIds(context: UserContext): string[] {
+    if (!USE_FAKE_DATA) return []
+
+    const byId = getTeamsForStaff(context.userId)
+    if (byId.length > 0) return byId
+
+    if (context.email) {
+        const canonicalId = DEMO_USER_IDS[context.email.toLowerCase().trim()]
+        if (canonicalId) {
+            const byEmail = getTeamsForStaff(canonicalId)
+            if (byEmail.length > 0) return byEmail
+        }
+    }
+
+    // Any staff role user gets default staff teams
+    if (context.roles.includes('staff')) {
+        const defaultStaffId = DEMO_USER_IDS['staff-only@example.com']
+        if (defaultStaffId) return getTeamsForStaff(defaultStaffId)
+    }
+
+    return []
 }
 
 // ============================================================================
@@ -242,6 +338,7 @@ export function filterEventsByRole<T extends { team_id?: string | null; team?: {
     if (permissions.canViewAllOrgData) {
         return events.filter((e) => {
             const orgId = e.team?.org_id
+            // Allow events without a team (org-wide events) or events in the current org
             return !orgId || orgId === currentOrgId
         })
     }
@@ -345,7 +442,7 @@ const VALID_EVENT_TYPES = [
 
 const VALID_RSVP_STATUSES = ['going', 'late', 'not_going', 'unknown'] as const
 
-const VALID_ORG_MEMBER_ROLES = ['parent', 'coach', 'org_admin', 'staff', 'athlete'] as const
+const VALID_ORG_MEMBER_ROLES = ['parent', 'guardian', 'coach', 'org_admin', 'staff', 'athlete', 'fan'] as const
 
 const VALID_ORG_TYPES = ['school', 'club', 'league', 'academy', 'aau'] as const
 
@@ -452,6 +549,27 @@ export async function waitForUserContext(
  */
 export function getDemoUserContext(email: string): UserContext | null {
     const normalizedEmail = email.toLowerCase().trim()
+    const registryUser = getDemoUserByEmail(normalizedEmail)
+    if (registryUser?.seeded) {
+        const rolesByRegistryRole: Record<string, OrgMemberRole[]> = {
+            org_admin: ['org_admin'],
+            coach: ['coach'],
+            staff: ['staff'],
+            guardian: ['guardian', 'parent'],
+            athlete: ['athlete'],
+            fan: ['fan'],
+            platform_admin: [],
+        }
+
+        return {
+            userId: registryUser.userId ?? resolveDemoUserId(normalizedEmail) ?? normalizedEmail,
+            email: normalizedEmail,
+            orgId: registryUser.defaultOrgId ?? DEMO_ORG_A_ID,
+            roles: rolesByRegistryRole[registryUser.role] ?? ['parent'],
+            isPlatformAdmin: registryUser.role === 'platform_admin',
+        }
+    }
+
     const userId = resolveDemoUserId(normalizedEmail)
 
     if (userId) {

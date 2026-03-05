@@ -11,7 +11,7 @@
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_TRANSACTION_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { debug } from '../../lib/debug'
-import { calculatePermissions } from '../fake/userContext'
+import { calculatePermissions, resolveDemoUserId } from '../fake/userContext'
 import {
     fakeFeeAssignments,
     getFeeById,
@@ -33,6 +33,7 @@ import {
 } from '../fake/fakePayments'
 import { getChildrenForUserId, getAssignedTeamsForCoach } from '../fake/relationships'
 import { getChildById, getFamilyById, getUserById, getFamilyMembersForFamily } from '../fake/fakeUsers'
+import { getGuardianCanonicalUserId } from '../fake/userContext'
 import { supabase } from '../../lib/supabase'
 import { buildFeeAssignmentQuery } from './queryHelpers'
 import { normalizeSupabaseResponse } from './responseHelpers'
@@ -51,9 +52,11 @@ async function simulateDelay(): Promise<void> {
 }
 
 function buildPermissions(context: UserContext): PermissionSet {
-    const childIds = getChildrenForUserId(context.userId)
+    const effectiveUserId = getGuardianCanonicalUserId(context)
+    const childIds = getChildrenForUserId(effectiveUserId)
+    const coachLookupUserId = (context.email && resolveDemoUserId(context.email)) || context.userId
     const assignedTeamIds = context.roles.includes('coach')
-        ? getAssignedTeamsForCoach(context.userId)
+        ? getAssignedTeamsForCoach(coachLookupUserId)
         : []
 
     return calculatePermissions(context, assignedTeamIds, childIds, [])
@@ -264,7 +267,8 @@ export async function getFeeAssignmentsForUser(
                 }
             }
 
-            const childIds = getChildrenForUserId(context.userId)
+            const effectiveUserId = getGuardianCanonicalUserId(context)
+            const childIds = getChildrenForUserId(effectiveUserId)
             const assignments = childIds.flatMap((childId) => getFeeAssignmentsWithDetailsForChild(childId))
 
             // Enrich assignments with athlete and parent information
@@ -355,7 +359,8 @@ export async function getFeeAssignmentById(
             }
             const permissions = buildPermissions(context)
             if (!permissions.canViewAllOrgData) {
-                const childIds = getChildrenForUserId(context.userId)
+                const effectiveUserId = getGuardianCanonicalUserId(context)
+                const childIds = getChildrenForUserId(effectiveUserId)
                 if (!childIds.includes((assignment as any).athlete_id ?? (assignment as any).child_id)) {
                     return { data: null, error: new Error('Access denied') }
                 }
@@ -423,7 +428,8 @@ export async function getUnpaidFeeAssignments(
         try {
             await simulateDelay()
 
-            const childIds = getChildrenForUserId(context.userId)
+            const effectiveUserId = getGuardianCanonicalUserId(context)
+            const childIds = getChildrenForUserId(effectiveUserId)
             const unpaid = childIds.flatMap((childId) =>
                 getUnpaidFeeAssignmentsForChild(childId).map((fa) => ({
                     ...fa,
@@ -1041,7 +1047,8 @@ export async function getParentPaymentSummary(
         try {
             await simulateDelay()
 
-            const childIds = getChildrenForUserId(context.userId)
+            const effectiveUserId = getGuardianCanonicalUserId(context)
+            const childIds = getChildrenForUserId(effectiveUserId)
             const assignments = childIds.flatMap((childId) => getFeeAssignmentsForChild(childId))
 
             const totalPaidCents = assignments.reduce((sum, a) => sum + a.amount_paid_cents, 0)

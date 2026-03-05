@@ -217,6 +217,50 @@ export const DEFAULT_ADVANCED_SETTINGS: Omit<AdvancedSettings, 'org_id' | 'updat
 }
 
 // ============================================================================
+// Messaging Settings
+// ============================================================================
+
+export const messagingPrecedenceSchema = z.object({
+  platform_floor: z.literal('enforced'),
+  org_policy: z.literal('authoritative'),
+  user_preference: z.literal('allowed_when_safe'),
+})
+
+export const messagingSettingsSchema = z.object({
+  org_id: z.string().uuid(),
+  settings_version: z.number().int().min(1),
+  effective_from: z.string(),
+  precedence_contract: messagingPrecedenceSchema,
+  enable_parent_to_parent_dms: z.boolean(),
+  enable_minor_to_minor_dms: z.boolean(),
+  require_parent_approval_for_minor_dm: z.boolean(),
+  enable_admin_audit_access: z.boolean(),
+  enable_minor_group_parent_visibility: z.boolean(),
+  require_read_receipts_safety_critical: z.boolean(),
+  retention_days: z.number().int().min(1),
+  updated_at: z.string(),
+})
+
+export type MessagingSettings = z.infer<typeof messagingSettingsSchema>
+
+export const DEFAULT_MESSAGING_SETTINGS: Omit<MessagingSettings, 'org_id' | 'updated_at'> = {
+  settings_version: 1,
+  effective_from: new Date(0).toISOString(),
+  precedence_contract: {
+    platform_floor: 'enforced',
+    org_policy: 'authoritative',
+    user_preference: 'allowed_when_safe',
+  },
+  enable_parent_to_parent_dms: true,
+  enable_minor_to_minor_dms: true,
+  require_parent_approval_for_minor_dm: false,
+  enable_admin_audit_access: true,
+  enable_minor_group_parent_visibility: true,
+  require_read_receipts_safety_critical: false,
+  retention_days: 730,
+}
+
+// ============================================================================
 // Aggregate Type
 // ============================================================================
 
@@ -228,6 +272,7 @@ export interface OrganizationSettings {
   visibility: VisibilitySettings
   notifications: NotificationSettings
   advanced: AdvancedSettings
+  messaging: MessagingSettings
 }
 
 // ============================================================================
@@ -275,6 +320,11 @@ export function getDefaultSettings(orgId: string, organizationName: string): Org
     advanced: {
       org_id: orgId,
       ...DEFAULT_ADVANCED_SETTINGS,
+      updated_at: now,
+    },
+    messaging: {
+      org_id: orgId,
+      ...DEFAULT_MESSAGING_SETTINGS,
       updated_at: now,
     },
   }

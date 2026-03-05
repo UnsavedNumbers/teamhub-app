@@ -31,6 +31,11 @@ const portal = {
         icon: 'calendar_month',
         description: 'View all events',
     },
+    calendarCreate: {
+        path: '/portal/calendar/new',
+        label: 'New Event',
+        icon: 'add',
+    },
     eventDetail: {
         path: '/portal/calendar/events/:eventId',
         params: ['eventId'] as const,
@@ -63,7 +68,7 @@ const portal = {
         path: '/portal/huddles',
         label: 'Huddles',
         icon: 'forum',
-        description: 'Team chat and messaging',
+        description: 'Team and organization chat channels',
     },
     // Announcements
     announcements: {
@@ -72,15 +77,15 @@ const portal = {
         icon: 'campaign',
         description: 'Important announcements',
     },
-    // Legacy routes (for backwards compatibility)
+    // Direct messages
     messages: {
         path: '/portal/messages',
-        label: 'Huddles',
-        icon: 'forum',
-        description: 'Team chat and announcements',
+        label: 'Messages',
+        icon: 'mail',
+        description: 'Direct user-to-user messages',
     },
     announcementDetail: {
-        path: '/portal/messages/:announcementId',
+        path: '/portal/announcements/:announcementId',
         params: ['announcementId'] as const,
         label: 'Announcement',
         icon: 'mail',
@@ -179,6 +184,12 @@ const portal = {
         icon: 'group_add',
         description: 'Enter an invite code',
     },
+    registrationHub: {
+        path: '/portal/registration-hub',
+        label: 'Registration Hub',
+        icon: 'app_registration',
+        description: 'Role-based registration actions',
+    },
 
     // Tryouts
     tryouts: {
@@ -192,6 +203,11 @@ const portal = {
         params: ['tryoutId'] as const,
         label: 'Tryout Details',
         icon: 'emoji_events',
+    },
+    tryoutRegistrations: {
+        path: '/portal/tryouts/registrations',
+        label: 'My Tryout Registrations',
+        icon: 'assignment',
     },
 
     // Uniforms
@@ -1271,6 +1287,13 @@ const admin = {
             description: 'Registration and evaluation',
             requiresOrg: true,
         },
+        assigned: {
+            path: '/admin/tryouts/assigned',
+            label: 'My Tryouts',
+            icon: 'assignment_ind',
+            description: 'Assigned evaluator tryouts',
+            requiresOrg: true,
+        },
         create: {
             path: '/admin/tryouts/new',
             label: 'Create Tryout',
@@ -1282,6 +1305,27 @@ const admin = {
             params: ['tryoutId'] as const,
             label: 'Tryout Details',
             icon: 'emoji_events',
+            requiresOrg: true,
+        },
+        registrations: {
+            path: '/admin/tryouts/:tryoutId/registrations',
+            params: ['tryoutId'] as const,
+            label: 'Tryout Registrations',
+            icon: 'groups',
+            requiresOrg: true,
+        },
+        evaluators: {
+            path: '/admin/tryouts/:tryoutId/evaluators',
+            params: ['tryoutId'] as const,
+            label: 'Tryout Evaluators',
+            icon: 'badge',
+            requiresOrg: true,
+        },
+        evaluation: {
+            path: '/admin/tryouts/:tryoutId/evaluation',
+            params: ['tryoutId'] as const,
+            label: 'Tryout Evaluation',
+            icon: 'fact_check',
             requiresOrg: true,
         },
     },

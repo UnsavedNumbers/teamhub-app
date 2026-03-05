@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, PageHeader, Button, Badge, StatCard } from '@/components/platformAdmin'
+import { Card, PageHeader, Button, Badge } from '@/components/platformAdmin'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '@/i18n/useI18n'
 import { USE_FAKE_DATA } from '@/data/config'
@@ -20,6 +20,7 @@ import { PhotoUploadZone } from '@/components/admin/galleries/PhotoUploadZone'
 import { OrgAdminGalleryView } from '@/components/orgAdmin/OrgAdminGalleryView'
 import { GalleryEditModal } from '@/components/admin/galleries/GalleryEditModal'
 import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
+import { TopLevelStats } from '@/components/common/TopLevelStats'
 import '../../styles/orgAdmin.css'
 
 type ViewMode = 'grid' | 'list'
@@ -259,12 +260,16 @@ export default function PhotoDetail() {
         />
 
         {/* Stats */}
-        <div className="oa-grid oa-grid-cols-1 sm:oa-grid-cols-4 oa-gap-3">
-          <StatCard label={t('photos.stats.totalPhotos')} value={String(photos.length)} />
-          <StatCard label={t('common.approved')} value={String(photos.filter((p) => (p.approval_status || p.status) === 'approved').length)} />
-          <StatCard label={t('photos.pendingApproval.badge')} value={String(pendingCount)} />
-          <StatCard label={t('photos.stats.flagged')} value={String(photos.filter((p) => (p.approval_status || p.status) === 'rejected').length)} />
-        </div>
+        <TopLevelStats
+          className="oa-mb-3"
+          ariaLabel="Gallery photo summary metrics"
+          items={[
+            { id: 'total', label: t('photos.stats.totalPhotos'), value: String(photos.length) },
+            { id: 'approved', label: t('common.approved'), value: String(photos.filter((p) => (p.approval_status || p.status) === 'approved').length), tone: 'success' },
+            { id: 'pending', label: t('photos.pendingApproval.badge'), value: String(pendingCount), tone: pendingCount > 0 ? 'warning' : 'default' },
+            { id: 'flagged', label: t('photos.stats.flagged'), value: String(photos.filter((p) => (p.approval_status || p.status) === 'rejected').length), tone: 'danger' },
+          ]}
+        />
 
         {/* Upload Zone */}
         <Card className="oa-card oa-mt-3">

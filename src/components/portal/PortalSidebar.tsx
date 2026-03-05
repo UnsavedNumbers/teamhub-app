@@ -1,10 +1,11 @@
-import { Link, useLocation } from 'react-router-dom'
+﻿import { Link, useLocation } from 'react-router-dom'
 import {
   Home,
   Calendar,
   Users,
   Megaphone,
   MessageSquare,
+  Mail,
   Image,
   Video,
   Ticket,
@@ -77,7 +78,7 @@ function NavItem({
             'flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
             isActive
               ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)] dark:bg-[var(--org-btn-primary-bg)]/20'
-              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
+              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-100'
           )}
         >
           <span className="flex items-center gap-3">
@@ -89,7 +90,7 @@ function NavItem({
           />
         </button>
         {isExpanded && (
-          <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l-2 border-slate-200 pl-3 dark:border-slate-700">
+          <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l-2 border-gray-200 pl-3 dark:border-gray-700">
             {item.children!.map((child) => (
               <NavSubItem key={child.path} item={child} onClose={onClose} />
             ))}
@@ -107,7 +108,7 @@ function NavItem({
         'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
         isActive
           ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-link-color)] dark:bg-[var(--org-btn-primary-bg)]/20'
-          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
+          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100'
       )}
     >
       <Icon className="h-5 w-5 shrink-0" />
@@ -135,7 +136,7 @@ function NavSubItem({
         'flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
         isActive
           ? 'bg-[var(--org-btn-primary-bg)]/10 font-semibold text-[var(--org-link-color)] dark:bg-[var(--org-btn-primary-bg)]/20'
-          : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
+          : 'font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-100'
       )}
     >
       {Icon && <Icon className="h-4 w-4 shrink-0" />}
@@ -189,6 +190,7 @@ export default function PortalSidebar({
         { path: getLink('portal.uniforms'), label: t('nav.uniforms'), routeKey: 'portal.uniforms', icon: Shirt },
       ],
     },
+    { path: getLink('portal.messages'), label: 'Messages', icon: Mail, routeKey: 'portal.messages' },
     { path: getLink('portal.announcements'), label: t('nav.announcements'), icon: Megaphone, routeKey: 'portal.messages' },
     { path: getLink('portal.huddles'), label: t('nav.huddles'), icon: MessageSquare, routeKey: 'portal.huddles' },
     {
@@ -207,6 +209,7 @@ export default function PortalSidebar({
         { path: '/portal/follows', label: t('nav.whoIFollow'), routeKey: 'portal.following', icon: Heart },
         { path: '/portal/discover', label: t('nav.browseOrgs'), routeKey: 'portal.discoverOrgs', icon: Search },
         { path: getLink('portal.join'), label: t('nav.joinTeam'), routeKey: 'portal.join', icon: UserPlus },
+        { path: getLink('portal.registrationHub'), label: 'Portal Registration Hub', routeKey: 'portal.registrationHub', icon: FileText },
         { path: getLink('portal.bookmarkedEvents'), label: t('nav.bookmarks'), routeKey: 'portal.bookmarkedEvents', icon: Bookmark },
       ],
     },
@@ -282,10 +285,10 @@ export default function PortalSidebar({
               </span>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+              <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {currentOrganization.name}
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 {role === 'guardian' ? t('nav.guardian') : t('nav.athlete')}
               </p>
             </div>
@@ -307,7 +310,7 @@ export default function PortalSidebar({
 
         {roleItems.length > 0 && (
           <>
-            <div className="my-2 border-t border-slate-200 dark:border-slate-700" />
+            <div className="my-2 border-t border-gray-200 dark:border-gray-700" />
             <nav className="flex flex-col gap-0.5" aria-label={`${role} navigation`}>
               {roleItems.map((item) => (
                 <NavItem
@@ -321,12 +324,12 @@ export default function PortalSidebar({
           </>
         )}
 
-        <div className="my-2 border-t border-slate-200 dark:border-slate-700" />
+        <div className="my-2 border-t border-gray-200 dark:border-gray-700" />
         <div>
           <button
             type="button"
             onClick={() => setSettingsOpen((o) => !o)}
-            className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+            className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-100"
           >
             <span className="flex items-center gap-3">
               <Settings className="h-5 w-5 shrink-0" />
@@ -337,10 +340,10 @@ export default function PortalSidebar({
             />
           </button>
           {settingsOpen && (
-            <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l-2 border-slate-200 pl-3 dark:border-slate-700">
+            <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l-2 border-gray-200 pl-3 dark:border-gray-700">
               <Link
                 to="/portal/settings"
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-100"
                 onClick={onClose}
               >
                 <User className="h-4 w-4" />
@@ -348,7 +351,7 @@ export default function PortalSidebar({
               </Link>
               <Link
                 to="/portal/settings"
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-100"
                 onClick={onClose}
               >
                 <Bell className="h-4 w-4" />
@@ -363,18 +366,18 @@ export default function PortalSidebar({
         <button
           type="button"
           onClick={onCollapse}
-          className="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full border-2 border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800"
+          className="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full border-2 border-gray-200 bg-white dark:border-gray-700 dark:bg-neutral-950"
           aria-label="Collapse sidebar"
         >
-          <ChevronLeft className="h-3.5 w-3.5 text-slate-500" />
+          <ChevronLeft className="h-3.5 w-3.5 text-gray-500" />
         </button>
       )}
     </>
   )
 
   const baseClasses = cn(
-    'portal-workspace-sidebar flex flex-col border-r-2 border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900',
-    collapsed ? 'w-0 min-w-0 overflow-hidden' : 'w-[260px] min-w-[260px]',
+    'portal-workspace-sidebar relative flex min-h-0 flex-col border-r-2 border-gray-200 bg-white dark:border-gray-800 dark:bg-black',
+    collapsed ? 'w-0 min-w-0 overflow-hidden' : 'w-[260px] min-w-[260px] overflow-y-auto overflow-x-hidden',
     isOverlay && 'fixed inset-y-0 left-0 z-50 w-[260px]'
   )
 
@@ -384,3 +387,4 @@ export default function PortalSidebar({
     </aside>
   )
 }
+

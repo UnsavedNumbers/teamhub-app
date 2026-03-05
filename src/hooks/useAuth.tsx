@@ -30,7 +30,7 @@ import { debug } from '../lib/debug'
 import { captureEvent, identifyUser, resetAnalytics } from '../lib/analytics/analytics'
 
 // Role types - now per organization (must match OrganizationContext.OrgMemberRole)
-type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff' | 'athlete'
+type OrgMemberRole = 'parent' | 'guardian' | 'coach' | 'org_admin' | 'staff' | 'athlete' | 'fan'
 type LegacyUserRole = 'parent' | 'coach' | 'admin'
 
 interface UserProfile {
@@ -102,7 +102,13 @@ function readFakeAuthState(): FakeAuthState | null {
     const roles = Array.isArray(parsed.roles)
       ? parsed.roles.filter(
           (role): role is OrgMemberRole =>
-            role === 'parent' || role === 'coach' || role === 'org_admin' || role === 'staff' || role === 'athlete',
+            role === 'parent' ||
+            role === 'guardian' ||
+            role === 'coach' ||
+            role === 'org_admin' ||
+            role === 'staff' ||
+            role === 'athlete' ||
+            role === 'fan',
         )
       : []
 
@@ -348,7 +354,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const roles = Array.isArray(o.roles)
                 ? o.roles.filter(
                   (r: unknown): r is OrgMemberRole =>
-                    r === 'parent' || r === 'coach' || r === 'org_admin' || r === 'staff' || r === 'athlete'
+                    r === 'parent' || r === 'guardian' || r === 'coach' || r === 'org_admin' || r === 'staff' || r === 'athlete' || r === 'fan'
                 )
                 : []
 
@@ -582,6 +588,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setOrganizations(organizations)
         }
         setLoading(false)
+        return () => {
+          mountedRef.current = false
+        }
       } else {
         // No fake auth state, but check for real Supabase session (from demo entry flow)
         clearFakeAuthState()
@@ -632,7 +641,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               roles: Array.isArray(org.roles)
                 ? org.roles.filter(
                     (r: unknown): r is OrgMemberRole =>
-                      r === 'parent' || r === 'coach' || r === 'org_admin' || r === 'staff' || r === 'athlete'
+                      r === 'parent' || r === 'guardian' || r === 'coach' || r === 'org_admin' || r === 'staff' || r === 'athlete' || r === 'fan'
                   )
                 : [],
             }))
@@ -672,6 +681,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mountedRef.current) return
+
+      if (USE_FAKE_DATA) {
+        const persistedFakeAuth = readFakeAuthState()
+        if (persistedFakeAuth && event !== 'SIGNED_OUT') {
+          debug.flow('Auth', 'Ignoring Supabase auth event because fake auth is authoritative', {
+            event,
+            persistedEmail: persistedFakeAuth.email,
+            eventUserId: session?.user?.id ?? null,
+            currentUserId: latestUserRef.current?.id ?? null,
+            ...getAuthRouteContext(),
+          })
+          return
+        }
+      }
 
       const currentUser = latestUserRef.current
       const currentProfile = latestProfileRef.current
@@ -752,15 +775,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // #region agent log
       if (event === 'SIGNED_IN' && session?.user) {
         const alreadyLoaded = currentProfile && currentProfile.id === session.user.id
-        fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7451fa'},body:JSON.stringify({sessionId:'7451fa',location:'useAuth.tsx:751',message:'SIGNED_IN event - checking if should skip state updates',data:{event,alreadyLoaded,currentUserId:currentUser?.id,newUserId:session.user.id,currentSessionExists:!!latestUserRef.current?.id},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
         // Skip setSession/setUser if user already loaded — prevents unnecessary re-renders
         // that cause form state loss. Session token refresh happens in Supabase client.
         if (alreadyLoaded) {
-          fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7451fa'},body:JSON.stringify({sessionId:'7451fa',location:'useAuth.tsx:755',message:'Skipping setSession/setUser - already loaded',data:{userId:session.user.id},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
         } else {
           setSession(session)
           setUser(session.user)
-          fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7451fa'},body:JSON.stringify({sessionId:'7451fa',location:'useAuth.tsx:758',message:'Calling setSession/setUser - not loaded',data:{userId:session.user.id},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
         }
       } else {
         setSession(session)
@@ -1095,6 +1115,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } else {
             clearStoredDemoCode()
             refreshSession()
+          }
+          try {
+            await supabase.auth.signOut()
+          } catch (err) {
+            debug.error('Auth', 'Underlying Supabase signOut failed in demo mode', {
+              userId: user?.id,
+              error: err,
+            })
           }
           clearFakeAuthState()
           setUser(null)

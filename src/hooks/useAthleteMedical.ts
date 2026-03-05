@@ -10,9 +10,10 @@ import { useIsMounted } from './useIsMounted'
 import {
     getAthleteMedical,
     upsertAthleteMedical,
-    canViewAthleteMedical,
 } from '../data/services/athleteMedicalService'
 import type { AthleteMedicalPrivate, EmergencyContact } from '../types/athleteSportProfiles'
+import { getAthleteSensitiveAccess } from '../data/services/sensitiveAccessService'
+import { canAccessSensitiveData } from '../utils/sensitiveAccess'
 
 interface UseAthleteMedicalResult {
     medical: AthleteMedicalPrivate | null
@@ -20,6 +21,7 @@ interface UseAthleteMedicalResult {
     error: Error | null
     updating: boolean
     hasPermission: boolean
+    canUpdate: boolean
     updateMedical: (
         medicalNotes: string | null,
         allergies: string | null,
@@ -41,7 +43,8 @@ export function useAthleteMedical(athleteId: string | null): UseAthleteMedicalRe
     const [loading, setLoading] = useState(true)
     const [updating, setUpdating] = useState(false)
     const [error, setError] = useState<Error | null>(null)
-    const [hasPermission, setHasPermission] = useState(true)
+    const [hasPermission, setHasPermission] = useState(false)
+    const [canUpdate, setCanUpdate] = useState(false)
     const [trigger, setTrigger] = useState(0)
 
     const abortControllerRef = useRef<AbortController | null>(null)
@@ -57,7 +60,8 @@ export function useAthleteMedical(athleteId: string | null): UseAthleteMedicalRe
                 setLoading(false)
                 setMedical(null)
                 setError(null)
-                setHasPermission(true)
+                setHasPermission(false)
+                setCanUpdate(false)
             }
             return
         }
@@ -76,13 +80,15 @@ export function useAthleteMedical(athleteId: string | null): UseAthleteMedicalRe
 
         const loadMedical = async () => {
             try {
-                // Check permission first
-                const permission = await canViewAthleteMedical(athleteId)
+                const { data: access } = await getAthleteSensitiveAccess(athleteId)
+                const permission = canAccessSensitiveData(access, 'medical', 'read')
+                const updatePermission = canAccessSensitiveData(access, 'medical', 'update')
 
                 if (controller.signal.aborted) return
                 if (!isMounted.current) return
 
                 setHasPermission(permission)
+                setCanUpdate(updatePermission)
 
                 if (!permission) {
                     setMedical(null)
@@ -116,6 +122,8 @@ export function useAthleteMedical(athleteId: string | null): UseAthleteMedicalRe
                 const error = err instanceof Error ? err : new Error('Failed to load medical data')
                 setError(error)
                 setMedical(null)
+                setHasPermission(false)
+                setCanUpdate(false)
             } finally {
                 if (controller.signal.aborted) return
                 if (!isMounted.current) return
@@ -143,7 +151,7 @@ export function useAthleteMedical(athleteId: string | null): UseAthleteMedicalRe
             return false
         }
 
-        if (!hasPermission) {
+        if (!hasPermission || !canUpdate) {
             console.error('[useAthleteMedical] Cannot update: no permission')
             setError(new Error('You do not have permission to update medical data for this athlete'))
             return false
@@ -212,7 +220,7 @@ export function useAthleteMedical(athleteId: string | null): UseAthleteMedicalRe
                 setUpdating(false)
             }
         }
-    }, [athleteId, medical, hasPermission, isMounted])
+    }, [athleteId, medical, hasPermission, canUpdate, isMounted])
 
     return {
         medical,
@@ -220,6 +228,7 @@ export function useAthleteMedical(athleteId: string | null): UseAthleteMedicalRe
         error,
         updating,
         hasPermission,
+        canUpdate,
         updateMedical,
         refetch,
     }

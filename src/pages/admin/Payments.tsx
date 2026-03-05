@@ -17,7 +17,10 @@ import {
   type ColumnConfig
 } from '../../components/admin'
 import { FeatureGatedButton } from '../../components/FeatureGatedButton'
+import { TopLevelStats } from '../../components/common/TopLevelStats'
 import { cn } from '../../utils/cn'
+import { hasAnyRole } from '../../utils/roleHelpers'
+import { Navigate } from 'react-router-dom'
 import '../../styles/orgAdmin.css'
 
 interface PaymentDisplay {
@@ -29,20 +32,6 @@ interface PaymentDisplay {
   remaining_display: string
   status: 'unpaid' | 'partial' | 'paid' | 'waived' | 'overdue'
   created_at: string
-}
-
-function StatCard({ label, value, icon }: { label: string; value: string; icon: string }) {
-  return (
-    <Card>
-      <div className={cn('oa-flex', 'oa-items-center', 'oa-justify-between', 'oa-gap-3')}>
-        <div>
-          <div className="oa-caption oa-text-muted">{label}</div>
-          <div className="oa-h2">{value}</div>
-        </div>
-        <span className="material-symbols-outlined oa-text-muted">{icon}</span>
-      </div>
-    </Card>
-  )
 }
 
 export default function Payments() {
@@ -68,9 +57,15 @@ export default function Payments() {
   const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
   const t = useT()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
   
   // Extract primitive values to avoid infinite loops in useEffect dependencies
   const orgId = context.orgId
+
+  // Coaches cannot access payments page - redirect to dashboard
+  if (!isOrgAdmin) {
+    return <Navigate to={getLink(RouteKeys.ADMIN_DASHBOARD)} replace />
+  }
 
   const fetchPayments = useCallback(async () => {
     if (!isReady) return
@@ -372,7 +367,7 @@ export default function Payments() {
             <div style={{
               position: 'absolute',
               inset: 0,
-              background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.8) 100%)',
+              background: 'rgba(0, 0, 0, 0.76)',
             }} />
             
             {/* All Content on top of hero */}
@@ -666,18 +661,14 @@ export default function Payments() {
         </Card>
       )}
 
-      <div className={cn('oa-grid', 'oa-grid-2', 'oa-gap-6', 'oa-mb-8')}>
-        <StatCard 
-          label="COLLECTED" 
-          value={`$${stats.collected.toLocaleString()}`}
-          icon="check_circle"
-        />
-        <StatCard 
-          label="OUTSTANDING" 
-          value={`$${stats.outstanding.toLocaleString()}`}
-          icon="error"
-        />
-      </div>
+      <TopLevelStats
+        className="oa-mb-8"
+        ariaLabel="Payments summary metrics"
+        items={[
+          { id: 'collected', label: 'Collected', value: `$${stats.collected.toLocaleString()}`, icon: 'check_circle', tone: 'success' },
+          { id: 'outstanding', label: 'Outstanding', value: `$${stats.outstanding.toLocaleString()}`, icon: 'error', tone: stats.outstanding > 0 ? 'warning' : 'default' },
+        ]}
+      />
 
       <div className={cn('oa-flex', 'oa-gap-2', 'oa-mb-6', 'oa-mt-2', 'oa-chip-scroll-row')}>
         {(['all', 'unpaid', 'partial', 'paid'] as const).map((f) => (

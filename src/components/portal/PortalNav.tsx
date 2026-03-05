@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import MegaMenu from '../common/MegaMenu'
 import ThemeToggle from './ThemeToggle'
@@ -17,6 +17,7 @@ import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
 import { athleteNavSections } from '../../utils/routes/navigation'
 import { TeamSwitcher } from './TeamSwitcher'
 import { useCoachTeamSelection } from '../../hooks/useCoachTeamSelection'
+import PwaInstallCta from '../pwa/PwaInstallCta'
 
 // ============================================================================
 // ORGANIZATION ADMIN MENU STRUCTURE
@@ -180,7 +181,9 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
           items: [
             { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', path: getLink('portal.tryouts'), description: 'Tryout sessions' },
             { routeKey: 'portal.travel', text: 'Travel', icon: 'flight', path: getLink('portal.travel'), description: 'Trip details' },
-            { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: getLink('portal.messages'), description: 'Communications' },
+            { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: getLink('portal.messages'), description: 'Direct user-to-user messages' },
+            { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', path: getLink('portal.huddles'), description: 'Team and organization chat channels' },
+            { routeKey: 'portal.messages', text: 'Announcements', icon: 'campaign', path: getLink('portal.announcements'), description: 'Team announcements and updates' },
             { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', path: getLink('portal.photos'), description: 'Team photos' },
             { routeKey: 'portal.videos', text: 'Videos', icon: 'smart_display', path: getLink('portal.videos'), description: 'Video library & feedback' },
             { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', path: getLink('portal.settings'), description: 'Preferences' },
@@ -250,7 +253,9 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         {
           label: 'Messages',
           items: [
-            { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', path: getLink('portal.messages'), description: 'Team chat and announcements' },
+            { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', path: getLink('portal.messages'), description: 'Direct user-to-user messages' },
+            { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', path: getLink('portal.huddles'), description: 'Team and organization chat channels' },
+            { routeKey: 'portal.messages', text: 'Announcements', icon: 'campaign', path: getLink('portal.announcements'), description: 'Team announcements and updates' },
           ],
         },
       ],
@@ -312,6 +317,16 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
   }, [forceRole, isOrgAdmin, hasAnyRole])
 
   const currentRole = determineRole()
+  const registrationHubPath = getLink('portal.registrationHub')
+
+  const resolvePathForRouteKey = useCallback((routeKey?: string): string | undefined => {
+    if (!routeKey) return undefined
+    try {
+      return getLink(routeKey as any)
+    } catch {
+      return undefined
+    }
+  }, [])
 
   // Select navigation based on role
   const rawNavSections = currentRole === 'org_admin' 
@@ -322,9 +337,56 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
         ? athleteNavSections
         : parentNavSections
 
+  const navSectionsWithRegistration = useMemo(() => {
+    const sectionsWithPaths = rawNavSections.map((section) => ({
+      ...section,
+      groups: section.groups.map((group) => ({
+        ...group,
+        items: group.items.map((item) => ({
+          ...item,
+          path: (item as any).path ?? resolvePathForRouteKey(item.routeKey),
+        })),
+      })),
+    }))
+
+    const hasRegistrationHub = sectionsWithPaths.some((section) =>
+      section.groups.some((group) =>
+        group.items.some((item) =>
+          (item as any).path === registrationHubPath
+        )
+      )
+    )
+
+    if (hasRegistrationHub) {
+      return sectionsWithPaths
+    }
+
+    return [
+      ...sectionsWithPaths,
+      {
+        label: 'Portal Registration Hub',
+        route: registrationHubPath,
+        groups: [
+          {
+            label: '',
+            items: [
+              {
+                routeKey: 'portal.registrationHub',
+                text: 'Portal Registration Hub',
+                icon: 'app_registration',
+                path: registrationHubPath,
+                description: 'Open your role-based portal registration workspace',
+              },
+            ],
+          },
+        ],
+      },
+    ]
+  }, [rawNavSections, registrationHubPath, resolvePathForRouteKey])
+
   // Apply feature gate filtering - wait for org context to avoid warnings
   const { filteredSections: navSections } = useFilteredNavigation(
-    isOrgLoading ? [] : rawNavSections
+    isOrgLoading ? [] : navSectionsWithRegistration
   )
 
   // Logo based on theme
@@ -559,13 +621,18 @@ export default function PortalNav({ forceRole }: PortalNavProps) {
 
       {/* Right section */}
       <div className="gn-right">
+        <PwaInstallCta
+          compactOnMobile={false}
+          buttonClassName="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-neutral-900 dark:text-gray-200 dark:hover:bg-neutral-800"
+        />
+
         {/* Demo Mode Badge */}
         <DemoModeBadge />
 
         {/* Role indicator */}
         {currentOrganization && (
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/50">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800/50">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
               {currentOrganization.name}
             </span>
             <span className="text-xs font-semibold text-primary-600 dark:text-primary-400">
@@ -628,3 +695,4 @@ function CoachTeamSwitcher({ context: _context }: { context: any }) {
     />
   )
 }
+

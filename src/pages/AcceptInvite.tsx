@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+﻿import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -11,7 +11,7 @@ import { showSuccess, showError } from '../utils/toast'
 // Minimal layout for unauthenticated users - no portal navigation
 function MinimalLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-slate-100 antialiased relative">
+    <div className="min-h-screen bg-background-light dark:bg-background-dark font-impact text-gray-900 dark:text-gray-100 antialiased relative">
       {/* Background Field Markings (Grid) */}
       <div 
         className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1]"
@@ -22,7 +22,7 @@ function MinimalLayout({ children }: { children: React.ReactNode }) {
       />
       
       {/* Simple header with logo */}
-      <header className="py-6 px-6 border-b border-slate-200 dark:border-slate-700">
+      <header className="py-6 px-6 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-[1200px] mx-auto flex items-center">
           <span className="text-xl font-bold text-primary-600">YouthSports Team Hub</span>
         </div>
@@ -439,7 +439,7 @@ export default function AcceptInvite() {
               <p className="mb-4 text-red-600 dark:text-red-400">{error}</p>
               {error.includes('Login required') || error.includes('Email mismatch') ? (
                 <div className="space-y-2">
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                     You need to be logged in with the email address that received this invitation.
                   </p>
                   <Button 
@@ -503,12 +503,12 @@ export default function AcceptInvite() {
           ) : message ? (
             <div>
               <p className="mb-4 text-green-600 dark:text-green-400">{message}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Redirecting to dashboard...</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Redirecting to dashboard...</p>
             </div>
           ) : (
             <div>
               <p className="mb-6">Processing your invitation...</p>
-              {loading && <p className="text-sm text-slate-500 dark:text-slate-400">Please wait...</p>}
+              {loading && <p className="text-sm text-gray-500 dark:text-gray-400">Please wait...</p>}
             </div>
           )}
         </Card>
@@ -516,3 +516,4 @@ export default function AcceptInvite() {
     </Layout>
   )
 }
+

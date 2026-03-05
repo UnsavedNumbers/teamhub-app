@@ -751,15 +751,22 @@ export const fakeTeamMembers: FakeTeamMember[] = [
     { id: 'tm-009', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_ETHAN_WILLIAMS_ID, role: 'player', status: 'active', jersey_number: '3', position: 'Center', joined_at: getDateInCurrentYear(2, 12), created_at: getDateInCurrentYear(2, 12), updated_at: getDateInCurrentYear(2, 12) },
 
     { id: 'tm-010', team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_ISABELLA_RODRIGUEZ_ID, role: 'player', status: 'active', jersey_number: '17', position: 'Guard', joined_at: getDateInCurrentYear(2, 15), created_at: getDateInCurrentYear(2, 15), updated_at: getDateInCurrentYear(2, 15) },
+
+    // U14 Elite Soccer Team (for demo coach)
+    { id: 'tm-011', team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_EMMA_JOHNSON_ID, role: 'captain', status: 'active', jersey_number: '9', position: 'Forward', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
+    { id: 'tm-012', team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_OLIVIA_SMITH_ID, role: 'player', status: 'active', jersey_number: '11', position: 'Midfielder', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
+    { id: 'tm-013', team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, athlete_id: CHILD_MASON_RODRIGUEZ_ID, role: 'player', status: 'active', jersey_number: '6', position: 'Defender', joined_at: getDateInCurrentYear(2, 1), created_at: getDateInCurrentYear(2, 1), updated_at: getDateInCurrentYear(2, 1) },
 ]
 
 export const fakeCoachAssignments: FakeCoachAssignment[] = [
     { id: 'ca-001', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: COACH_ONLY_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 1) },
     { id: 'ca-002', team_id: TEAM_U12_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: COACH_ONLY_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 1) },
-    { id: 'ca-003', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: PARENT_COACH_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 10) },
-    { id: 'ca-004', team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_MARTINEZ_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 15) },
-    { id: 'ca-005', team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_THOMPSON_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 1) },
-    { id: 'ca-006', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_MARTINEZ_ID, role: 'assistant_coach', created_at: getDateInCurrentYear(2, 5) },
+    { id: 'ca-003', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: COACH_ONLY_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 5) }, // Demo coach gets basketball team too
+    { id: 'ca-004', team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: COACH_ONLY_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 8) }, // Demo coach gets elite team too
+    { id: 'ca-005', team_id: TEAM_U10_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: PARENT_COACH_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 10) },
+    { id: 'ca-006', team_id: TEAM_U12_BASKETBALL_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_MARTINEZ_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 15) },
+    { id: 'ca-007', team_id: TEAM_U14_SOCCER_ELITE_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_THOMPSON_ID, role: 'head_coach', created_at: getDateInCurrentYear(2, 1) },
+    { id: 'ca-008', team_id: TEAM_U10_SOCCER_ID, season_id: SEASON_SPRING_CURRENT_ID, user_id: USER_COACH_MARTINEZ_ID, role: 'assistant_coach', created_at: getDateInCurrentYear(2, 5) },
 ]
 
 // ============================================================================

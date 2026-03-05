@@ -61,12 +61,19 @@ export function RoleSelection() {
   // Helper functions for role titles and descriptions
   const getRoleTitle = useCallback((role: OrgMemberRole): string => {
     switch (role) {
+      case 'guardian':
       case 'parent':
         return t('portal.roleSelection.parentTitle')
       case 'coach':
         return t('portal.roleSelection.coachTitle')
       case 'org_admin':
         return t('portal.roleSelection.adminTitle')
+      case 'fan':
+        return 'Fan Portal'
+      case 'athlete':
+        return 'Athlete Portal'
+      case 'staff':
+        return 'Staff Portal'
       default:
         return role
     }
@@ -223,7 +230,7 @@ export function RoleSelection() {
     const role = selectedCard.substring(lastDashIndex + 1) as OrgMemberRole
     
     // Validate role
-    if (!['parent', 'coach', 'org_admin'].includes(role)) {
+    if (!['parent', 'guardian', 'coach', 'org_admin', 'staff', 'athlete', 'fan'].includes(role)) {
       setError(t('portal.roleSelection.errors.invalidRole'))
       return
     }
@@ -272,6 +279,8 @@ export function RoleSelection() {
       let destination: string
       if (role === 'org_admin' || role === 'coach') {
         destination = getLink(RouteKeys.ADMIN_DASHBOARD)
+      } else if (role === 'fan') {
+        destination = getLink(RouteKeys.FAN_HOME)
       } else {
         destination = getLink(RouteKeys.PORTAL_DASHBOARD)
       }
@@ -338,6 +347,9 @@ export function RoleSelection() {
         return '/images/roles/admin.png'
       case 'coach':
         return '/images/roles/coach.png'
+      case 'fan':
+        return '/fan_hero_background.png'
+      case 'guardian':
       case 'parent':
         return '/images/roles/guardian.png'
       default:
@@ -347,7 +359,8 @@ export function RoleSelection() {
 
   // Group by role type for display
   const groupedCards = {
-    parent: roleCards.filter(c => c.role === 'parent'),
+    parent: roleCards.filter(c => c.role === 'parent' || c.role === 'guardian'),
+    fan: roleCards.filter(c => c.role === 'fan'),
     coach: roleCards.filter(c => c.role === 'coach'),
     admin: roleCards.filter(c => c.role === 'org_admin'),
   }
@@ -490,7 +503,7 @@ export function RoleSelection() {
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-slate-900">
       {/* Header */}
-      <header className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-6 md:px-10 py-4">
+      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-solid border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-6 md:px-10 py-4">
         <div className="flex items-center gap-4">
           {/* Logo - same format as PortalNav */}
           <Link to="/portal/dashboard" className="flex items-center gap-3">
@@ -601,6 +614,79 @@ export function RoleSelection() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4">
                 {groupedCards.parent.map((card) => {
+                  const cardId = `${card.orgId}-${card.role}`
+                  const isSelected = selectedCard === cardId
+                  const bgImage = getRoleBackgroundImage(card.role)
+                  return (
+                    <div
+                      key={cardId}
+                      ref={(el) => {
+                        if (el) cardRefs.current.set(cardId, el)
+                        else cardRefs.current.delete(cardId)
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Select ${card.title} for ${card.orgName}`}
+                      aria-pressed={isSelected}
+                      onClick={() => handleCardClick(card)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleCardClick(card)
+                        }
+                      }}
+                      className={`cursor-pointer group relative flex flex-col gap-4 p-8 rounded-2xl transition-all overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                        isSelected
+                          ? 'shadow-[0_10px_30px_rgba(37,140,244,0.15)] bg-white dark:bg-slate-800 border-2 border-primary'
+                          : 'shadow-sm hover:-translate-y-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700'
+                      }`}
+                      style={{ boxSizing: 'border-box' }}
+                    >
+                      {isSelected && (
+                        <div className="absolute top-4 right-4 text-primary scale-125 z-20">
+                          <span className="material-symbols-outlined fill-1">check_circle</span>
+                        </div>
+                      )}
+                      <div className="relative z-10 flex items-center gap-4">
+                        <div className="h-20 w-20 sm:h-24 sm:w-24 flex-shrink-0 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600">
+                          <img
+                            src={orgVisualSettings[card.orgId]?.logoUrl || bgImage}
+                            alt={`${card.orgName} logo`}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              if (e.currentTarget.dataset.fallbackApplied === 'true') return
+                              e.currentTarget.dataset.fallbackApplied = 'true'
+                              e.currentTarget.src = bgImage
+                            }}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p
+                            className={`text-xl font-bold leading-normal break-words whitespace-normal ${orgVisualSettings[card.orgId]?.primaryColor ? '' : 'text-primary'}`}
+                            style={orgVisualSettings[card.orgId]?.primaryColor ? { color: orgVisualSettings[card.orgId].primaryColor! } : undefined}
+                          >
+                            {card.title}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Fan Section */}
+          {groupedCards.fan.length > 0 && (
+            <section>
+              <div className="flex items-center gap-4 mb-6">
+                <h3 className="text-slate-900 dark:text-white text-sm font-black tracking-widest uppercase px-6 py-2 bg-white dark:bg-slate-800 border-2 border-slate-900 dark:border-white rounded-full">
+                  {getRoleTitle('fan')}
+                </h3>
+                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4">
+                {groupedCards.fan.map((card) => {
                   const cardId = `${card.orgId}-${card.role}`
                   const isSelected = selectedCard === cardId
                   const bgImage = getRoleBackgroundImage(card.role)
@@ -815,7 +901,7 @@ export function RoleSelection() {
           <button
             onClick={handleEnter}
             disabled={!selectedCard || navigating || isOffline || USE_FAKE_DATA}
-            className={`flex min-w-[320px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 gap-3 text-lg font-black leading-normal tracking-widest uppercase transition-all ${
+            className={`flex w-full max-w-[320px] sm:min-w-[320px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-14 gap-3 text-lg font-black leading-normal tracking-widest uppercase transition-all ${
               selectedCard && !navigating && !isOffline && !USE_FAKE_DATA
                 ? 'bg-primary text-white hover:bg-primary/90 shadow-[0_8px_0_0_#1a6ec2] active:shadow-[0_2px_0_0_#1a6ec2] active:translate-y-[6px]'
                 : 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-500 cursor-not-allowed'

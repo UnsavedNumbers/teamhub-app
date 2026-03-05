@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { useLicense } from '../../hooks/useLicense'
@@ -17,6 +17,7 @@ import { createCheckoutSession, upgradeOrgLicense } from '../../api/billing'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { resolveFeatureFlag } from '../../utils/featureFlags'
 import { supabase } from '../../lib/supabase'
+import '../../styles/orgAdmin.css'
 
 export default function PlanSelection() {
   const navigate = useNavigate()

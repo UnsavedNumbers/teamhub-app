@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
 import { getOrganizationUsers } from '../../data/services/usersService'
 import { 
@@ -11,7 +12,7 @@ import {
   OrgDataTable,
   type ColumnConfig,
 } from '../../components/admin'
-import { mapDbRoleToFrontendRole } from '../../utils/roleHelpers'
+import { mapDbRoleToFrontendRole, hasAnyRole } from '../../utils/roleHelpers'
 import { formatDate } from '../../utils/dateFormatters'
 import '../../styles/orgAdmin.css'
 
@@ -34,9 +35,11 @@ export default function OrganizationUsers() {
 
 
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
   const t = useT()
   const location = useLocation()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
 
   const fetchUsers = useCallback(async () => {
     if (!isReady) return
@@ -145,9 +148,11 @@ export default function OrganizationUsers() {
         title={t('admin.users.title')}
         subtitle={t('admin.users.subtitle')} 
         actions={
-          <Button onClick={() => navigate('/admin/users/new')} variant="primary" icon="add" className="w-full sm:w-auto">
-            {t('admin.users.createSubtitle').replace('Add', 'Create').split(' ')[0] || 'Add'} User
-          </Button>
+          isOrgAdmin ? (
+            <Button onClick={() => navigate('/admin/users/new')} variant="primary" icon="add" className="w-full sm:w-auto">
+              {t('admin.users.createSubtitle').replace('Add', 'Create').split(' ')[0] || 'Add'} User
+            </Button>
+          ) : undefined
         }
       />
 

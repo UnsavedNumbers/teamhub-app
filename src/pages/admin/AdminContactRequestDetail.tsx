@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Admin Contact Request Detail Page
  *
  * Shows the full details of a single contact request from a guardian or athlete.
@@ -36,6 +36,7 @@ import {
   AdminLoadingSpinner,
 } from '../../components/admin'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 
 // ============================================================================
 // Helpers

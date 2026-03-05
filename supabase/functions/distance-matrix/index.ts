@@ -1,5 +1,4 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +11,16 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const internalToken = Deno.env.get('API_MANAGER_INTERNAL_TOKEN')
+    if (!supabaseUrl || !serviceRoleKey || !internalToken) {
+      return new Response(JSON.stringify({ error: 'API manager is not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     const url = new URL(req.url)
     const origins = url.searchParams.get('origins')
     const destinations = url.searchParams.get('destinations')
@@ -23,26 +32,46 @@ serve(async (req) => {
       })
     }
 
-    const apiKey = Deno.env.get('GOOGLE_DISTANCE_MATRIX_API_KEY') || Deno.env.get('GOOGLE_PLACES_API_KEY')
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'API key not configured' }), {
-        status: 500,
+    const departureTime = String(Math.floor(Date.now() / 1000))
+    const functionsBaseUrl = supabaseUrl.replace('/rest/v1', '')
+
+    const response = await fetch(`${functionsBaseUrl}/functions/v1/api`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify({
+        operation: 'travel.distanceMatrix',
+        input: {
+          origins,
+          destinations,
+          departureTime,
+          trafficModel: 'best_guess',
+          units: 'imperial',
+          mode: 'driving',
+          internalToken,
+        },
+      }),
+    })
+
+    const payload = await response.json().catch(() => null)
+    if (!response.ok || !payload?.ok) {
+      return new Response(JSON.stringify({ error: payload?.error?.message || 'API manager request failed' }), {
+        status: response.status || 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const departureTime = Math.floor(Date.now() / 1000)
-    const apiUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origins)}&destinations=${encodeURIComponent(destinations)}&departure_time=${departureTime}&traffic_model=best_guess&units=imperial&key=${apiKey}`
-
-    const response = await fetch(apiUrl)
-    const data = await response.json()
+    const data = payload?.data?.providerResponse ?? null
 
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

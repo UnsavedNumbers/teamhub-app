@@ -69,7 +69,7 @@ typings/
 .env
 .env.test
 .env.dev
-.env.demo
+#.env.demo
 .env*.backup
 
 # parcel-bundler cache (https://parceljs.org/)
@@ -135,6 +135,7 @@ artifacts/screenshots/
 public/demo-assets/videos/*.mp4
 public/demo-assets/videos/*.mov
 public/demo-assets/videos/*.webm
+public/demo-assets/*
 
 # Docs
 *xlsx

@@ -4,12 +4,15 @@
  * Displays fee assignments and payments for a specific team within the Team Detail page.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { getFeeAssignmentsForTeam } from '../../data/services/paymentsService'
 import { formatCurrency } from '../../data/services/paymentsService'
 import { Button, EmptyState } from '../platformAdmin'
+import { redactPaymentAmount } from '../../utils/dataRedaction'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import type { FakeFeeAssignment } from '../../data/fake/fakePayments'
 
 interface TeamPaymentsTabProps {
@@ -32,11 +35,20 @@ interface PaymentDisplay {
 export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabProps) {
   // All hooks must be called unconditionally at the top
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
   const [payments, setPayments] = useState<PaymentDisplay[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const isMountedRef = useRef(true)
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
+  
+  // Permission context for redaction
+  const permissionContext = useMemo(() => ({
+    org: currentOrganization,
+    userId: context.userId,
+    teamId,
+  }), [currentOrganization, context.userId, teamId])
 
   const handleViewAllPayments = useCallback(() => {
     navigate(`/admin/payments?teamId=${teamId}`)
@@ -91,9 +103,9 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
             id: assignment.id,
             athlete_name: athleteName,
             fee_title: assignment.fee?.title || 'Fee',
-            amount_due: formatCurrency(amountDue),
-            amount_paid: formatCurrency(amountPaid),
-            balance: formatCurrency(balance),
+            amount_due: isOrgAdmin ? formatCurrency(amountDue) : redactPaymentAmount(permissionContext, amountDue),
+            amount_paid: isOrgAdmin ? formatCurrency(amountPaid) : redactPaymentAmount(permissionContext, amountPaid),
+            balance: isOrgAdmin ? formatCurrency(balance) : redactPaymentAmount(permissionContext, balance),
             status,
             due_date: assignment.due_date || null,
           }
@@ -112,7 +124,7 @@ export function TeamPaymentsTab({ teamId, seasonId, teamName }: TeamPaymentsTabP
         setLoading(false)
       }
     }
-  }, [context, isReady, teamId, seasonId])
+  }, [context, isReady, teamId, seasonId, isOrgAdmin, permissionContext])
 
   useEffect(() => {
     isMountedRef.current = true

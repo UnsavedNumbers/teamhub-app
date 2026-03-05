@@ -36,6 +36,115 @@ interface DemoSwitchRoleResponse {
   message?: string
 }
 
+const DEMO_APP_URL_LOCAL = "http://localhost:5173"
+const DEMO_APP_URL_PROD = "https://demo.youthsports.team"
+const DEMO_AUTH_CALLBACK_PATH = "/portal/auth/callback"
+
+function normalizeOrigin(value: string | null): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  try {
+    const url = new URL(trimmed)
+    return url.origin.replace(/\/$/, "")
+  } catch {
+    return null
+  }
+}
+
+function inferOriginFromReferer(referer: string | null): string | null {
+  if (!referer) return null
+  try {
+    return new URL(referer).origin.replace(/\/$/, "")
+  } catch {
+    return null
+  }
+}
+
+function isLocalHostOrigin(origin: string): boolean {
+  try {
+    const host = new URL(origin).hostname.toLowerCase()
+    return host === "localhost" || host === "127.0.0.1" || host === "::1"
+  } catch {
+    return false
+  }
+}
+
+function isLocalRequestOrigin(req: Request): boolean {
+  const xAppOrigin = normalizeOrigin(req.headers.get("X-App-Origin"))
+  if (xAppOrigin) return isLocalHostOrigin(xAppOrigin)
+
+  const requestOrigin = normalizeOrigin(req.headers.get("Origin"))
+  if (requestOrigin) return isLocalHostOrigin(requestOrigin)
+
+  const refererOrigin = inferOriginFromReferer(req.headers.get("Referer"))
+  if (refererOrigin) return isLocalHostOrigin(refererOrigin)
+
+  return false
+}
+
+function resolveDemoSiteUrl(req: Request, supabaseUrl: string): string {
+  const xAppOrigin = normalizeOrigin(req.headers.get("X-App-Origin"))
+  const requestOrigin = normalizeOrigin(req.headers.get("Origin"))
+  const refererOrigin = inferOriginFromReferer(req.headers.get("Referer"))
+  const forwardedHost = req.headers.get("X-Forwarded-Host")?.trim()
+  const forwardedProto = req.headers.get("X-Forwarded-Proto")?.trim() || "https"
+  const hostHeader = req.headers.get("Host")?.trim()
+
+  const candidateFromHeaders = xAppOrigin || requestOrigin || refererOrigin
+  if (candidateFromHeaders) {
+    return candidateFromHeaders
+  }
+
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`.replace(/\/$/, "")
+  }
+
+  if (hostHeader) {
+    const proto = hostHeader.includes("localhost") || hostHeader.includes("127.0.0.1") ? "http" : "https"
+    return `${proto}://${hostHeader}`.replace(/\/$/, "")
+  }
+
+  const explicitDemoUrl = normalizeOrigin(Deno.env.get("DEMO_APP_URL") ?? null)
+  const fallbackEnvUrl = normalizeOrigin(Deno.env.get("SITE_URL") ?? Deno.env.get("APP_URL") ?? null)
+  const isLocalEnvironment = supabaseUrl.includes("localhost") || supabaseUrl.includes("127.0.0.1")
+
+  if (explicitDemoUrl) {
+    return explicitDemoUrl
+  }
+
+  if (fallbackEnvUrl) {
+    if (!isLocalEnvironment && isLocalHostOrigin(fallbackEnvUrl)) {
+      return DEMO_APP_URL_PROD
+    }
+    return fallbackEnvUrl
+  }
+
+  return isLocalEnvironment ? DEMO_APP_URL_LOCAL : DEMO_APP_URL_PROD
+}
+
+function sanitizeActionLink(actionLink: string, expectedSiteUrl: string): string {
+  try {
+    const linkUrl = new URL(actionLink)
+    const expectedOrigin = new URL(expectedSiteUrl).origin
+    if (linkUrl.origin !== expectedOrigin && linkUrl.pathname === DEMO_AUTH_CALLBACK_PATH) {
+      return new URL(linkUrl.pathname + linkUrl.search + linkUrl.hash, expectedOrigin).toString()
+    }
+
+    const redirectParam = linkUrl.searchParams.get("redirect_to")
+    if (!redirectParam) return actionLink
+
+    const redirectUrl = new URL(redirectParam)
+    if (redirectUrl.origin === expectedOrigin) return actionLink
+
+    const rewrittenRedirect = new URL(redirectUrl.pathname + redirectUrl.search + redirectUrl.hash, expectedOrigin)
+    linkUrl.searchParams.set("redirect_to", rewrittenRedirect.toString())
+    return linkUrl.toString()
+  } catch {
+    return actionLink
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -193,17 +302,19 @@ serve(async (req) => {
       }, 500)
     }
 
-    // Generate magic link for the new shared demo user
-    // Construct proper redirect URL - prefer SITE_URL, fallback to localhost for dev
-    let siteUrl = Deno.env.get("SITE_URL")
-    if (!siteUrl) {
-      // For local development, use localhost
-      // In production, SITE_URL should be set in Edge Function secrets
-      siteUrl = "http://localhost:5173"
+    // Generate magic link for the new shared demo user.
+    // Prefer current request origin/context and avoid localhost fallbacks in prod.
+    const isLocalEnvironment = supabaseUrl.includes("localhost") || supabaseUrl.includes("127.0.0.1")
+    let siteUrl = resolveDemoSiteUrl(req, supabaseUrl)
+    const localRequestOrigin = isLocalRequestOrigin(req)
+    if (!isLocalEnvironment && isLocalHostOrigin(siteUrl) && !localRequestOrigin) {
+      console.error("[demo-switch-role] Unsafe localhost redirect host resolved in non-local environment; forcing production demo host", {
+        resolvedSiteUrl: siteUrl,
+        localRequestOrigin,
+      })
+      siteUrl = DEMO_APP_URL_PROD
     }
-    // Ensure siteUrl doesn't end with a slash
-    siteUrl = siteUrl.replace(/\/$/, "")
-    const redirectTo = `${siteUrl}/portal/auth/callback?demo=true&role=${role}`
+    const redirectTo = `${siteUrl}${DEMO_AUTH_CALLBACK_PATH}?demo=true&role=${role}`
 
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "magiclink",
@@ -221,9 +332,46 @@ serve(async (req) => {
       }, 500)
     }
 
+    const rawActionLink = linkData.properties.action_link
+    const hashedToken = linkData.properties.hashed_token
+
+    // Verify OTP server-side to get session tokens directly.
+    // This bypasses the Supabase Auth redirect allowlist entirely.
+    let sessionTokens: { access_token: string; refresh_token: string } | null = null
+    try {
+      const { data: verifyData, error: verifyError } = await supabaseAdmin.auth.verifyOtp({
+        token_hash: hashedToken,
+        type: "magiclink",
+      })
+
+      if (!verifyError && verifyData?.session) {
+        sessionTokens = {
+          access_token: verifyData.session.access_token,
+          refresh_token: verifyData.session.refresh_token,
+        }
+        console.log("[demo-switch-role] OTP verified server-side, returning session tokens directly")
+      } else {
+        console.error("[demo-switch-role] OTP verification failed, falling back to action link", verifyError)
+      }
+    } catch (verifyErr) {
+      console.error("[demo-switch-role] OTP verification exception, falling back to action link", verifyErr)
+    }
+
+    // If server-side verification succeeded, return tokens directly
+    if (sessionTokens) {
+      return json(req, {
+        success: true,
+        access_token: sessionTokens.access_token,
+        refresh_token: sessionTokens.refresh_token,
+        message: "Role switched successfully",
+      }, 200)
+    }
+
+    // Fallback: return sanitized action link (browser redirect through Supabase)
+    const safeActionLink = sanitizeActionLink(rawActionLink, siteUrl)
     return json(req, {
       success: true,
-      redirect_url: linkData.properties.action_link,
+      redirect_url: safeActionLink,
       message: "Role switched successfully",
     }, 200)
 

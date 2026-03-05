@@ -9,6 +9,7 @@ import { useOrgAdminTheme } from '../hooks/useOrgAdminTheme'
 import { useOrganizationTheme } from '../hooks/useOrganizationTheme'
 import { useTheme } from '../hooks/useTheme'
 import { useT } from '../i18n/useI18n'
+import type { TranslationKey } from '../i18n'
 import { useSidebar } from '../contexts/SidebarContext'
 import { useScrollLock } from '@/hooks/useScrollLock'
 import { ADMIN_LAYOUT_MOBILE_NAV_QUERY } from '@/config/breakpoints'
@@ -17,6 +18,7 @@ import SidebarOrganizationSwitcher from '../components/admin/SidebarOrganization
 import MobileMenu from '../components/common/MobileMenu'
 import GlobalNav from '../components/common/GlobalNav'
 import { DemoGuideIntegration } from '../components/demo/DemoGuideIntegration'
+import { AppPage } from '../components/shared/AppPage'
 import type { NavSection } from '@/types/menu'
 import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
 import { useQuery } from '@tanstack/react-query'
@@ -80,6 +82,9 @@ export default function AdminLayout() {
   }, [])
 
   const hasOrg = !!currentOrganization?.id
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
+  const isCoach = hasAnyRole(currentOrganization, ['coach'])
+  const isStaff = hasAnyRole(currentOrganization, ['staff'])
   
   // Fetch parent_org_id for current org
   const { data: orgData } = useQuery({
@@ -136,8 +141,10 @@ export default function AdminLayout() {
         { routeKey: 'admin.levels.list', text: t('admin.navigation.organizationLevels'), icon: 'grade', path: getLink('admin.levels.list'), requiresOrg: true },
         { routeKey: 'admin.teams.list', text: t('admin.navigation.organizationTeams'), icon: 'groups', path: getLink('admin.teams.list'), requiresOrg: true },
         { routeKey: 'admin.seasons.list', text: t('admin.navigation.organizationSeasons'), icon: 'calendar_month', path: getLink('admin.seasons.list'), requiresOrg: true },
-        { routeKey: 'admin.organization.users', text: t('admin.navigation.organizationStaff'), icon: 'person', path: getPath(RouteKeys.ADMIN_ORGANIZATION_USERS), requiresOrg: true },
-        { routeKey: 'admin.organization.bulkInvite', text: t('admin.navigation.bulkInvites'), icon: 'upload', path: getLink(RouteKeys.ADMIN_ORGANIZATION_BULK_INVITE), requiresOrg: true },
+        ...(isOrgAdmin ? [
+          { routeKey: 'admin.organization.users', text: t('admin.navigation.organizationStaff'), icon: 'person', path: getPath(RouteKeys.ADMIN_ORGANIZATION_USERS), requiresOrg: true },
+          { routeKey: 'admin.organization.bulkInvite', text: t('admin.navigation.bulkInvites'), icon: 'upload', path: getLink(RouteKeys.ADMIN_ORGANIZATION_BULK_INVITE), requiresOrg: true },
+        ] : []),
         ...(isParentOrg ? [{ routeKey: 'admin.organization.subOrgs', text: 'Sub-Organizations', icon: 'apartment', path: getLink('admin.organization.subOrgs'), requiresOrg: false }] : []),
       ],
     },
@@ -148,8 +155,10 @@ export default function AdminLayout() {
         requiresOrg: true,
         children: [
             { routeKey: 'admin.athletes.list', text: t('admin.navigation.athletesList'), icon: 'child_care', path: getPath(RouteKeys.ADMIN_ATHLETES), requiresOrg: true },
-            { routeKey: 'admin.guardians.list', text: t('admin.navigation.guardians'), icon: 'home', path: getLink('admin.guardians.list'), requiresOrg: true },
-            { routeKey: 'admin.guardianRequests', text: t('admin.navigation.guardianRequests'), icon: 'person_add', path: getLink('admin.guardianRequests'), requiresOrg: true },
+        ...(isOrgAdmin ? [
+          { routeKey: 'admin.guardians.list', text: t('admin.navigation.guardians'), icon: 'home', path: getLink('admin.guardians.list'), requiresOrg: true },
+          { routeKey: 'admin.guardianRequests', text: t('admin.navigation.guardianRequests'), icon: 'person_add', path: getLink('admin.guardianRequests'), requiresOrg: true },
+        ] : []),
         ],
     },
     {
@@ -170,18 +179,24 @@ export default function AdminLayout() {
       path: getPath(RouteKeys.ADMIN_PAYMENTS),
       requiresOrg: true,
       children: [
-        { routeKey: 'admin.payments.list', text: t('admin.navigation.payments'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_PAYMENTS), requiresOrg: true },
+        ...(isOrgAdmin ? [{ routeKey: 'admin.payments.list', text: t('admin.navigation.payments'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_PAYMENTS), requiresOrg: true }] : []),
         { routeKey: 'admin.events.list', text: t('admin.navigation.events'), icon: 'event', path: getPath(RouteKeys.ADMIN_EVENTS), requiresOrg: true },
         { routeKey: 'admin.facilities.list', text: t('admin.facilities.title'), icon: 'location_city', path: getLink('admin.facilities.list'), requiresOrg: true },
         { routeKey: 'admin.attendance', text: t('admin.navigation.attendance'), icon: 'how_to_reg', path: getLink('admin.attendance'), requiresOrg: true },
         { routeKey: 'admin.notifications', text: t('admin.navigation.notifications'), icon: 'notifications', path: getLink('admin.notifications'), requiresOrg: true },
-        { routeKey: 'admin.contactRequests.list', text: t('admin.navigation.contactRequests'), icon: 'inbox', path: getLink('admin.contactRequests.list'), requiresOrg: true },
+        ...(isOrgAdmin ? [{ routeKey: 'admin.contactRequests.list', text: t('admin.navigation.contactRequests'), icon: 'inbox', path: getLink('admin.contactRequests.list'), requiresOrg: true }] : []),
+        { routeKey: isOrgAdmin ? 'admin.tryouts.list' : 'admin.tryouts.assigned', text: isOrgAdmin ? t('admin.navigation.tryouts' as TranslationKey) : t('admin.navigation.myTryouts' as TranslationKey), icon: 'emoji_events', path: isOrgAdmin ? getLink('admin.tryouts.list') : getLink('admin.tryouts.assigned'), requiresOrg: true },
+        ...(isOrgAdmin ? [{ routeKey: 'admin.tryouts.create', text: t('admin.navigation.createTryout' as TranslationKey), icon: 'add', path: getLink('admin.tryouts.create'), requiresOrg: true }] : []),
+        // Staff can access gate scanning
+        ...(isStaff && !isOrgAdmin ? [
+          { routeKey: 'admin.ticketingScanner', text: t('admin.navigation.gateEntry'), icon: 'qr_code_scanner', path: getLink('admin.ticketingScanner'), requiresOrg: true },
+        ] : []),
         { routeKey: 'admin.announcements.list', text: t('admin.navigation.announcements'), icon: 'campaign', path: getPath(RouteKeys.ADMIN_ANNOUNCEMENTS), requiresOrg: true },
         { routeKey: 'admin.travel.list', text: t('admin.navigation.travel'), icon: 'flight', path: getLink('admin.travel.list'), requiresOrg: true },
         { routeKey: 'admin.uniforms.list', text: t('admin.navigation.uniforms'), icon: 'checkroom', path: getPath(RouteKeys.ADMIN_UNIFORMS), requiresOrg: true },
       ],
     },
-    {
+    ...(isOrgAdmin ? [{
       label: t('admin.navigation.reporting'),
       icon: 'analytics',
       path: getLink('admin.reports.overview'),
@@ -193,7 +208,7 @@ export default function AdminLayout() {
         { routeKey: 'admin.reports.exports', text: t('admin.navigation.exportHistory'), icon: 'download', path: getLink('admin.reports.exports'), requiresOrg: true },
         { routeKey: 'admin.reports.schedules', text: t('admin.navigation.scheduledReports'), icon: 'schedule', path: getLink('admin.reports.schedules'), requiresOrg: true },
       ],
-    },
+    }] : []),
     {
       label: t('admin.navigation.photos'),
       icon: 'photo_library',
@@ -220,13 +235,13 @@ export default function AdminLayout() {
       path: getPath(RouteKeys.ADMIN_SETTINGS),
       requiresOrg: false,
       children: [
-        ...(isSubOrg ? [] : [{ routeKey: 'admin.organization.billing', text: t('admin.navigation.billing'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING), requiresOrg: false }]),
+        ...(isOrgAdmin && !isSubOrg ? [{ routeKey: 'admin.organization.billing', text: t('admin.navigation.billing'), icon: 'credit_card', path: getPath(RouteKeys.ADMIN_ORGANIZATION_BILLING), requiresOrg: false }] : []),
         { routeKey: 'admin.settings', text: t('admin.navigation.settings'), icon: 'settings', path: getPath(RouteKeys.ADMIN_SETTINGS), requiresOrg: false },
         { routeKey: 'admin.help', text: t('admin.navigation.helpSupport'), icon: 'help', path: getLink('admin.help'), requiresOrg: false },
         { routeKey: 'admin.contact', text: t('admin.navigation.contactSupport'), icon: 'mail', path: getLink('admin.contact'), requiresOrg: false },
       ],
     },
-  ], [t])
+  ], [t, isOrgAdmin, isCoach, isStaff, isParentOrg, isSubOrg])
 
   // Convert to NavigationSection format for feature gate filtering
   const navSections = useMemo(() => {
@@ -265,7 +280,7 @@ export default function AdminLayout() {
   // Convert filtered sections back to menu item format
   const menuItems = useMemo(() => {
     return filteredSections.map((section, index) => {
-      const originalItem = rawMenuItems[index]
+      const originalItem = rawMenuItems.find((item) => item.label === section.label) ?? rawMenuItems[index]
       if (!section.groups[0]?.items.length) return null
 
       const firstItem = section.groups[0].items[0]
@@ -331,7 +346,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="oa-root oa-app oa-theme-active">
+    <AppPage className="oa-root oa-app oa-theme-active">
       {/* Mobile header - shown when viewport ≤1023px (matches CSS) */}
       {showMobileNav && (
         <header className="oa-mobile-header">
@@ -552,7 +567,7 @@ export default function AdminLayout() {
       )}
 
       {/* Main */}
-      <div className="oa-main">
+      <div className="oa-main min-w-0">
         {/* Global Navigation Header - Hidden on paywall route */}
         {!isPaywallRoute && <GlobalNav variant="admin" />}
 
@@ -565,7 +580,7 @@ export default function AdminLayout() {
         )}
 
         {/* Content */}
-        <main className="oa-content" data-testid="app-shell">
+        <main className="oa-content min-w-0" data-testid="app-shell">
           <Outlet />
         </main>
       </div>
@@ -650,7 +665,7 @@ export default function AdminLayout() {
           </div>
         )
       })()}
-    </div>
+    </AppPage>
   )
 }
 

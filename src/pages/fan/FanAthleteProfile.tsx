@@ -10,9 +10,16 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { followOrg, unfollowOrg } from '../../data/services/fanService'
+import { followOrg, getAthleteProfile, unfollowOrg } from '../../data/services/fanService'
+import { USE_FAKE_DATA } from '../../data/config'
+import { getFakeTicketingEvents } from '../../data/fake/fakeTicketingEvents'
+import { getMockGalleriesForOrg, getMockPhotosForGallery } from '../../data/fake/mockGalleries'
+import { getOrganizationById } from '../../data/fake/fakeOrganizations'
+import { getChildById } from '../../data/fake/fakeUsers'
+import { getActiveTeamMembershipsForChild, getTeamWithDetails } from '../../data/fake/fakeTeams'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import { TopLevelStats } from '../../components/common/TopLevelStats'
 import AthleteAvatar from '../../components/portal/AthleteAvatar'
 import { useUserContext } from '../../hooks/useUserContext'
 import { showError, showSuccess } from '../../utils/toast'
@@ -36,8 +43,12 @@ interface AthleteProfile {
   org_id: string
   org_name: string
   org_slug?: string
+  org_logo_url?: string | null
   sport: string
-  privacy_level: 'public' | 'private' | 'followers_only'
+  sports: string[]
+  current_teams: string[]
+  quick_summary: string
+  privacy_level: 'public' | 'private' | 'followers_only' | 'unlisted'
   is_following: boolean
   follower_count: number
 }
@@ -47,7 +58,8 @@ import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycl
 export default function FanAthleteProfile() {
   useDebugLifecycle('FanAthleteProfile')
   
-  const { id } = useParams<{ id: string }>()
+  const { id, athleteId } = useParams<{ id?: string; athleteId?: string }>()
+  const resolvedAthleteId = athleteId || id
   const navigate = useNavigate()
   
   const { context } = useUserContext()
@@ -56,45 +68,146 @@ export default function FanAthleteProfile() {
   const [error, setError] = useState<string | null>(null)
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
+  const [selectedSportBadge, setSelectedSportBadge] = useState<string | null>(null)
   
   // Related content
-  const [upcomingEvents] = useState<any[]>([])
-  const [stats] = useState<any[]>([])
-  const [taggedPhotos] = useState<any[]>([])
-  const [achievements] = useState<any[]>([])
+  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([])
+  const [stats, setStats] = useState<any[]>([])
+  const [taggedPhotos, setTaggedPhotos] = useState<any[]>([])
+  const [achievements, setAchievements] = useState<any[]>([])
 
   useEffect(() => {
-    if (!id) {
+    if (!resolvedAthleteId) {
       setError('Athlete not found')
       setLoading(false)
       return
     }
 
     loadProfile()
-  }, [id])
+  }, [resolvedAthleteId])
 
   const loadProfile = async () => {
-    if (!id) return
+    if (!resolvedAthleteId) return
 
     setLoading(true)
     setError(null)
 
-    // In production: call getAthleteProfile(id)
-    // For now, simulate with placeholder
-    setTimeout(() => {
+    const { data, error: profileError } = await getAthleteProfile(resolvedAthleteId)
+
+    if (profileError || !data) {
       setProfile(null)
-      setError('Athlete not found')
+      setError(profileError?.message || 'Athlete not found')
       setLoading(false)
-    }, 500)
+      return
+    }
+
+    const child = USE_FAKE_DATA ? getChildById(resolvedAthleteId) : undefined
+    const membership = USE_FAKE_DATA ? getActiveTeamMembershipsForChild(resolvedAthleteId)[0] : undefined
+    const team = membership ? getTeamWithDetails(membership.team_id) : undefined
+    const org = team ? getOrganizationById(team.org_id) : undefined
+
+    const mappedProfile: AthleteProfile = {
+      id: data.id,
+      first_name: child?.first_name || data.name.split(' ')[0] || 'Athlete',
+      last_name: child?.last_name || data.name.split(' ').slice(1).join(' ') || '',
+      photo_url: child?.photo_url || data.logo_url,
+      cover_url: data.cover_url,
+      jersey_number: data.jersey_number || membership?.jersey_number || child?.jersey_number || undefined,
+      position: data.position || membership?.position || undefined,
+      height: child?.height_cm ? `${Math.round(child.height_cm / 2.54)} in` : undefined,
+      weight: child?.weight_kg ? `${Math.round(child.weight_kg * 2.20462)} lbs` : undefined,
+      graduation_year: child?.date_of_birth ? new Date(child.date_of_birth).getFullYear() + 18 : undefined,
+      bio: data.description || undefined,
+      team_id: team?.id || '',
+      team_name: team?.name || 'Team',
+      org_id: team?.org_id || '',
+      org_name: org?.name || data.parent_org_name || 'Organization',
+      org_slug: org?.slug,
+      org_logo_url: org?.logo_url || null,
+      sport: team?.sport?.name || data.position || 'Sports',
+      sports: Array.isArray((data as any).sports) ? ((data as any).sports as string[]).filter(Boolean) : (team?.sport?.name ? [team.sport.name] : []),
+      current_teams: Array.isArray((data as any).current_teams) ? ((data as any).current_teams as string[]).filter(Boolean) : (team?.name ? [team.name] : []),
+      quick_summary: (() => {
+        const sports = Array.isArray((data as any).sports) ? ((data as any).sports as string[]).filter(Boolean) : []
+        if (sports.length <= 1) {
+          const role = data.position ? ` • ${data.position}` : ''
+          const jersey = data.jersey_number ? ` • #${data.jersey_number}` : ''
+          return `${sports[0] || team?.sport?.name || 'Athlete'}${role}${jersey}`
+        }
+        return `${sports.length} sports • unified profile`
+      })(),
+      privacy_level: data.privacy_level === 'unlisted' ? 'followers_only' : data.privacy_level,
+      is_following: data.is_following,
+      follower_count: data.follower_count || 0,
+    }
+
+    setProfile(mappedProfile)
+    setIsFollowing(Boolean(data.is_following))
+
+    if (USE_FAKE_DATA && team) {
+      const now = Date.now()
+      const teamEvents = getFakeTicketingEvents(team.org_id, {
+        page: 1,
+        perPage: 60,
+        fanVisibleOnly: true,
+      }).data
+        .map((event) => ({
+          id: event.id,
+          title: event.title,
+          start_time: event.starts_at,
+          end_time: event.ends_at || event.starts_at,
+          location: [event.venue_name, event.venue_city, event.venue_state].filter(Boolean).join(', ') || null,
+          event_type: event.event_type,
+        }))
+        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+
+      const nextEvents = teamEvents.filter((event) => new Date(event.start_time).getTime() >= now).slice(0, 8)
+      setUpcomingEvents(nextEvents)
+
+      const photos = getMockGalleriesForOrg(team.org_id)
+        .filter((gallery) => gallery.fans_can_see)
+        .flatMap((gallery) => getMockPhotosForGallery(gallery.id))
+        .slice(0, 12)
+      setTaggedPhotos(photos)
+
+      setStats([
+        { label: 'Games Played', value: String(Math.max(1, Math.min(24, teamEvents.length))) },
+        { label: 'Upcoming Events', value: String(nextEvents.length) },
+        { label: 'Team', value: team.name },
+      ])
+
+      const recentAchievements = teamEvents
+        .filter((event) => new Date(event.start_time).getTime() < now)
+        .slice(-3)
+        .reverse()
+        .map((event, index) => ({
+          icon: index === 0 ? 'emoji_events' : 'military_tech',
+          title: index === 0 ? 'Game Day Recognition' : 'Strong Performance',
+          description: `Participated in ${event.title}`,
+          date: event.start_time,
+        }))
+      setAchievements(recentAchievements)
+    } else {
+      setUpcomingEvents([])
+      setTaggedPhotos([])
+      setStats([])
+      setAchievements([])
+    }
+
+    setLoading(false)
   }
 
   const handleFollowToggle = async () => {
     if (!profile) return
+    if (!profile.org_id) {
+      showError('Unable to update follow status for this athlete')
+      return
+    }
     
     setFollowLoading(true)
     
     if (isFollowing) {
-      const { error } = await unfollowOrg(profile.id)
+      const { error } = await unfollowOrg(profile.org_id)
       if (error) {
         showError('Failed to unfollow')
       } else {
@@ -102,7 +215,7 @@ export default function FanAthleteProfile() {
         showSuccess(`Unfollowed ${profile.first_name} ${profile.last_name}`)
       }
     } else {
-      const { error } = await followOrg(profile.id)
+      const { error } = await followOrg(profile.org_id)
       if (error) {
         showError('Failed to follow')
       } else {
@@ -139,12 +252,14 @@ export default function FanAthleteProfile() {
   }
 
   const fullName = `${profile.first_name} ${profile.last_name}`
+  const sportBadges = profile.sports.length > 0 ? profile.sports : (profile.sport ? [profile.sport] : [])
+  const currentTeamLabels = profile.current_teams.length > 0 ? profile.current_teams : (profile.team_name ? [profile.team_name] : [])
 
   return (
-    <>
+    <div className="fan-athlete-profile-page">
       {/* Back Button */}
       <button 
-        className="fan-back-btn"
+        className="fan-athlete-back-btn"
         onClick={() => navigate(-1)}
       >
         <span className="material-symbols-outlined">arrow_back</span>
@@ -152,7 +267,7 @@ export default function FanAthleteProfile() {
       </button>
 
       {/* Athlete Header */}
-      <div className="fan-entity-header fan-athlete-header">
+      <div className="fan-entity-header fan-athlete-header fan-athlete-hero-card">
         <div className="fan-entity-cover">
           {profile.cover_url ? (
             <img src={profile.cover_url} alt="" />
@@ -161,7 +276,7 @@ export default function FanAthleteProfile() {
           )}
         </div>
         
-        <div className="fan-entity-info">
+        <div className="fan-entity-info fan-athlete-hero-content">
           <div className="fan-athlete-photo-large">
             <AthleteAvatar
               athlete={{ id: profile.id, first_name: profile.first_name, last_name: profile.last_name, org_id: profile.org_id ?? context?.orgId, has_profile_photo: !!profile.photo_url, profile_photo_updated_at: null } as unknown as Athlete}
@@ -173,55 +288,94 @@ export default function FanAthleteProfile() {
             )}
           </div>
           
-          <div className="fan-entity-details">
+          <div className="fan-entity-details fan-athlete-identity">
             <h1 className="fan-entity-name">{fullName}</h1>
-            <div className="fan-athlete-team-info">
-              <button 
-                className="fan-entity-parent"
-                onClick={() => navigate(getLink(RouteKeys.FAN_TEAM_PROFILE, { id: profile.team_id }))}
-              >
-                <span className="material-symbols-outlined">groups</span>
-                {profile.team_name}
-              </button>
+            <div className="fan-athlete-team-info fan-athlete-location-row">
+              {profile.team_id && currentTeamLabels.length <= 1 ? (
+                <button
+                  className="fan-entity-parent"
+                  onClick={() => navigate(getLink(RouteKeys.FAN_TEAM_PROFILE, { teamId: profile.team_id }))}
+                >
+                  <span className="material-symbols-outlined">groups</span>
+                  {currentTeamLabels[0]}
+                </button>
+              ) : (
+                <span className="fan-entity-parent">
+                  <span className="material-symbols-outlined">groups</span>
+                  {currentTeamLabels.length > 1 ? `${currentTeamLabels.length} current teams` : 'No active team'}
+                </span>
+              )}
               <span className="fan-athlete-separator">•</span>
               <button 
                 className="fan-entity-parent"
-                onClick={() => profile.org_slug && navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { slug: profile.org_slug }))}
+                onClick={() => profile.org_slug && navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { orgId: profile.org_slug }))}
               >
+                {profile.org_logo_url ? (
+                  <img src={profile.org_logo_url} alt={profile.org_name} className="size-4 rounded-full object-cover" />
+                ) : (
+                  <span className="material-symbols-outlined">business</span>
+                )}
                 {profile.org_name}
               </button>
             </div>
-            <div className="fan-entity-tags">
-              {profile.sport && <span className="fan-entity-tag">{profile.sport}</span>}
+            <div className="fan-entity-tags fan-athlete-tags">
+              {sportBadges.map((sport) => (
+                <button
+                  key={sport}
+                  type="button"
+                  className={`fan-entity-tag ${selectedSportBadge === sport ? 'ring-2 ring-offset-1 ring-slate-700' : ''}`}
+                  onClick={() => setSelectedSportBadge((prev) => (prev === sport ? null : sport))}
+                  title={`Filter to ${sport}`}
+                >
+                  {sport}
+                </button>
+              ))}
               {profile.position && <span className="fan-entity-tag">{profile.position}</span>}
               {profile.graduation_year && <span className="fan-entity-tag">Class of {profile.graduation_year}</span>}
             </div>
-          </div>
-          
-          <button 
-            className={`fan-follow-btn ${isFollowing ? 'following' : ''}`}
-            onClick={handleFollowToggle}
-            disabled={followLoading}
-          >
-            {followLoading ? (
-              <LoadingSpinner size="small" />
-            ) : isFollowing ? (
-              <>
-                <span className="material-symbols-outlined">check</span>
-                Following
-              </>
-            ) : (
-              <>
-                <span className="material-symbols-outlined">add</span>
-                Follow
-              </>
+            <p className="fan-entity-description">{profile.quick_summary}</p>
+            {selectedSportBadge && (
+              <p className="fan-entity-description">Filtered sport: {selectedSportBadge}</p>
             )}
-          </button>
+            <div className="fan-athlete-action-row">
+              <button 
+                className={`fan-follow-btn fan-athlete-follow-btn ${isFollowing ? 'following' : 'not-following'}`}
+                onClick={handleFollowToggle}
+                disabled={followLoading}
+              >
+                {followLoading ? (
+                  <LoadingSpinner size="small" />
+                ) : isFollowing ? (
+                  <>
+                    <span className="material-symbols-outlined">check</span>
+                    Following
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined">add</span>
+                    Follow
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Quick Info */}
       <div className="fan-athlete-quick-info">
+        {sportBadges.length > 0 && (
+          <div className="fan-athlete-info-item">
+            <span className="fan-athlete-info-label">Sports</span>
+            <span className="fan-athlete-info-value">{sportBadges.length}</span>
+          </div>
+        )}
+        {currentTeamLabels.length > 0 && (
+          <div className="fan-athlete-info-item">
+            <span className="fan-athlete-info-label">Current Teams</span>
+            <span className="fan-athlete-info-value">{currentTeamLabels.length}</span>
+          </div>
+        )}
         {profile.height && (
           <div className="fan-athlete-info-item">
             <span className="fan-athlete-info-label">Height</span>
@@ -249,20 +403,15 @@ export default function FanAthleteProfile() {
       </div>
 
       {/* Stats */}
-      <div className="fan-entity-stats">
-        <div className="fan-entity-stat">
-          <span className="fan-entity-stat-value">{profile.follower_count || 0}</span>
-          <span className="fan-entity-stat-label">Followers</span>
-        </div>
-        <div className="fan-entity-stat">
-          <span className="fan-entity-stat-value">{taggedPhotos.length}</span>
-          <span className="fan-entity-stat-label">Photos</span>
-        </div>
-        <div className="fan-entity-stat">
-          <span className="fan-entity-stat-value">{achievements.length}</span>
-          <span className="fan-entity-stat-label">Achievements</span>
-        </div>
-      </div>
+      <TopLevelStats
+        className="fan-entity-stats"
+        ariaLabel="Athlete profile summary metrics"
+        items={[
+          { id: 'followers', label: 'Followers', value: profile.follower_count || 0 },
+          { id: 'photos', label: 'Photos', value: taggedPhotos.length },
+          { id: 'achievements', label: 'Achievements', value: achievements.length },
+        ]}
+      />
 
       {/* Bio Section */}
       {profile.bio && (
@@ -383,6 +532,6 @@ export default function FanAthleteProfile() {
           </div>
         )}
       </section>
-    </>
+    </div>
   )
 }

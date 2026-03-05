@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import {
   createCheckoutSession,
+  requestTicketWalletPass,
   resendTickets,
   validateTicketScan,
 } from '@/data/services/ticketingService'
@@ -176,5 +177,75 @@ describe('ticketingService integration', () => {
 
     expect(result.data).toBeNull()
     expect(result.error?.message).toBe('Invalid token')
+  })
+
+  test('returns permission error when wallet pass access is forbidden', async () => {
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: 'token-123' } },
+      error: null,
+    })
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      json: async () => ({ error: 'Access denied' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await requestTicketWalletPass({
+      ticket_id: 'ticket-1',
+      wallet_type: 'google',
+      event_title: 'State Final',
+      entry_code: 'ENTRY123',
+    })
+
+    expect(result.data).toBeNull()
+    expect(result.error?.message).toBe('You do not have access to this ticket')
+  })
+
+  test('falls back to local pass when wallet function is unavailable', async () => {
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: 'token-123' } },
+      error: null,
+    })
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({ error: 'Function not found' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await requestTicketWalletPass({
+      ticket_id: 'ticket-1',
+      wallet_type: 'apple',
+      event_title: 'State Final',
+      entry_code: 'ENTRY123',
+    })
+
+    expect(result.error).toBeNull()
+    expect(result.data?.is_fallback).toBe(true)
+    expect(result.data?.action).toBe('download')
+  })
+
+  test('falls back to local pass during network failures', async () => {
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: 'token-123' } },
+      error: null,
+    })
+
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await requestTicketWalletPass({
+      ticket_id: 'ticket-1',
+      wallet_type: 'google',
+      event_title: 'State Final',
+      entry_code: 'ENTRY123',
+    })
+
+    expect(result.error).toBeNull()
+    expect(result.data?.is_fallback).toBe(true)
+    expect(result.data?.action).toBe('open')
   })
 })

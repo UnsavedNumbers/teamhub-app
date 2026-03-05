@@ -56,6 +56,22 @@ export function mapActionToJobType(action: NotificationAction): NotificationJobT
       return 'payment_receipt'
     case 'fee_payment_failed':
       return 'event_reminder' // Use event_reminder for payment failures
+
+    // Tryouts
+    case 'tryout_registration_confirmed':
+      return 'registration_confirmation'
+    case 'tryout_payment_received':
+      return 'payment_receipt'
+    case 'tryout_waitlisted':
+    case 'tryout_promoted_from_waitlist':
+    case 'tryout_reminder_x_days':
+    case 'tryout_reminder_day_before':
+    case 'tryout_day_of_reminder':
+    case 'tryout_evaluation_due':
+      return 'event_reminder'
+    case 'tryout_results_published':
+    case 'tryout_evaluator_assigned':
+      return 'new_message'
     
     // Athletes
     case 'athlete_added_to_team':

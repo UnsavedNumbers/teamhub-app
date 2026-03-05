@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AthleteProfilePage - Parent/Guardian View
  * 
  * Comprehensive athlete profile management for parents/guardians.
@@ -13,6 +13,7 @@ import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import { debug } from '../lib/debug'
 import { getAthleteById } from '../data/services/familyService'
 import { getAthleteTeamHistory, getAthleteTeamMemberships, type AthleteTeamMembershipDisplay } from '../data/services/teamsService'
+import { debouncedUpsertSportFilterPreferenceV2, getUnifiedAthleteProfileV2 } from '../data/services/unifiedAthleteProfileV2Service'
 import { getDisplayName } from '../utils/athleteHelpers'
 import PortalLayout from '../components/portal/PortalLayout'
 import AthleteAvatar from '../components/portal/AthleteAvatar'
@@ -60,6 +61,12 @@ export default function AthleteProfilePage() {
   const [sportIdToCode, setSportIdToCode] = useState<Record<string, SportCode>>({})
   const [activeTeamSports, setActiveTeamSports] = useState<SportCode[]>([])
   const [customSportNames, setCustomSportNames] = useState<Record<string, string>>({})
+  const [sportPreferenceLoaded, setSportPreferenceLoaded] = useState(false)
+  const lastSportPreferenceWriteAtRef = useRef<string | null>(null)
+  const sportPreferenceContextKey = useMemo(
+    () => (athleteId ? `portal-athlete-profile:${context.orgId}:${athleteId}` : ''),
+    [athleteId, context.orgId]
+  )
 
   const refreshAthlete = async () => {
     if (!athleteId || !isReady) return
@@ -91,6 +98,11 @@ export default function AthleteProfilePage() {
       isMountedRef.current = false
     }
   }, [])
+
+  useEffect(() => {
+    setSportPreferenceLoaded(false)
+    lastSportPreferenceWriteAtRef.current = null
+  }, [athleteId, sportPreferenceContextKey])
 
   // Redirect away from medical tab if feature is disabled
   useEffect(() => {
@@ -271,6 +283,81 @@ export default function AthleteProfilePage() {
     setSelectedSport(selectedSportCodes[0] ?? null)
   }, [selectedSport, selectedSportCodes])
 
+  // Load persisted sport filter preference once sports are known.
+  useEffect(() => {
+    if (!isReady || !athleteId || selectedSportCodes.length === 0 || sportPreferenceLoaded || !sportPreferenceContextKey) {
+      return
+    }
+
+    let cancelled = false
+    const loadPreference = async () => {
+      const { data } = await getUnifiedAthleteProfileV2({
+        athlete_id: athleteId,
+        org_id: context.orgId,
+        role_scope: 'parent',
+        context_key: sportPreferenceContextKey,
+      })
+
+      if (cancelled) return
+
+      const preference = (data?.user_preference as Record<string, unknown> | undefined)?.sport_filter
+      if (typeof preference === 'string' && preference !== 'all' && selectedSportCodes.includes(preference as SportCode)) {
+        setSelectedSport(preference as SportCode)
+      }
+      setSportPreferenceLoaded(true)
+    }
+
+    void loadPreference()
+    return () => {
+      cancelled = true
+    }
+  }, [
+    athleteId,
+    context.orgId,
+    isReady,
+    selectedSportCodes,
+    sportPreferenceContextKey,
+    sportPreferenceLoaded,
+  ])
+
+  // Debounced preference persistence for multi-sport athletes.
+  useEffect(() => {
+    if (!isReady || !athleteId || !context.userId || !sportPreferenceLoaded || !sportPreferenceContextKey) {
+      return
+    }
+    if (selectedSportCodes.length <= 1 || !selectedSport) return
+
+    const idempotencyKey = `${sportPreferenceContextKey}:${selectedSport}`
+    void debouncedUpsertSportFilterPreferenceV2(
+      context.userId,
+      {
+        athlete_id: athleteId,
+        org_id: context.orgId,
+        role_scope: 'parent',
+        context_key: sportPreferenceContextKey,
+      },
+      selectedSport,
+      {
+        idempotencyKey,
+        clientUpdatedAt: lastSportPreferenceWriteAtRef.current,
+      }
+    ).then(({ data }) => {
+      const updatedAt = (data?.updated_at ?? null) as string | null
+      if (typeof updatedAt === 'string') {
+        lastSportPreferenceWriteAtRef.current = updatedAt
+      }
+    })
+  }, [
+    athleteId,
+    context.orgId,
+    context.userId,
+    isReady,
+    selectedSport,
+    selectedSportCodes.length,
+    sportPreferenceContextKey,
+    sportPreferenceLoaded,
+  ])
+
   if (loading) {
     return (
       <PortalLayout
@@ -281,7 +368,7 @@ export default function AthleteProfilePage() {
         ]}
       >
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
         </div>
       </PortalLayout>
     )
@@ -299,7 +386,7 @@ export default function AthleteProfilePage() {
         <Card className="text-center py-12">
           <Icon name="error" size="text-6xl" className="text-red-400 mb-4" />
           <CardTitle className="mb-2">Error loading athlete profile</CardTitle>
-          <p className="text-slate-500 dark:text-slate-400 mb-4">
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
             {error?.message || 'Athlete not found'}
           </p>
           <div className="flex gap-4 justify-center">
@@ -346,7 +433,7 @@ export default function AthleteProfilePage() {
           {/* Title */}
           <div className="flex-1">
             <PageTitle>{displayName}</PageTitle>
-            <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
+            <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide mt-2">
               Athlete Profile
             </p>
           </div>
@@ -363,62 +450,78 @@ export default function AthleteProfilePage() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 border-b border-slate-200 dark:border-slate-700">
-        <div className="flex gap-8">
+      <div className="mb-6">
+        <div
+          className="grid grid-cols-2 gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-900/40 sm:grid-cols-3 lg:grid-cols-5"
+          role="tablist"
+          aria-label="Athlete profile sections"
+        >
           <button
             onClick={() => setActiveTab('universal')}
-            className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
+            role="tab"
+            aria-selected={activeTab === 'universal'}
+            className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-center text-xs font-semibold leading-tight transition-colors sm:text-sm ${
               activeTab === 'universal'
-                ? 'border-[var(--org-btn-primary-bg, #137fec)] text-[var(--org-btn-primary-bg, #137fec)]'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                ? 'bg-white text-[var(--org-btn-primary-bg, #137fec)] shadow-sm dark:bg-gray-800'
+                : 'text-gray-600 hover:bg-white/80 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/70 dark:hover:text-gray-200'
             }`}
           >
-            <Icon name="person" size="text-sm" className="mr-2 inline-block" />
-            Basic Info
+            <Icon name="person" size="text-sm" className="shrink-0" />
+            <span className="min-w-0">Basic Info</span>
           </button>
-          <button            onClick={() => setActiveTab('physical')}
-            className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
+          <button
+            onClick={() => setActiveTab('physical')}
+            role="tab"
+            aria-selected={activeTab === 'physical'}
+            className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-center text-xs font-semibold leading-tight transition-colors sm:text-sm ${
               activeTab === 'physical'
-                ? 'border-[var(--org-btn-primary-bg, #137fec)] text-[var(--org-btn-primary-bg, #137fec)]'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                ? 'bg-white text-[var(--org-btn-primary-bg, #137fec)] shadow-sm dark:bg-gray-800'
+                : 'text-gray-600 hover:bg-white/80 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/70 dark:hover:text-gray-200'
             }`}
           >
-            <Icon name="fitness_center" size="text-sm" className="mr-2 inline-block" />
-            Physical Info
+            <Icon name="fitness_center" size="text-sm" className="shrink-0" />
+            <span className="min-w-0">Physical Info</span>
           </button>
-          <button            onClick={() => setActiveTab('sports')}
-            className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
+          <button
+            onClick={() => setActiveTab('sports')}
+            role="tab"
+            aria-selected={activeTab === 'sports'}
+            className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-center text-xs font-semibold leading-tight transition-colors sm:text-sm ${
               activeTab === 'sports'
-                ? 'border-[var(--org-btn-primary-bg, #137fec)] text-[var(--org-btn-primary-bg, #137fec)]'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                ? 'bg-white text-[var(--org-btn-primary-bg, #137fec)] shadow-sm dark:bg-gray-800'
+                : 'text-gray-600 hover:bg-white/80 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/70 dark:hover:text-gray-200'
             }`}
           >
-            <Icon name="sports" size="text-sm" className="mr-2 inline-block" />
-            Sport Profiles
+            <Icon name="sports" size="text-sm" className="shrink-0" />
+            <span className="min-w-0">Sport Profiles</span>
           </button>
           {medicalGate.allowed && !medicalGate.loading && (
             <button
               onClick={() => setActiveTab('medical')}
-              className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
+              role="tab"
+              aria-selected={activeTab === 'medical'}
+              className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-center text-xs font-semibold leading-tight transition-colors sm:text-sm ${
                 activeTab === 'medical'
-                  ? 'border-[var(--org-btn-primary-bg, #137fec)] text-[var(--org-btn-primary-bg, #137fec)]'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                  ? 'bg-white text-[var(--org-btn-primary-bg, #137fec)] shadow-sm dark:bg-gray-800'
+                  : 'text-gray-600 hover:bg-white/80 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/70 dark:hover:text-gray-200'
               }`}
             >
-              <Icon name="medical_services" size="text-sm" className="mr-2 inline-block" />
-              Medical Info
+              <Icon name="medical_services" size="text-sm" className="shrink-0" />
+              <span className="min-w-0">Medical Info</span>
             </button>
           )}
           <button
             onClick={() => setActiveTab('teams')}
-            className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest border-b-2 transition-colors ${
+            role="tab"
+            aria-selected={activeTab === 'teams'}
+            className={`inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-center text-xs font-semibold leading-tight transition-colors sm:text-sm ${
               activeTab === 'teams'
-                ? 'border-[var(--org-btn-primary-bg, #137fec)] text-[var(--org-btn-primary-bg, #137fec)]'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                ? 'bg-white text-[var(--org-btn-primary-bg, #137fec)] shadow-sm dark:bg-gray-800'
+                : 'text-gray-600 hover:bg-white/80 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-800/70 dark:hover:text-gray-200'
             }`}
           >
-            <Icon name="groups" size="text-sm" className="mr-2 inline-block" />
-            {t('portal.athleteProfile.tabs.teams' as any)}
+            <Icon name="groups" size="text-sm" className="shrink-0" />
+            <span className="min-w-0">{t('portal.athleteProfile.tabs.teams' as any)}</span>
           </button>
         </div>
       </div>
@@ -430,7 +533,7 @@ export default function AthleteProfilePage() {
             {/* Basic Information Card */}
             <Card className="p-6">
               <CardTitle className="mb-6">Basic Information</CardTitle>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 Core athlete information. Updates are saved immediately.
               </p>
               
@@ -447,7 +550,7 @@ export default function AthleteProfilePage() {
             {/* Sports Interests */}
             <Card className="p-6">
               <CardTitle className="mb-6">Sports Interests</CardTitle>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 Sports this athlete plays or is interested in playing.
               </p>
               
@@ -460,31 +563,31 @@ export default function AthleteProfilePage() {
             {/* Emergency Contact */}
             <Card className="p-6">
               <CardTitle className="mb-6">Emergency Contact</CardTitle>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 Emergency contact information for this athlete.
               </p>
               
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                     Contact Name
                   </label>
-                  <p className="text-sm text-slate-900 dark:text-white">
+                  <p className="text-sm text-gray-900 dark:text-white">
                     {athlete.emergency_contact_name || 'Not set'}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
                     Contact Phone
                   </label>
-                  <p className="text-sm text-slate-900 dark:text-white">
+                  <p className="text-sm text-gray-900 dark:text-white">
                     {athlete.emergency_contact_phone || 'Not set'}
                   </p>
                 </div>
               </div>
 
               {medicalGate.allowed && !medicalGate.loading && (
-                <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-700 mt-6">
+                <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700 mt-6">
                   <Button
                     variant="secondary"
                     onClick={() => setActiveTab('medical')}
@@ -499,34 +602,40 @@ export default function AthleteProfilePage() {
         )}
 
         {activeTab === 'physical' && (
-          <Card className="p-6">
-            <CardTitle className="mb-6">Physical Information</CardTitle>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-              Basic measurements and sizes for {athlete.first_name}
-            </p>
-            <UniversalFieldsForm
-              athlete={athlete}
-              onSave={(updatedAthlete) => setAthlete(updatedAthlete)}
-            />
-          </Card>
+          <div className="space-y-6">
+            <Card className="p-6">
+              <CardTitle className="mb-6">Physical Information</CardTitle>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                Basic measurements and sizes for {athlete.first_name}
+              </p>
+              <UniversalFieldsForm
+                athlete={athlete}
+                onSave={(updatedAthlete) => setAthlete(updatedAthlete)}
+              />
+            </Card>
+          </div>
         )}
 
         {activeTab === 'sports' && (
           <div className="space-y-6">
-            {/* Sport Selector */}
-            <Card className="p-6">
-              <CardTitle className="mb-4">Select Sport</CardTitle>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                Choose a sport to view and edit profile and equipment information
-              </p>
-              {selectedSportCodes.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-6 text-center">
-                  <Icon name="info" size="text-3xl" className="text-slate-400 mb-2" />
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+            {selectedSportCodes.length === 0 && (
+              <Card className="p-6">
+                <CardTitle className="mb-4">Sport Profiles</CardTitle>
+                <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center">
+                  <Icon name="info" size="text-3xl" className="text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     No sports selected yet. Add sports in <strong>Basic Info &gt; Sports Interests</strong> to enable sport-specific profiles.
                   </p>
                 </div>
-              ) : (
+              </Card>
+            )}
+
+            {selectedSportCodes.length > 1 && (
+              <Card className="p-6">
+                <CardTitle className="mb-4">Select Sport</CardTitle>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  Choose a sport to view and edit profile and equipment information.
+                </p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {selectedSportCodes.map((sport) => (
                     <button
@@ -535,7 +644,7 @@ export default function AthleteProfilePage() {
                       className={`p-4 rounded-lg border-2 transition-all ${
                         selectedSport === sport
                           ? 'border-[var(--org-btn-primary-bg, #137fec)] bg-[var(--org-btn-primary-bg, #137fec)]/10'
-                          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                       }`}
                     >
                       <Icon name="sports" size="text-2xl" className="mb-2" />
@@ -543,8 +652,8 @@ export default function AthleteProfilePage() {
                     </button>
                   ))}
                 </div>
-              )}
-            </Card>
+              </Card>
+            )}
 
             {/* Sport Profile Card */}
             {selectedSport && (
@@ -557,104 +666,109 @@ export default function AthleteProfilePage() {
         )}
 
         {activeTab === 'medical' && medicalGate.allowed && !medicalGate.loading && (
-          <Card className="p-6">
-            <CardTitle className="mb-2">Medical Information</CardTitle>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-              Confidential health information for {displayName}
-            </p>
-            <MedicalInfoForm
-              athleteId={athlete.id}
-              athleteName={displayName}
-            />
-          </Card>
+          <div className="space-y-6">
+            <Card className="p-6">
+              <CardTitle className="mb-6">Medical Information</CardTitle>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                Confidential health information for {displayName}
+              </p>
+              <MedicalInfoForm
+                athleteId={athlete.id}
+                athleteName={displayName}
+              />
+            </Card>
+          </div>
         )}
 
         {activeTab === 'teams' && (
-          <Card className="p-6">
-            <CardTitle className="mb-2">{t('portal.athleteProfile.teams.title' as any)}</CardTitle>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-              {t('portal.athleteProfile.teams.description' as any)}
-            </p>
-            {teamsLoading ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white" />
-              </div>
-            ) : teamMemberships.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center">
-                <Icon name="groups" size="text-4xl" className="text-slate-400 mb-4" />
-                <p className="font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  {t('portal.athleteProfile.teams.emptyTitle' as any)}
-                </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-                  {t('portal.athleteProfile.teams.emptyDescription' as any)}
-                </p>
-                <Button
-                  variant="secondary"
-                  className="mt-4"
-                  onClick={() => navigate('/portal/join')}
-                >
-                  <Icon name="group_add" size="text-sm" className="mr-2" />
-                  {t('portal.athleteProfile.teams.joinTeamCta' as any)}
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {teamMemberships.map((m) => (
-                  <div
-                    key={m.id}
-                    className="flex flex-wrap items-center gap-4 p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30"
+          <div className="space-y-6">
+            <Card className="p-6">
+              <CardTitle className="mb-6">{t('portal.athleteProfile.teams.title' as any)}</CardTitle>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                {t('portal.athleteProfile.teams.description' as any)}
+              </p>
+              {teamsLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white" />
+                </div>
+              ) : teamMemberships.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
+                  <Icon name="groups" size="text-4xl" className="text-gray-400 mb-4" />
+                  <p className="font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    {t('portal.athleteProfile.teams.emptyTitle' as any)}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto">
+                    {t('portal.athleteProfile.teams.emptyDescription' as any)}
+                  </p>
+                  <Button
+                    variant="secondary"
+                    className="mt-4"
+                    onClick={() => navigate('/portal/join')}
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-900 dark:text-white truncate">
-                        {m.team_name}
-                      </p>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-slate-500 dark:text-slate-400">
-                        <span>{t('portal.athleteProfile.teams.season' as import('../i18n').TranslationKey)}: {m.season_name}</span>
-                        {m.program_name && (
-                          <span>{t('portal.athleteProfile.teams.program' as import('../i18n').TranslationKey)}: {m.program_name}</span>
-                        )}
-                        {m.sport_name && (
-                          <span>{t('portal.athleteProfile.teams.sport' as import('../i18n').TranslationKey)}: {m.sport_name}</span>
-                        )}
+                    <Icon name="group_add" size="text-sm" className="mr-2" />
+                    {t('portal.athleteProfile.teams.joinTeamCta' as any)}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {teamMemberships.map((m) => (
+                    <div
+                      key={m.id}
+                      className="flex flex-wrap items-center gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 dark:text-white truncate">
+                          {m.team_name}
+                        </p>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
+                          <span>{t('portal.athleteProfile.teams.season' as import('../i18n').TranslationKey)}: {m.season_name}</span>
+                          {m.program_name && (
+                            <span>{t('portal.athleteProfile.teams.program' as import('../i18n').TranslationKey)}: {m.program_name}</span>
+                          )}
+                          {m.sport_name && (
+                            <span>{t('portal.athleteProfile.teams.sport' as import('../i18n').TranslationKey)}: {m.sport_name}</span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-400 dark:text-gray-500">
+                          {m.jersey_number && (
+                            <span>{t('portal.athleteProfile.teams.jerseyNumber' as import('../i18n').TranslationKey)}: {m.jersey_number}</span>
+                          )}
+                          {m.position && (
+                            <span>{t('portal.athleteProfile.teams.position' as import('../i18n').TranslationKey)}: {m.position}</span>
+                          )}
+                          {m.joined_at && (
+                            <span>
+                              {t('portal.athleteProfile.teams.joinedAt' as import('../i18n').TranslationKey)}: {new Date(m.joined_at).toLocaleDateString()}
+                            </span>
+                          )}
+                          <span>{t('portal.athleteProfile.teams.status' as import('../i18n').TranslationKey)}: {m.status}</span>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-slate-400 dark:text-slate-500">
-                        {m.jersey_number && (
-                          <span>{t('portal.athleteProfile.teams.jerseyNumber' as import('../i18n').TranslationKey)}: {m.jersey_number}</span>
-                        )}
-                        {m.position && (
-                          <span>{t('portal.athleteProfile.teams.position' as import('../i18n').TranslationKey)}: {m.position}</span>
-                        )}
-                        {m.joined_at && (
-                          <span>
-                            {t('portal.athleteProfile.teams.joinedAt' as import('../i18n').TranslationKey)}: {new Date(m.joined_at).toLocaleDateString()}
-                          </span>
-                        )}
-                        <span>{t('portal.athleteProfile.teams.status' as import('../i18n').TranslationKey)}: {m.status}</span>
+                      <div className="flex gap-4 flex-shrink-0">
+                        <Button
+                          variant="secondary"
+                          onClick={() => navigate('/portal/calendar')}
+                        >
+                          <Icon name="calendar_month" size="text-sm" className="mr-1" />
+                          {t('portal.athleteProfile.teams.viewSchedule' as import('../i18n').TranslationKey)}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => navigate('/portal/huddles')}
+                        >
+                          <Icon name="forum" size="text-sm" className="mr-1" />
+                          {t('portal.athleteProfile.teams.viewMessages' as import('../i18n').TranslationKey)}
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-2 flex-shrink-0">
-                      <Button
-                        variant="secondary"
-                        onClick={() => navigate('/portal/calendar')}
-                      >
-                        <Icon name="calendar_month" size="text-sm" className="mr-1" />
-                        {t('portal.athleteProfile.teams.viewSchedule' as import('../i18n').TranslationKey)}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        onClick={() => navigate('/portal/messages')}
-                      >
-                        <Icon name="forum" size="text-sm" className="mr-1" />
-                        {t('portal.athleteProfile.teams.viewMessages' as import('../i18n').TranslationKey)}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
         )}
       </div>
     </PortalLayout>
   )
 }
+

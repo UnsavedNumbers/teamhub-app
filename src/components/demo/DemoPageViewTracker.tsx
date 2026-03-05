@@ -55,8 +55,17 @@ function detectPageId(pathname: string): string | null {
     return 'portal-payments'
   }
   if (pathname.startsWith('/portal/uniforms')) return 'portal-uniforms'
+  if (pathname.startsWith('/portal/announcements')) {
+    if (pathname.match(/\/announcements\/[^/]+$/)) return 'portal-announcementDetail'
+    return 'portal-messages'
+  }
+  if (pathname.startsWith('/portal/huddles')) {
+    return 'portal-messages'
+  }
+  if (pathname.match(/^\/portal\/messages\/[^/]+$/)) {
+    return 'portal-announcementDetail'
+  }
   if (pathname.startsWith('/portal/messages')) {
-    if (pathname.match(/\/messages\/[^/]+$/)) return 'portal-announcementDetail'
     return 'portal-messages'
   }
   if (pathname.startsWith('/portal/following')) return 'portal-following'

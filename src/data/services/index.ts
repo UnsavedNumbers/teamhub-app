@@ -25,6 +25,10 @@ export * from './paymentsService'
 // Travel Services
 export * from './travelService'
 
+// Tryouts Services
+export * from './tryoutsService'
+export * from './tryoutsNotifications'
+
 // Message/Notification Services
 export * from './messagesService'
 

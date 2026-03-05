@@ -206,7 +206,7 @@ describe('notificationServiceCore Integration Tests', () => {
         body: 'You have a new message.',
         entityType: 'message',
         entityId: 'message-123',
-        linkUrl: '/portal/messages?team=team-123',
+        linkUrl: '/portal/huddles?team=team-123',
       })
 
       expect(result.success).toBe(true)
@@ -223,7 +223,7 @@ describe('notificationServiceCore Integration Tests', () => {
         body: 'You were mentioned in a message.',
         entityType: 'message',
         entityId: 'message-123',
-        linkUrl: '/portal/messages?team=team-123',
+        linkUrl: '/portal/huddles?team=team-123',
         presentation: 'info',
       })
 

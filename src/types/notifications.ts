@@ -4,12 +4,13 @@
  * the role/action mapping documented in notification_action_role_mapping.md.
  */
 
-export type NotificationRole = 'guardian' | 'parent' | 'coach' | 'org_admin' | 'team_manager' | 'athlete' | 'staff' | 'platform_admin'
+export type NotificationRole = 'guardian' | 'parent' | 'coach' | 'org_admin' | 'team_manager' | 'athlete' | 'staff' | 'platform_admin' | 'fan'
 export type NotificationPresentation = 'info' | 'warning' | 'urgent'
 export type NotificationEntityType =
   | 'event'
   | 'travel'
   | 'fee'
+  | 'tryout'
   | 'athlete'
   | 'announcement'
   | 'message'
@@ -51,6 +52,17 @@ export type NotificationAction =
   | 'payout_account_connected'
   | 'payout_account_issue'
   | 'payout_processed'
+  // Tryouts
+  | 'tryout_registration_confirmed'
+  | 'tryout_payment_received'
+  | 'tryout_waitlisted'
+  | 'tryout_promoted_from_waitlist'
+  | 'tryout_reminder_x_days'
+  | 'tryout_reminder_day_before'
+  | 'tryout_day_of_reminder'
+  | 'tryout_results_published'
+  | 'tryout_evaluator_assigned'
+  | 'tryout_evaluation_due'
   // Athletes & Guardians
   | 'athlete_created'
   | 'athlete_updated'
@@ -181,6 +193,17 @@ export const ACTION_ROLE_MAP: Record<NotificationAction, NotificationRole[]> = {
   payout_account_connected: ['org_admin'],
   payout_account_issue: ['org_admin'],
   payout_processed: ['org_admin'],
+  // Tryouts
+  tryout_registration_confirmed: ['guardian', 'org_admin'],
+  tryout_payment_received: ['guardian', 'org_admin'],
+  tryout_waitlisted: ['guardian', 'org_admin'],
+  tryout_promoted_from_waitlist: ['guardian', 'org_admin'],
+  tryout_reminder_x_days: ['guardian', 'org_admin', 'athlete'],
+  tryout_reminder_day_before: ['guardian', 'org_admin', 'athlete'],
+  tryout_day_of_reminder: ['guardian', 'org_admin', 'athlete'],
+  tryout_results_published: ['guardian', 'coach', 'org_admin', 'athlete'],
+  tryout_evaluator_assigned: ['coach', 'org_admin'],
+  tryout_evaluation_due: ['coach', 'org_admin'],
   // Athletes & Guardians
   athlete_created: ['org_admin'],
   athlete_updated: ['org_admin'],
@@ -247,6 +270,13 @@ export function defaultPresentationForAction(action: NotificationAction): Notifi
   if (action === 'announcement_urgent' || action === 'event_weather_alert' || action === 'travel_canceled') {
     return 'urgent'
   }
-  if (action === 'fee_overdue' || action === 'event_canceled') return 'warning'
+  if (
+    action === 'fee_overdue' ||
+    action === 'event_canceled' ||
+    action === 'tryout_waitlisted' ||
+    action === 'tryout_evaluation_due'
+  ) {
+    return 'warning'
+  }
   return 'info'
 }

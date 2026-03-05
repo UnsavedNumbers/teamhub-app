@@ -14,7 +14,9 @@ import { captureEvent } from '../../lib/analytics/analytics'
 import type { SupabaseExtended as Database } from '../../lib/supabase.extended.types'
 import { normalizeSupabaseResponse } from './responseHelpers'
 import { getAthleteSports } from './athleteSportsService'
+import { getAthleteSensitiveAccess } from './sensitiveAccessService'
 import { getTierLimit, isLimitExceeded } from './tierLimitsService'
+import { canAccessSensitiveData, type SensitiveAthleteAccess } from '../../utils/sensitiveAccess'
 import {
     fakeFamilies,
     fakeChildren,
@@ -27,7 +29,7 @@ import {
     type FakeFamilyMember,
 } from '../fake/fakeUsers'
 import { getChildrenForUserId, getFamiliesForUserId } from '../fake/relationships'
-import { getCoachTeamIds } from '../fake/userContext'
+import { getCoachTeamIds, getGuardianCanonicalUserId } from '../fake/userContext'
 import { getTeamMembersForSeason, getTeamById, getActiveTeamMembershipsForChild, SEASON_SPRING_CURRENT_ID } from '../fake/fakeTeams'
 import type {
     Family,
@@ -60,8 +62,9 @@ async function simulateDelay(): Promise<void> {
 }
 
 async function buildPermissions(context: UserContext): Promise<PermissionSet> {
-    const ownedChildIds = getChildrenForUserId(context.userId)
-    const ownedFamilyIds = getFamiliesForUserId(context.userId)
+    const guardianUserId = getGuardianCanonicalUserId(context)
+    const ownedChildIds = getChildrenForUserId(guardianUserId)
+    const ownedFamilyIds = getFamiliesForUserId(guardianUserId)
     const assignedTeamIds = context.roles.includes('coach')
         ? await getCoachTeamIds(context)
         : []
@@ -554,7 +557,8 @@ export async function updateAthlete(
         
         // Check access
         if (!permissions.canViewAllOrgData) {
-            const ownedChildIds = getChildrenForUserId(context.userId)
+            const guardianUserId = getGuardianCanonicalUserId(context)
+            const ownedChildIds = getChildrenForUserId(guardianUserId)
             if (!ownedChildIds.includes(athleteId)) {
                 return { data: null, error: new Error('Access denied') }
             }
@@ -723,7 +727,8 @@ export async function getAthletes(
                 console.groupEnd()
                 return { data: results, error: null }
             }
-            const results = getChildrenForUser(context.userId).map((c) => mapFakeChild(c, context.orgId))
+            const guardianUserId = getGuardianCanonicalUserId(context)
+            const results = getChildrenForUser(guardianUserId).map((c) => mapFakeChild(c, context.orgId))
             debug.perf.end('familyService.getAthletes')
             debug.data('FamilyService.getAthletes', 'Response (fake)', { athleteCount: results.length })
             console.groupEnd()
@@ -1156,7 +1161,8 @@ export async function searchAthletes(
  */
 export async function getAthleteById(
     context: UserContext,
-    athleteId: string
+    athleteId: string,
+    sensitiveAccess?: SensitiveAthleteAccess | null
 ): Promise<{ data: Child | null; error: Error | null }> {
     console.groupCollapsed(`%cgetAthleteById: ${athleteId}`, 'color: #666; font-weight: bold;');
     debug.data('FamilyService.getAthleteById', 'Request', { athleteId, orgId: context.orgId })
@@ -1177,8 +1183,30 @@ export async function getAthleteById(
             
             // Check access
             if (!permissions.canViewAllOrgData) {
-                const ownedChildIds = getChildrenForUserId(context.userId)
-                if (!ownedChildIds.includes(athleteId)) {
+                let hasAccess = false
+                
+                // Check if coach can view this athlete (athlete is on coach's assigned teams)
+                if (permissions.canViewAssignedTeams && permissions.assignedTeamIds.length > 0) {
+                    const athleteIds = new Set<string>()
+                    for (const teamId of permissions.assignedTeamIds) {
+                        const members = getTeamMembersForSeason(teamId, SEASON_SPRING_CURRENT_ID)
+                        members.forEach((m) => athleteIds.add(m.athlete_id))
+                    }
+                    if (athleteIds.has(athleteId)) {
+                        hasAccess = true
+                    }
+                }
+                
+                // Check if guardian/parent can view this athlete (their own child)
+                if (!hasAccess) {
+                    const guardianUserId = getGuardianCanonicalUserId(context)
+                    const ownedChildIds = getChildrenForUserId(guardianUserId)
+                    if (ownedChildIds.includes(athleteId)) {
+                        hasAccess = true
+                    }
+                }
+                
+                if (!hasAccess) {
                     debug.perf.end('familyService.getAthleteById')
                     debug.error('FamilyService.getAthleteById', 'Access denied (fake)', { athleteId })
                     console.groupEnd()
@@ -1221,11 +1249,84 @@ export async function getAthleteById(
 
     // Real Data
     try {
+        type AthleteRow = {
+            id: string
+            org_id: string | null
+            family_id: string | null
+            first_name: string
+            last_name: string
+            birthdate: string | null
+            gender: string | null
+            preferred_name: string | null
+            jersey_number: string | null
+            profile_photo_updated_at: string | null
+            has_profile_photo: boolean | null
+            height_cm: number | null
+            weight_kg: number | null
+            shoe_size_value: string | null
+            shoe_size_system: string | null
+            shoe_width: string | null
+            tshirt_size: string | null
+            shorts_size: string | null
+            dominant_hand: string | null
+            phone?: string | null
+            email?: string | null
+            created_at: string | null
+            updated_at: string | null
+            deleted_at: string | null
+        }
+
+        type AthleteMedicalRow = {
+            medical_notes: string | null
+            allergies: string | null
+            emergency_contact: {
+                name?: string | null
+                phone?: string | null
+                relationship?: string | null
+                email?: string | null
+            } | null
+        }
+
         console.log('[getAthleteById] Fetching athlete:', athleteId)
-        
+
+        const accessResult = sensitiveAccess
+            ? { data: sensitiveAccess, error: null }
+            : await getAthleteSensitiveAccess(athleteId, context.orgId)
+        const access = accessResult.data
+        const canViewPii = canAccessSensitiveData(access, 'pii', 'read')
+        const canViewMedical = canAccessSensitiveData(access, 'medical', 'read')
+        const athleteSelect = [
+            'id',
+            'org_id',
+            'family_id',
+            'first_name',
+            'last_name',
+            'birthdate',
+            'gender',
+            'preferred_name',
+            'jersey_number',
+            'profile_photo_updated_at',
+            'has_profile_photo',
+            'height_cm',
+            'weight_kg',
+            'shoe_size_value',
+            'shoe_size_system',
+            'shoe_width',
+            'tshirt_size',
+            'shorts_size',
+            'dominant_hand',
+            'created_at',
+            'updated_at',
+            'deleted_at',
+        ]
+
+        if (canViewPii) {
+            athleteSelect.push('phone', 'email')
+        }
+
         const { data, error } = await supabase
             .from('athletes')
-            .select('*')
+            .select(athleteSelect.join(', '))
             .eq('id', athleteId)
             .is('deleted_at', null)
             .single()
@@ -1244,6 +1345,26 @@ export async function getAthleteById(
 
         if (!data) {
             return { data: null, error: null }
+        }
+
+        const athleteRow = data as unknown as AthleteRow
+
+        let medicalData: AthleteMedicalRow | null = null
+
+        if (canViewMedical) {
+            try {
+                const { data: medicalRow, error: medicalError } = await supabase
+                    .from('athlete_medical_private')
+                    .select('medical_notes, allergies, emergency_contact')
+                    .eq('athlete_id', athleteId)
+                    .maybeSingle()
+
+                if (!medicalError && medicalRow) {
+                    medicalData = medicalRow as AthleteMedicalRow
+                }
+            } catch (err) {
+                console.warn('[getAthleteById] Error loading athlete medical data:', err)
+            }
         }
 
         // Check if athlete has active guardian using RPC function
@@ -1281,27 +1402,36 @@ export async function getAthleteById(
 
         // Return athlete with sports data
         const athlete = {
-            id: data.id,
-            family_id: data.family_id,
-            first_name: data.first_name,
-            last_name: data.last_name,
-            date_of_birth: data.birthdate || '',
-            gender: data.gender as Gender | null,
-            preferred_name: data.preferred_name ?? null,
-            jersey_number: data.jersey_number ?? null,
-            medical_notes: data.medical_notes ?? null,
-            allergies: data.allergies ?? null,
-            phone: (data as any).phone ?? null,
-            email: (data as any).email ?? null,
-            emergency_contact_name: data.emergency_contact_name ?? null,
-            emergency_contact_phone: data.emergency_contact_phone ?? null,
+            id: athleteRow.id,
+            family_id: athleteRow.family_id,
+            first_name: athleteRow.first_name,
+            last_name: athleteRow.last_name,
+            date_of_birth: athleteRow.birthdate || '',
+            gender: athleteRow.gender as Gender | null,
+            preferred_name: athleteRow.preferred_name ?? null,
+            jersey_number: athleteRow.jersey_number ?? null,
+            medical_notes: medicalData?.medical_notes ?? null,
+            allergies: medicalData?.allergies ?? null,
+            phone: canViewPii ? athleteRow.phone ?? null : null,
+            email: canViewPii ? athleteRow.email ?? null : null,
+            emergency_contact_name: canViewMedical ? medicalData?.emergency_contact?.name ?? null : null,
+            emergency_contact_phone: canViewMedical ? medicalData?.emergency_contact?.phone ?? null : null,
             photo_url: null, // @deprecated - Use profile_photo_updated_at instead
-            profile_photo_updated_at: (data as any).profile_photo_updated_at ?? null,
-            has_profile_photo: (data as any).has_profile_photo ?? false,
-            org_id: context.orgId, // Include org_id for photo URL generation
-            created_at: data.created_at ?? new Date().toISOString(),
-            updated_at: data.updated_at ?? new Date().toISOString(),
-            deleted_at: data.deleted_at,
+            profile_photo_updated_at: athleteRow.profile_photo_updated_at ?? null,
+            has_profile_photo: athleteRow.has_profile_photo ?? false,
+            org_id: athleteRow.org_id ?? context.orgId,
+            height_cm: athleteRow.height_cm ?? null,
+            weight_kg: athleteRow.weight_kg ?? null,
+            shoe_size_value: athleteRow.shoe_size_value ?? null,
+            shoe_size_system: athleteRow.shoe_size_system ?? null,
+            shoe_width: athleteRow.shoe_width ?? null,
+            tshirt_size: athleteRow.tshirt_size ?? null,
+            shorts_size: athleteRow.shorts_size ?? null,
+            dominant_hand: athleteRow.dominant_hand ?? null,
+            emergency_contact: canViewMedical ? medicalData?.emergency_contact ?? null : null,
+            created_at: athleteRow.created_at ?? new Date().toISOString(),
+            updated_at: athleteRow.updated_at ?? new Date().toISOString(),
+            deleted_at: athleteRow.deleted_at,
             sports: sports,
             has_active_guardian: hasActiveGuardian
         } as unknown as Child

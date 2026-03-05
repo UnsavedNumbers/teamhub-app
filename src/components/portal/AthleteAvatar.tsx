@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Athlete Avatar Component
  * 
  * Displays athlete photo if available, otherwise shows avatar with initials.
@@ -102,7 +102,7 @@ export default function AthleteAvatar({ athlete, photoSize = '256', className = 
     if (!displayUrl || imageError || fallbackResizing) {
         return (
             <div
-                className={`w-full h-full bg-slate-400 dark:bg-slate-600 flex items-center justify-center text-white font-black ${className}`}
+                className={`w-full h-full bg-gray-400 dark:bg-gray-600 flex items-center justify-center text-white font-black ${className}`}
                 aria-label={`${athlete.first_name} ${athlete.last_name}`}
             >
                 <span className="text-4xl">{initials}</span>
@@ -125,17 +125,18 @@ export default function AthleteAvatar({ athlete, photoSize = '256', className = 
                 }`}
             />
             {!imageLoaded && !imageError && (
-                <div className="absolute inset-0 bg-slate-200 dark:bg-slate-700 animate-pulse flex items-center justify-center">
-                    <div className="w-full h-full bg-slate-400 dark:bg-slate-600 flex items-center justify-center">
+                <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse flex items-center justify-center">
+                    <div className="w-full h-full bg-gray-400 dark:bg-gray-600 flex items-center justify-center">
                         <span className="text-white font-black text-4xl">{initials}</span>
                     </div>
                 </div>
             )}
             {imageError && (
-                <div className="absolute inset-0 bg-slate-400 dark:bg-slate-600 flex items-center justify-center text-white font-black">
+                <div className="absolute inset-0 bg-gray-400 dark:bg-gray-600 flex items-center justify-center text-white font-black">
                     <span className="text-4xl">{initials}</span>
                 </div>
             )}
         </div>
     )
 }
+

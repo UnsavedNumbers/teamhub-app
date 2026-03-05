@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Admin Athletes Page
  *
  * Lists all athletes in the organization with filtering and view options.
@@ -24,6 +24,7 @@ import { getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getSeasons } from '../../data/services/seasonsService'
 import type { AthleteViewMode } from '../../components/admin/AthletesHeader'
+import '../../styles/orgAdmin.css'
 
 interface Team {
     id: string
@@ -151,7 +152,8 @@ export default function AdminAthletes() {
         setLoading(true)
         try {
             // Use the athletes list service which handles fake data
-            const result = await athletesListService.getAthletes(context.orgId)
+            // Pass context so coaches only see athletes from their assigned teams
+            const result = await athletesListService.getAthletes(context.orgId, context)
 
             if (!result.success || !result.data) {
                 setAthletes([])
@@ -169,7 +171,17 @@ export default function AdminAthletes() {
             if (filters.search) {
                 const searchLower = filters.search.toLowerCase()
                 filteredAthletes = filteredAthletes.filter((a: AthleteCardData) =>
-                    `${a.first_name} ${a.last_name}`.toLowerCase().includes(searchLower)
+                    [
+                        `${a.first_name} ${a.last_name}`,
+                        ...(a.sports?.map((sport) => sport.name) ?? []),
+                        ...(a.teams?.map((team) => team.name) ?? []),
+                        ...(a.roles ?? []),
+                        ...(a.positions ?? []),
+                        ...(a.jersey_numbers ?? []).map((jerseyNumber) => `#${jerseyNumber}`),
+                    ]
+                        .join(' ')
+                        .toLowerCase()
+                        .includes(searchLower)
                 )
             }
 
@@ -183,14 +195,16 @@ export default function AdminAthletes() {
             // Team filter
             if (filters.teamIds.length > 0) {
                 filteredAthletes = filteredAthletes.filter((a: AthleteCardData) =>
-                    a.primary_team && filters.teamIds.includes(a.primary_team.id as string)
+                    a.teams?.some((team) => filters.teamIds.includes(team.id)) ||
+                    (a.primary_team && filters.teamIds.includes(a.primary_team.id as string))
                 )
             }
 
             // Sport filter
             if (filters.sportIds.length > 0) {
                 filteredAthletes = filteredAthletes.filter((a: AthleteCardData) =>
-                    a.primary_sport && filters.sportIds.includes(a.primary_sport.id as string)
+                    a.sports?.some((sport) => sport.id && filters.sportIds.includes(sport.id)) ||
+                    (a.primary_sport && filters.sportIds.includes(a.primary_sport.id as string))
                 )
             }
 

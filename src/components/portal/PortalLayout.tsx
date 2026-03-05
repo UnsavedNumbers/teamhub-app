@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+﻿import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import PortalHeader from './PortalHeader'
 import { useUserContext } from '../../hooks/useUserContext'
@@ -46,7 +46,7 @@ export default function PortalLayout({ children, breadcrumbs, forceRole }: Porta
   }, [isReady, context?.orgId])
 
   return (
-    <div className="oa-theme-active min-h-screen bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-slate-100 antialiased relative">
+    <div className="oa-theme-active portal-neutral min-h-screen bg-gray-50 dark:bg-black font-impact text-gray-900 dark:text-gray-100 antialiased relative">
       {/* Background Field Markings (Grid) */}
       <div className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1] portal-grid-bg" />
 
@@ -56,7 +56,7 @@ export default function PortalLayout({ children, breadcrumbs, forceRole }: Porta
       <main className="w-full px-4 sm:px-6 py-4 sm:py-8">
         {/* Breadcrumbs - Hide on mobile if too many */}
         {breadcrumbs && breadcrumbs.length > 0 && (
-          <nav className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 sm:mb-6">
+          <nav className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400 mb-4 sm:mb-6">
             {breadcrumbs.map((crumb, index) => (
               <span key={index} className="flex items-center gap-2">
                 {index > 0 && (
@@ -67,7 +67,7 @@ export default function PortalLayout({ children, breadcrumbs, forceRole }: Porta
                     {crumb.label}
                   </Link>
                 ) : (
-                  <span className="text-slate-900 dark:text-white">{crumb.label}</span>
+                  <span className="text-gray-900 dark:text-gray-100">{crumb.label}</span>
                 )}
               </span>
             ))}
@@ -82,12 +82,12 @@ export default function PortalLayout({ children, breadcrumbs, forceRole }: Porta
 
       {/* General Contact Footer */}
       {generalContact && (
-        <footer className="mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 py-8">
+        <footer className="mt-auto border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-neutral-950 py-8">
             <div className="max-w-[1200px] mx-auto px-4 sm:px-6 text-center">
-                <p className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4">Questions?</p>
+                <p className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4">Questions?</p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                        <Icon name="person" size="text-lg" className="text-slate-400" />
+                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+                        <Icon name="person" size="text-lg" className="text-gray-400" />
                         <span className="font-bold">{generalContact.name}</span>
                     </div>
                     <a href={`mailto:${generalContact.email}`} className="flex items-center gap-2 text-[var(--org-link-color)] hover:underline font-bold text-sm">
@@ -95,8 +95,8 @@ export default function PortalLayout({ children, breadcrumbs, forceRole }: Porta
                         {generalContact.email}
                     </a>
                     {generalContact.phone && (
-                        <a href={`tel:${generalContact.phone}`} className="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold text-sm transition-colors">
-                            <Icon name="phone" size="text-lg" className="text-slate-400" />
+                        <a href={`tel:${generalContact.phone}`} className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 font-bold text-sm transition-colors">
+                            <Icon name="phone" size="text-lg" className="text-gray-400" />
                             {generalContact.phone}
                         </a>
                     )}
@@ -107,3 +107,4 @@ export default function PortalLayout({ children, breadcrumbs, forceRole }: Porta
     </div>
   )
 }
+

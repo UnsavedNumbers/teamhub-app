@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
-import { StatCard, PageHeader, Card, Button, OfflineBanner } from '../../components/platformAdmin'
+import { PageHeader, Card, Button, OfflineBanner } from '../../components/platformAdmin'
+import { TopLevelStats } from '../../components/common/TopLevelStats'
 import type { LicenseMetrics, LicenseAlert } from '../../types/licenseTiers.types'
 import { getLink } from '../../utils/routes'
 import { useI18n } from '../../i18n/useI18n'
@@ -239,62 +240,20 @@ export default function LicensesOverview() {
         </div>
       )}
 
-      {/* Stats Row 1: Tiers & Features */}
-      <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4 pa-gap-4">
-        <StatCard
-          label={t('platformAdmin.licenses.overview.stats.activeTiers')}
-          value={metrics?.active_tiers ?? 0}
-          icon="workspace_premium"
-          onClick={() => navigate(getLink('platformAdmin.licenses.tiers'))}
-        />
-        <StatCard
-          label={t('platformAdmin.licenses.overview.stats.totalFeatures')}
-          value={metrics?.total_features ?? 0}
-          icon="inventory_2"
-          onClick={() => navigate(getLink('platformAdmin.licenses.features'))}
-        />
-        <StatCard
-          label={t('platformAdmin.licenses.metrics.featuresPowerOnly')}
-          value="—"
-          icon="star"
-          meta={t('platformAdmin.licenses.metrics.seeFeatureCatalog')}
-        />
-        <StatCard
-          label={t('platformAdmin.licenses.metrics.featuresBasic')}
-          value="—"
-          icon="check_circle"
-          meta={t('platformAdmin.licenses.metrics.seeFeatureCatalog')}
-        />
-      </div>
-
-      {/* Stats Row 2: Organizations & Overrides */}
-      <div className="pa-grid pa-grid-cols-1 sm:pa-grid-cols-2 lg:pa-grid-cols-4 pa-gap-4 pa-mt-5">
-        <StatCard
-          label="Organizations on Basic"
-          value={metrics?.orgs_on_basic ?? 0}
-          icon="apartment"
-          onClick={() => navigate(getLink('platformAdmin.organizations.list'))}
-        />
-        <StatCard
-          label="Organizations on Power"
-          value={metrics?.orgs_on_power ?? 0}
-          icon="apartment"
-          onClick={() => navigate(getLink('platformAdmin.organizations.list'))}
-        />
-        <StatCard
-          label="Active Overrides"
-          value={metrics?.active_overrides ?? 0}
-          icon="rule"
-          onClick={() => navigate(getLink('platformAdmin.licenses.overrides'))}
-        />
-        <StatCard
-          label="Tiers Missing Price ID"
-          value={metrics?.tiers_missing_price_id ?? 0}
-          icon="credit_card"
-          meta={metrics?.tiers_missing_price_id ?? 0 > 0 ? 'Action required' : 'All configured'}
-        />
-      </div>
-
+      <TopLevelStats
+        className="pa-mb-5"
+        ariaLabel="License overview summary metrics"
+        items={[
+          { id: 'active-tiers', label: t('platformAdmin.licenses.overview.stats.activeTiers'), value: metrics?.active_tiers ?? 0, icon: 'workspace_premium', onClick: () => navigate(getLink('platformAdmin.licenses.tiers')) },
+          { id: 'total-features', label: t('platformAdmin.licenses.overview.stats.totalFeatures'), value: metrics?.total_features ?? 0, icon: 'inventory_2', onClick: () => navigate(getLink('platformAdmin.licenses.features')) },
+          { id: 'power-only', label: t('platformAdmin.licenses.metrics.featuresPowerOnly'), value: '-', icon: 'star', meta: t('platformAdmin.licenses.metrics.seeFeatureCatalog'), empty: true },
+          { id: 'basic-features', label: t('platformAdmin.licenses.metrics.featuresBasic'), value: '-', icon: 'check_circle', meta: t('platformAdmin.licenses.metrics.seeFeatureCatalog'), empty: true },
+          { id: 'basic-orgs', label: 'Organizations on Basic', value: metrics?.orgs_on_basic ?? 0, icon: 'apartment', onClick: () => navigate(getLink('platformAdmin.organizations.list')) },
+          { id: 'power-orgs', label: 'Organizations on Power', value: metrics?.orgs_on_power ?? 0, icon: 'apartment', onClick: () => navigate(getLink('platformAdmin.organizations.list')) },
+          { id: 'overrides', label: 'Active Overrides', value: metrics?.active_overrides ?? 0, icon: 'rule', onClick: () => navigate(getLink('platformAdmin.licenses.overrides')) },
+          { id: 'missing-price', label: 'Tiers Missing Price ID', value: metrics?.tiers_missing_price_id ?? 0, icon: 'credit_card', meta: (metrics?.tiers_missing_price_id ?? 0) > 0 ? 'Action required' : 'All configured', tone: (metrics?.tiers_missing_price_id ?? 0) > 0 ? 'warning' : 'success' },
+        ]}
+      />
       {/* Quick Actions */}
       <div className="pa-mt-5">
         <Card
@@ -355,3 +314,4 @@ export default function LicensesOverview() {
     </div>
   )
 }
+

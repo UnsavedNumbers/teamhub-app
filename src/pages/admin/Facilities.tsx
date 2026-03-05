@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useT } from '../../i18n/useI18n'
 import { getLink } from '../../utils/routes'
 import { getErrorMessage } from '../../utils/errorUtils'
@@ -18,6 +19,7 @@ import type { Facility, FacilityFilters } from '../../types/facilities'
 import FacilitiesFilters from '../../components/admin/FacilitiesFilters'
 import FacilityFormSlideOver from '../../components/admin/FacilityFormSlideOver'
 import ResourceFormSlideOver from '../../components/admin/ResourceFormSlideOver'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import '../../styles/orgAdmin.css'
 
 const DEFAULT_FILTERS: FacilityFilters = {
@@ -50,8 +52,10 @@ export default function Facilities() {
     const [, setActionLoading] = useState(false)
 
     const { context, isReady } = useUserContext()
+    const { currentOrganization } = useOrganization()
     const navigate = useNavigate()
     const t = useT()
+    const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
 
     const fetchFacilities = useCallback(async () => {
         if (!isReady || !context.orgId) return
@@ -202,12 +206,16 @@ export default function Facilities() {
                         <Button variant="secondary" onClick={handleViewSchedule} icon="calendar_month">
                             {t('admin.facilities.viewSchedule')}
                         </Button>
-                        <Button variant="secondary" onClick={handleCreateResource} icon="add">
-                            {t('admin.facilities.addResource')}
-                        </Button>
-                        <Button variant="primary" onClick={handleCreateFacility} icon="add">
-                            {t('admin.facilities.create')}
-                        </Button>
+                        {isOrgAdmin && (
+                            <>
+                                <Button variant="secondary" onClick={handleCreateResource} icon="add">
+                                    {t('admin.facilities.addResource')}
+                                </Button>
+                                <Button variant="primary" onClick={handleCreateFacility} icon="add">
+                                    {t('admin.facilities.create')}
+                                </Button>
+                            </>
+                        )}
                     </div>
                 }
             />
@@ -249,9 +257,11 @@ export default function Facilities() {
                         <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0 oa-flex-1">
                             <h3 className="oa-h3 oa-mb-0">{t('admin.facilities.empty.title')}</h3>
                             <p className="oa-body-m oa-text-muted oa-mb-4">{t('admin.facilities.empty.message')}</p>
-                            <Button variant="primary" onClick={handleCreateFacility} icon="add">
-                                {t('admin.facilities.empty.createButton')}
-                            </Button>
+                            {isOrgAdmin && (
+                                <Button variant="primary" onClick={handleCreateFacility} icon="add">
+                                    {t('admin.facilities.empty.createButton')}
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </Card>
@@ -339,29 +349,33 @@ export default function Facilities() {
                                 >
                                     {t('admin.facilities.openSchedule')}
                                 </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="compact"
-                                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                                        e.stopPropagation()
-                                        handleEditFacility(facility)
-                                    }}
-                                    icon="edit"
-                                >
-                                    {t('common.edit')}
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="compact"
-                                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                                        e.stopPropagation()
-                                        handleDeleteFacility(facility)
-                                    }}
-                                    icon="delete"
-                                    style={{ color: 'var(--pa-danger)' }}
-                                >
-                                    {t('common.delete')}
-                                </Button>
+                                {isOrgAdmin && (
+                                    <>
+                                        <Button
+                                            variant="ghost"
+                                            size="compact"
+                                            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                                                e.stopPropagation()
+                                                handleEditFacility(facility)
+                                            }}
+                                            icon="edit"
+                                        >
+                                            {t('common.edit')}
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="compact"
+                                            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                                                e.stopPropagation()
+                                                handleDeleteFacility(facility)
+                                            }}
+                                            icon="delete"
+                                            style={{ color: 'var(--pa-danger)' }}
+                                        >
+                                            {t('common.delete')}
+                                        </Button>
+                                    </>
+                                )}
                             </div>
                         </Card>
                         </div>

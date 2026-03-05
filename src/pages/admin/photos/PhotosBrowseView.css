@@ -349,7 +349,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--pa-surface-subtle) 0%, var(--pa-surface-panel) 100%);
+  background: var(--pa-surface-panel);
 }
 
 .card-image-placeholder .material-symbols-outlined {
@@ -361,7 +361,7 @@
 .card-image-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 50%);
+  background: rgba(0, 0, 0, 0.28);
   opacity: 0.6;
   pointer-events: none;
 }

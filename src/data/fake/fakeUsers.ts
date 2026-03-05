@@ -104,6 +104,9 @@ const COACH_ONLY_ID = DEMO_USER_IDS['coach-only@example.com']
 const ADMIN_ONLY_ID = DEMO_USER_IDS['admin-only@example.com']
 const PARENT_ADMIN_ID = DEMO_USER_IDS['parent-admin@example.com']
 const PARENT_COACH_ID = DEMO_USER_IDS['parent-coach@example.com']
+export const STAFF_ONLY_ID = DEMO_USER_IDS['staff-only@example.com']
+export const ATHLETE_ONLY_ID = DEMO_USER_IDS['athlete-only@example.com']
+export const FAN_ONLY_ID = DEMO_USER_IDS['fan-only@example.com']
 
 // ============================================================================
 // Generated IDs (stable for relationships)
@@ -222,6 +225,31 @@ export const fakeUsers: FakeUser[] = [
         display_name: 'Priya Patel',
         created_at: '2024-03-01T09:00:00Z',
         updated_at: '2024-03-01T09:00:00Z',
+    },
+    // ── New demo role users ──────────────────────────────────────────────────
+    {
+        id: STAFF_ONLY_ID,
+        email: 'staff-only@example.com',
+        phone: '+1 (555) 741-8520',
+        display_name: 'Jordan Lee (Staff)',
+        created_at: getDateInCurrentYear(1, 20, 8),
+        updated_at: getDateInCurrentYear(1, 20, 8),
+    },
+    {
+        id: ATHLETE_ONLY_ID,
+        email: 'athlete-only@example.com',
+        phone: '+1 (555) 852-9630',
+        display_name: 'Emma Johnson (Athlete)',
+        created_at: getDateInCurrentYear(1, 15, 10),
+        updated_at: getDateInCurrentYear(1, 15, 10),
+    },
+    {
+        id: FAN_ONLY_ID,
+        email: 'fan-only@example.com',
+        phone: '+1 (555) 963-7410',
+        display_name: 'Casey Fan',
+        created_at: getDateInCurrentYear(2, 1, 12),
+        updated_at: getDateInCurrentYear(2, 1, 12),
     },
 ]
 
@@ -708,6 +736,44 @@ export const fakeOrganizationMembers: FakeOrganizationMember[] = [
         status: 'active',
         created_at: '2024-03-01T09:00:00Z',
         updated_at: '2024-03-01T09:00:00Z',
+    },
+    // New demo role memberships
+    {
+        id: 'om-011',
+        org_id: DEMO_ORG_A_ID,
+        user_id: STAFF_ONLY_ID,
+        roles: ['staff'] as OrgMemberRole[],
+        status: 'active',
+        created_at: getDateInCurrentYear(1, 20, 8),
+        updated_at: getDateInCurrentYear(1, 20, 8),
+    },
+    {
+        id: 'om-012',
+        org_id: DEMO_ORG_A_ID,
+        user_id: ATHLETE_ONLY_ID,
+        roles: ['athlete'] as OrgMemberRole[],
+        status: 'active',
+        created_at: getDateInCurrentYear(1, 15, 10),
+        updated_at: getDateInCurrentYear(1, 15, 10),
+    },
+    {
+        id: 'om-013',
+        org_id: DEMO_ORG_A_ID,
+        user_id: FAN_ONLY_ID,
+        roles: ['fan'] as OrgMemberRole[],
+        status: 'active',
+        created_at: getDateInCurrentYear(2, 1, 12),
+        updated_at: getDateInCurrentYear(2, 1, 12),
+    },
+    // Fan also follows Org B for multi-org demo
+    {
+        id: 'om-014',
+        org_id: DEMO_ORG_B_ID,
+        user_id: FAN_ONLY_ID,
+        roles: ['fan'] as OrgMemberRole[],
+        status: 'active',
+        created_at: getDateInCurrentYear(2, 5, 12),
+        updated_at: getDateInCurrentYear(2, 5, 12),
     },
 ]
 

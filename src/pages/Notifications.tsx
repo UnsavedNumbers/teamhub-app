@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
+﻿import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { getLink, RouteKeys } from '../utils/routes'
 import { useOptionalAuth } from '../hooks/useAuth'
@@ -7,8 +7,9 @@ import { notificationService } from '../data/services/notificationService'
 import { getAthletes } from '../data/services/familyService'
 import { getTeamsForParent } from '../data/services/teamsService'
 import { NotificationRecord } from '../types/notifications'
-import type { NotificationCursor } from '../data/services/messagesService'
-import PortalHeader from '../components/portal/PortalHeader'
+import type { NotificationCursor } from '../data/services/userNotificationsService'
+import PortalLayout from '../components/portal/PortalLayout'
+import { PageTitle } from '../components/portal/Typography'
 import NotificationErrorBoundary from '../components/common/NotificationErrorBoundary'
 import { showError, showSuccess } from '../utils/toast'
 import { cn } from '../utils/cn'
@@ -39,8 +40,8 @@ const FilterSection = ({ title, items, selectedIds, onToggle, onSelectAll }: Fil
   const isAllSelected = selectedIds.size === items.length
   
   return (
-    <div className="pt-5 border-t border-gray-100 dark:border-slate-800 animate-in fade-in slide-in-from-top-2 duration-200">
-      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-2">
+    <div className="pt-5 border-t border-gray-100 dark:border-gray-800 animate-in fade-in slide-in-from-top-2 duration-200">
+      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full bg-[var(--org-btn-primary-bg)]" aria-hidden />
         {title}
       </h3>
@@ -48,17 +49,17 @@ const FilterSection = ({ title, items, selectedIds, onToggle, onSelectAll }: Fil
       {/* Select All Option */}
       <button
         onClick={onSelectAll}
-        className="flex items-center gap-3 w-full text-left cursor-pointer mb-3 pb-3 border-b border-gray-50 dark:border-slate-800/50 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-all group"
+        className="flex items-center gap-3 w-full text-left cursor-pointer mb-3 pb-3 border-b border-gray-50 dark:border-gray-800/50 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all group"
       >
         <div className={cn(
           "w-5 h-5 rounded border flex items-center justify-center transition-all shadow-inner",
           isAllSelected 
             ? "bg-[var(--org-btn-primary-bg)] border-[var(--org-btn-primary-bg)] text-white" 
-            : "bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 group-hover:border-[var(--org-btn-primary-bg)]"
+            : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 group-hover:border-[var(--org-btn-primary-bg)]"
         )}>
           {isAllSelected && <span className="material-symbols-outlined text-[14px]">check</span>}
         </div>
-        <span className="text-sm font-bold text-slate-900 dark:text-white">
+        <span className="text-sm font-bold text-gray-900 dark:text-white">
           All {title}
         </span>
       </button>
@@ -75,20 +76,20 @@ const FilterSection = ({ title, items, selectedIds, onToggle, onSelectAll }: Fil
                 "flex items-center gap-3 w-full text-left cursor-pointer p-3 rounded-xl transition-all border group",
                 isSelected 
                   ? "bg-[var(--org-btn-primary-bg)]/8 dark:bg-[var(--org-btn-primary-bg)]/12 border-[var(--org-btn-primary-bg)]/40 shadow-sm" 
-                  : "border-transparent hover:border-[var(--org-btn-primary-bg)]/40 hover:bg-gray-50 dark:hover:bg-slate-800/50 hover:shadow-sm hover:translate-y-[-1px]"
+                  : "border-transparent hover:border-[var(--org-btn-primary-bg)]/40 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:shadow-sm hover:translate-y-[-1px]"
               )}
             >
               <div className={cn(
                 "w-5 h-5 rounded border flex items-center justify-center transition-all",
                 isSelected 
                   ? "bg-[var(--org-btn-primary-bg)] border-[var(--org-btn-primary-bg)] text-white" 
-                  : "bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 group-hover:border-[var(--org-btn-primary-bg)]"
+                  : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 group-hover:border-[var(--org-btn-primary-bg)]"
               )}>
                 {isSelected && <span className="material-symbols-outlined text-[14px] animate-in zoom-in">check</span>}
               </div>
               <span className={cn(
                 "text-sm transition-colors",
-                isSelected ? "font-bold text-[var(--org-btn-primary-bg)]" : "font-medium text-slate-700 dark:text-slate-300"
+                isSelected ? "font-bold text-[var(--org-btn-primary-bg)]" : "font-medium text-gray-700 dark:text-gray-300"
               )}>
                 {item.name}
               </span>
@@ -315,7 +316,7 @@ export default function Notifications() {
 
       let label = dateStr
       if (dateStr === todayStr) label = 'Today'
-      else if (dateStr === yesterdayStr) label = `Yesterday — ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
+      else if (dateStr === yesterdayStr) label = `Yesterday - ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
       else label = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()
 
       if (label !== lastDate) {
@@ -396,10 +397,28 @@ export default function Notifications() {
     return 'notifications' // default
   }
 
-  const getColorClass = (action: string) => {
-    if (action.includes('urgent')) return 'text-red-500'
-    if (action.includes('payment')) return 'text-emerald-600'
-    return 'text-[var(--org-btn-primary-bg)]'
+  const formatTime = (value: string) =>
+    new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+  const formatRelativeTime = (value: string) => {
+    const created = new Date(value).getTime()
+    const diffMs = Date.now() - created
+    const minutes = Math.max(0, Math.floor(diffMs / 60000))
+    if (minutes < 1) return 'Just now'
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+    const days = Math.floor(hours / 24)
+    return `${days} day${days === 1 ? '' : 's'} ago`
+  }
+
+  const getStatusTag = (notification: NotificationRecord, isUnread: boolean) => {
+    if (notification.archived_at) return { label: 'Archived', tone: 'muted' as const }
+    if (isUnread) return { label: 'New', tone: 'accent' as const }
+    if (notification.action.includes('payment')) return { label: 'Logged', tone: 'muted' as const }
+    if (notification.action.includes('message')) return { label: 'Updated', tone: 'muted' as const }
+    if (notification.action.includes('event')) return { label: 'Updated', tone: 'muted' as const }
+    return { label: 'Info', tone: 'muted' as const }
   }
 
   if (!auth) return null
@@ -409,22 +428,40 @@ export default function Notifications() {
 
   return (
     <NotificationErrorBoundary>
-      <div className="min-h-screen bg-white dark:bg-slate-900 font-sans text-slate-900 dark:text-white">
-        <PortalHeader />
-      
-      <main className="max-w-[1400px] mx-auto flex flex-col lg:flex-row min-h-screen gap-6 p-6">
+      <PortalLayout
+        breadcrumbs={[
+          { label: 'Home', path: '/portal/dashboard' },
+          { label: 'Notifications' },
+        ]}
+      >
+        <div className="mb-6 sm:mb-8">
+          <PageTitle>Notifications</PageTitle>
+          <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide mt-1">
+            Stay on top of team, athlete, and program updates.
+          </p>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-280px)] lg:min-h-[600px]">
         
         {/* Sidebar Navigation */}
-        <aside className="w-full lg:w-72 flex flex-col gap-6 bg-white dark:bg-slate-900 p-6 rounded-xl h-fit border border-gray-100 dark:border-slate-800">
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-4">Filters</h3>
+        <aside className="w-full lg:w-[320px] lg:flex-shrink-0 flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/50">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 dark:text-white">Filters</h3>
+              <button
+                onClick={clearFilters}
+                className="text-xs font-bold uppercase tracking-wider text-gray-500 hover:text-[var(--org-link-color)] transition-colors"
+              >
+                Clear
+              </button>
+            </div>
             <div className="flex flex-col gap-2">
               <div 
                 onClick={() => setFilterByType(filterByType === 'athlete' ? 'all' : 'athlete')}
                 className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
                   filterByType === 'athlete' 
                     ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-btn-primary-bg)]' 
-                    : 'hover:bg-gray-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -439,7 +476,7 @@ export default function Notifications() {
                 className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
                   filterByType === 'team' 
                     ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-btn-primary-bg)]' 
-                    : 'hover:bg-gray-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -454,7 +491,7 @@ export default function Notifications() {
                 className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
                   filterByType === 'program' 
                     ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-btn-primary-bg)]' 
-                    : 'hover:bg-gray-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -469,7 +506,7 @@ export default function Notifications() {
                 className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
                   filterByType === 'sport' 
                     ? 'bg-[var(--org-btn-primary-bg)]/10 text-[var(--org-btn-primary-bg)]' 
-                    : 'hover:bg-gray-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-white'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -481,216 +518,195 @@ export default function Notifications() {
             </div>
           </div>
 
-          {filterByType === 'athlete' && athletes.length > 0 && (
-            <FilterSection 
-              title="Active Athletes" 
-              items={athletes.map(a => ({ id: a.id, name: `${a.first_name} ${a.last_name}` }))}
-              selectedIds={selectedAthleteIds}
-              onToggle={(id) => handleToggle(id, selectedAthleteIds, setSelectedAthleteIds)}
-              onSelectAll={() => handleSelectAll(athletes, selectedAthleteIds, setSelectedAthleteIds)}
-            />
-          )}
+          <div className="flex-1 overflow-y-auto p-4">
+            {filterByType === 'athlete' && athletes.length > 0 && (
+              <FilterSection 
+                title="Active Athletes" 
+                items={athletes.map(a => ({ id: a.id, name: `${a.first_name} ${a.last_name}` }))}
+                selectedIds={selectedAthleteIds}
+                onToggle={(id) => handleToggle(id, selectedAthleteIds, setSelectedAthleteIds)}
+                onSelectAll={() => handleSelectAll(athletes, selectedAthleteIds, setSelectedAthleteIds)}
+              />
+            )}
 
-          {filterByType === 'team' && teams.length > 0 && (
-            <FilterSection 
-              title="Active Teams" 
-              items={teams.map(t => ({ id: t.id, name: t.name }))}
-              selectedIds={selectedTeamIds}
-              onToggle={(id) => handleToggle(id, selectedTeamIds, setSelectedTeamIds)}
-              onSelectAll={() => handleSelectAll(teams, selectedTeamIds, setSelectedTeamIds)}
-            />
-          )}
+            {filterByType === 'team' && teams.length > 0 && (
+              <FilterSection 
+                title="Active Teams" 
+                items={teams.map(t => ({ id: t.id, name: t.name }))}
+                selectedIds={selectedTeamIds}
+                onToggle={(id) => handleToggle(id, selectedTeamIds, setSelectedTeamIds)}
+                onSelectAll={() => handleSelectAll(teams, selectedTeamIds, setSelectedTeamIds)}
+              />
+            )}
 
-          {filterByType === 'program' && (
-            <FilterSection 
-              title="Programs" 
-              items={programs}
-              selectedIds={selectedProgramIds}
-              onToggle={(id) => handleToggle(id, selectedProgramIds, setSelectedProgramIds)}
-              onSelectAll={() => handleSelectAll(programs, selectedProgramIds, setSelectedProgramIds)}
-            />
-          )}
+            {filterByType === 'program' && (
+              <FilterSection 
+                title="Programs" 
+                items={programs}
+                selectedIds={selectedProgramIds}
+                onToggle={(id) => handleToggle(id, selectedProgramIds, setSelectedProgramIds)}
+                onSelectAll={() => handleSelectAll(programs, selectedProgramIds, setSelectedProgramIds)}
+              />
+            )}
 
-          {filterByType === 'sport' && (
-            <FilterSection 
-              title="Sports" 
-              items={sports}
-              selectedIds={selectedSportIds}
-              onToggle={(id) => handleToggle(id, selectedSportIds, setSelectedSportIds)}
-              onSelectAll={() => handleSelectAll(sports, selectedSportIds, setSelectedSportIds)}
-            />
-          )}
+            {filterByType === 'sport' && (
+              <FilterSection 
+                title="Sports" 
+                items={sports}
+                selectedIds={selectedSportIds}
+                onToggle={(id) => handleToggle(id, selectedSportIds, setSelectedSportIds)}
+                onSelectAll={() => handleSelectAll(sports, selectedSportIds, setSelectedSportIds)}
+              />
+            )}
+          </div>
 
-          <button 
-            onClick={clearFilters}
-            className="mt-4 flex w-full items-center justify-center rounded-lg h-10 px-4 bg-gray-100 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-bold hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
-          >
-            Clear All Filters
-          </button>
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+            <button 
+              onClick={clearFilters}
+              className="flex w-full items-center justify-center rounded-lg h-10 px-4 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            >
+              Clear All Filters
+            </button>
+          </div>
         </aside>
 
         {/* Notification Feed Content */}
-        <section className="flex-1 bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
-          
-          {/* Feed Header */}
-          <div className="p-8 border-b border-gray-100 dark:border-slate-800 flex flex-wrap justify-between items-end gap-4">
-            <div className="flex flex-col gap-2">
-              <h1 className="text-slate-900 dark:text-white text-3xl sm:text-5xl font-black leading-none tracking-tight">Notifications</h1>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">
-                {filteredNotifications.length} updates
-              </p>
+        <section className="portal-notif-feed flex-1 min-w-0">
+          <div className="portal-notif-feed__header">
+            <div className="portal-notif-feed__heading">
+              <p className="portal-notif-feed__micro">Family activity stream</p>
+              <h2 className="portal-notif-feed__title">Notifications</h2>
+              <p className="portal-notif-feed__subtitle">{filteredNotifications.length} updates</p>
             </div>
-            <button 
+            <button
               onClick={handleMarkAllRead}
-              className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-[var(--org-btn-primary-bg)] transition-colors mb-2"
+              className="portal-notif-feed__markall"
+              disabled={notifications.every((n) => n.read_at)}
             >
-              <span className="material-symbols-outlined text-lg">done_all</span>
+              <span className="material-symbols-outlined">done_all</span>
               Mark all as read
             </button>
           </div>
 
-          {/* Tabs */}
-          <div className="px-8 border-b border-gray-100 dark:border-slate-800">
-            <div className="flex gap-10 overflow-x-auto">
-              <button 
-                onClick={() => setActiveTab('all')}
-                className={`border-b-4 py-4 text-sm font-bold transition-colors whitespace-nowrap ${
-                  activeTab === 'all' 
-                    ? 'border-[var(--org-btn-primary-bg)] text-slate-900 dark:text-white' 
-                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
+          <div className="portal-notif-feed__tabs" role="tablist">
+            {(['all', 'unread', 'archived'] as const).map((tab) => (
+              <button
+                key={tab}
+                role="tab"
+                aria-selected={activeTab === tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn('portal-notif-feed__tab', activeTab === tab && 'is-active')}
               >
-                All Activity
+                {tab === 'all' && 'All Activity'}
+                {tab === 'unread' && 'Unread'}
+                {tab === 'archived' && 'Archived'}
               </button>
-              <button 
-                onClick={() => setActiveTab('unread')}
-                className={`border-b-4 py-4 text-sm font-bold transition-colors whitespace-nowrap ${
-                  activeTab === 'unread' 
-                    ? 'border-[var(--org-btn-primary-bg)] text-slate-900 dark:text-white' 
-                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Unread
-              </button>
-              <button 
-                onClick={() => setActiveTab('archived')}
-                className={`border-b-4 py-4 text-sm font-bold transition-colors whitespace-nowrap ${
-                  activeTab === 'archived' 
-                    ? 'border-[var(--org-btn-primary-bg)] text-slate-900 dark:text-white' 
-                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Archived
-              </button>
-            </div>
+            ))}
           </div>
 
-          {/* Notification List (The Stream) */}
-          <div className="flex flex-col min-h-[400px]">
+          <div className="portal-notif-feed__list">
             {loading ? (
-              <div className="flex items-center justify-center p-20">
-                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[var(--org-btn-primary-bg)]"></div>
+              <div className="portal-notif-feed__loading">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="portal-notif-feed__skeleton" />
+                ))}
               </div>
             ) : filteredNotifications.length === 0 ? (
-               <div className="flex flex-col items-center justify-center p-20 text-center">
-                 <span className="material-symbols-outlined text-6xl text-slate-200 dark:text-slate-700 mb-4">notifications_off</span>
-                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">No notifications found</h3>
-                 <p className="text-slate-500 mt-2">You're all caught up!</p>
-               </div>
+              <div className="portal-notif-feed__empty">
+                <div className="portal-notif-feed__empty-icon">
+                  <span className="material-symbols-outlined" aria-hidden>
+                    notifications_off
+                  </span>
+                </div>
+                <div>
+                  <h3 className="portal-notif-feed__empty-title">No notifications found</h3>
+                  <p className="portal-notif-feed__empty-copy">You are all caught up.</p>
+                </div>
+              </div>
             ) : (
-              groupedNotifications.map((group, groupIdx) => (
-                <div key={groupIdx}>
-                  {/* Date Header */}
+              groupedNotifications.map((group) => (
+                <div key={group.label} className="portal-notif-group">
                   {group.label !== 'Today' && (
-                    <div className="bg-gray-50 dark:bg-slate-800/30 px-8 py-4 border-b border-gray-100 dark:border-slate-800">
-                      <span className="tracking-[0.15em] text-xs font-bold text-slate-400 uppercase">{group.label}</span>
+                    <div className="portal-notif-group__header">
+                      <span className="portal-notif-feed__micro">{group.label}</span>
                     </div>
                   )}
-
-                  {/* Items */}
                   {group.items.map((notification) => {
-                    const timeStr = new Date(notification.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
                     const isUnread = !notification.read_at
-                    
+                    const isArchived = Boolean(notification.archived_at)
+                    const icon = getIcon(notification.action)
+                    const statusTag = getStatusTag(notification, isUnread)
+                    const metaLabel =
+                      notification.role_context?.toUpperCase() ||
+                      notification.action.replace(/_/g, ' ').toUpperCase()
                     return (
-                      <div 
-                        key={notification.id} 
-                        className={`group flex flex-col md:flex-row md:items-center p-8 border-b border-gray-100 dark:border-slate-800 transition-colors ${
-                          isUnread ? 'bg-white dark:bg-slate-900' : 'bg-gray-50/50 dark:bg-slate-900/50'
-                        } hover:bg-gray-50 dark:hover:bg-slate-800/50`}
+                      <article
+                        key={notification.id}
+                        className={cn(
+                          'portal-notif-row',
+                          isUnread && 'portal-notif-row--unread',
+                          isArchived && 'portal-notif-row--archived'
+                        )}
                       >
-                       <div className="flex items-start md:items-center w-full gap-4 md:gap-8">
-                          
-                          {/* Time Column */}
-                          <div className="min-w-[100px] md:min-w-[120px] pt-1 md:pt-0">
-                             <h2 className={`text-2xl md:text-3xl font-black tabular-nums whitespace-nowrap ${isUnread ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
-                               {timeStr}
-                             </h2>
+                        <div className="portal-notif-row__time">{formatTime(notification.created_at)}</div>
+                        <div className="portal-notif-row__icon">
+                          <span className="material-symbols-outlined portal-notif-row__icon-symbol">{icon}</span>
+                          <span
+                            className={cn(
+                              'portal-notif-label',
+                              statusTag.tone === 'accent'
+                                ? 'portal-notif-label--accent'
+                                : 'portal-notif-label--muted'
+                            )}
+                          >
+                            {statusTag.label}
+                          </span>
+                        </div>
+                        <div className="portal-notif-row__body">
+                          <div className="portal-notif-row__title-line">
+                            <h3 className="portal-notif-row__title">{notification.title}</h3>
+                            {notification.presentation_type === 'urgent' && (
+                              <span className="portal-notif-row__meta-chip">Urgent</span>
+                            )}
+                            {notification.role_context && (
+                              <span className="portal-notif-row__meta-chip">{notification.role_context.toUpperCase()}</span>
+                            )}
                           </div>
-
-                          {/* Icon & Content Container */}
-                          <div className="flex items-start gap-4 md:gap-6 flex-1">
-                            
-                            {/* Icon Column */}
-                            <div className="flex flex-col items-center pt-1 md:pt-0">
-                               <span className={`material-symbols-outlined text-3xl md:text-4xl font-light ${isUnread ? getColorClass(notification.action) : 'text-slate-400'}`}>
-                                 {getIcon(notification.action)}
-                               </span>
-                               {isUnread && (
-                                 <span className="tracking-[0.15em] text-[0.65rem] font-bold text-[var(--org-btn-primary-bg)] mt-1 uppercase">NEW</span>
-                               )}
-                            </div>
-
-                            {/* Text Content */}
-                            <div className={`flex flex-col ${!isUnread && 'opacity-60'}`}>
-                               <div className="flex flex-wrap gap-2 items-center mb-1">
-                                <h3 className={`text-lg md:text-xl font-bold ${isUnread ? 'text-slate-900 dark:text-white' : 'line-through text-slate-900 dark:text-white'}`}>
-                                  {notification.title}
-                                </h3>
-                                {/* Mobile-only status chips could go here */}
-                               </div>
-                               <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-sm md:text-base">
-                                  {notification.body}
-                               </p>
-                               {/* Actions */}
-                               <div className="flex gap-4 mt-3">
-                                 {notification.link_url && (
-                                   <Link to={notification.link_url} className="text-sm font-bold text-[var(--org-link-color)] hover:underline flex items-center gap-1">
-                                      View Details <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                                   </Link>
-                                 )}
-                                 {/* Actions */}
-                                 {isUnread && (
-                                    <button 
-                                      onClick={() => handleMarkRead(notification.id)}
-                                      className="text-sm font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                                    >
-                                      Dismiss
-                                    </button>
-                                 )}
-                                 {!notification.archived_at && activeTab !== 'archived' && (
-                                    <button 
-                                      onClick={() => handleArchive(notification.id)}
-                                      className="text-sm font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                                    >
-                                      Archive
-                                    </button>
-                                 )}
-                               </div>
-                            </div>
-                          </div>
-              
-                          {/* Desktop Meta Column */}
-                          <div className="hidden md:flex flex-col items-end gap-2 min-w-[100px]">
-                            {/* We don't always have a tag, but if we did: */}
-                             {notification.role_context && (
-                                <span className="px-3 py-1 rounded-full bg-gray-100 dark:bg-slate-700 text-xs font-bold text-slate-500 dark:text-slate-300 uppercase">
-                                  {notification.role_context}
+                          <p className="portal-notif-row__text">{notification.body}</p>
+                          <div className="portal-notif-row__actions">
+                            {notification.link_url && (
+                              <Link to={notification.link_url} className="portal-notif-row__action-link">
+                                View details
+                                <span className="material-symbols-outlined portal-notif-row__action-icon">
+                                  arrow_forward
                                 </span>
-                             )}
+                              </Link>
+                            )}
+                            {isUnread && (
+                              <button
+                                type="button"
+                                className="portal-notif-row__action-button"
+                                onClick={() => handleMarkRead(notification.id)}
+                              >
+                                Mark read
+                              </button>
+                            )}
+                            {!notification.archived_at && activeTab !== 'archived' && (
+                              <button
+                                type="button"
+                                className="portal-notif-row__action-button"
+                                onClick={() => handleArchive(notification.id)}
+                              >
+                                Archive
+                              </button>
+                            )}
                           </div>
-                       </div>
-                      </div>
+                        </div>
+                        <div className="portal-notif-row__meta">
+                          <span className="portal-notif-row__meta-chip">{metaLabel}</span>
+                          <span className="portal-notif-row__meta-time">{formatRelativeTime(notification.created_at)}</span>
+                        </div>
+                      </article>
                     )
                   })}
                 </div>
@@ -698,27 +714,23 @@ export default function Notifications() {
             )}
           </div>
 
-          {/* Offline Indicator */}
           {isOffline && (
-            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800">
-              <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
-                <span className="material-symbols-outlined">wifi_off</span>
-                <span className="text-sm font-medium">You're offline. Some features may be unavailable.</span>
-              </div>
+            <div className="portal-notif-feed__offline">
+              <span className="material-symbols-outlined">wifi_off</span>
+              <span>You're offline. Some features may be unavailable.</span>
             </div>
           )}
 
-          {/* Load More Footer - only if we have data and next cursor */}
           {!loading && filteredNotifications.length > 0 && nextCursor && (
-            <div className="p-8 flex justify-center">
-              <button 
+            <div className="portal-notif-feed__footer">
+              <button
                 onClick={handleLoadMore}
                 disabled={loadingMore || isOffline}
-                className="org-btn-secondary flex items-center gap-2 px-8 py-3 rounded-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="portal-notif-feed__loadmore"
               >
                 {loadingMore ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current"></div>
+                    <div className="portal-notif-feed__spinner" />
                     Loading...
                   </>
                 ) : (
@@ -732,19 +744,9 @@ export default function Notifications() {
           )}
         </section>
 
-      </main>
-
-      {/* Help Center Sticky */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <button 
-          onClick={() => window.open('/help', '_blank')}
-          className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-xl rounded-full px-6 py-3 flex items-center gap-3 hover:scale-105 transition-transform"
-        >
-          <span className="material-symbols-outlined text-[var(--org-btn-primary-bg)]">contact_support</span>
-          <span className="text-sm font-bold text-slate-900 dark:text-white">Help Center</span>
-        </button>
-      </div>
-      </div>
+        </div>
+      </PortalLayout>
     </NotificationErrorBoundary>
   )
 }
+

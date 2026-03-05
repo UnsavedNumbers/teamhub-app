@@ -17,6 +17,7 @@ export const STORAGE_KEYS = {
   THEME_PREFERENCE: 'youthsports-theme-preference',
   LANGUAGE_PREFERENCE: 'youthsports-language',
   SIDEBAR_COLLAPSED: 'youthsports-sidebar-collapsed',
+  PUSH_DEVICE_ID: 'youthsports-push-device-id',
   
   // Feature flags cache
   FEATURE_FLAGS_CACHE: 'youthsports-feature-flags-cache',

@@ -57,9 +57,9 @@ export default function Modal({ open, onClose, title, children, size = 'medium',
   if (!open) return null
 
   const sizeMap = {
-    small: '400px',
-    medium: '600px',
-    large: '800px',
+    small: 'min(400px, calc(100vw - 32px))',
+    medium: 'min(600px, calc(100vw - 32px))',
+    large: 'min(800px, calc(100vw - 32px))',
   }
 
   const modalContent = (
@@ -86,6 +86,7 @@ export default function Modal({ open, onClose, title, children, size = 'medium',
           maxWidth: sizeMap[size],
           margin: 0,
           maxHeight: '90vh',
+          overflowX: 'hidden',
           overflowY: 'auto',
           backgroundColor: 'white',
           position: 'relative',

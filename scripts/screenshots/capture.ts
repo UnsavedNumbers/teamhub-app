@@ -58,6 +58,34 @@ async function normalizeUI(page: Page, config: ScreenshotConfig): Promise<void> 
         animation: none !important;
         caret-color: transparent !important;
       }
+      /* Hide sidebar navigation for content-only captures */
+      .oa-sidebar,
+      .pa-sidebar,
+      .portal-workspace-sidebar,
+      .gn-root,
+      .portal-workspace-header,
+      .pa-org-switcher,
+      .pa-org-switcher-dropdown,
+      .pa-mobile-sidebar-toggle,
+      .oa-mobile-header,
+      .pa-mobile-header,
+      .mobile-menu,
+      [class*="sidebar-drawer"] {
+        display: none !important;
+        visibility: hidden !important;
+      }
+      /* Reflow main content after sidebar removal */
+      .oa-main,
+      .pa-main,
+      .portal-workspace-main {
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      .oa-content {
+        max-width: 100% !important;
+      }
       [data-testid*="spinner"],
       [data-testid*="loading"],
       .loading,
@@ -127,6 +155,9 @@ async function waitForPageReady(page: Page, config: ScreenshotConfig): Promise<v
 
   // Always wait for fonts
   await page.evaluate(() => document.fonts.ready)
+
+  // Allow async role/context hydration and permission-gated UI to settle
+  await page.waitForTimeout(1200)
 }
 
 // ============================================================================
@@ -203,6 +234,23 @@ async function captureRoute(
     }
     
     await waitForPageReady(page, config)
+
+    // Route-specific readiness checks for controls that appear after org/role hydration
+    if (routeKey === 'admin.facilities.list') {
+      await page
+        .waitForSelector('button:has-text("ADD FACILITY"), button:has-text("Add Facility"), button:has-text("ADD RESOURCE"), button:has-text("Add Resource")', {
+          timeout: 5000,
+        })
+        .catch(async () => {
+          // Fallback: ensure facility cards are fully rendered before capture
+          await page
+            .waitForSelector('text=OPEN SCHEDULE, button:has-text("Open Schedule"), button:has-text("OPEN SCHEDULE")', {
+              timeout: 4000,
+            })
+            .catch(() => {})
+        })
+    }
+
     await normalizeUI(page, config)
 
     // Determine if fullPage or viewport screenshot

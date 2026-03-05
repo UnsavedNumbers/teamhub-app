@@ -11,6 +11,7 @@ const defaultTeam: TeamsRow = {
   invite_code: 'INV123',
   is_active: true,
   level_id: null,
+  min_roster_size: null,
   max_roster_size: null,
   name: 'Test Team',
   org_id: '650e8400-e29b-41d4-a716-446655440001',

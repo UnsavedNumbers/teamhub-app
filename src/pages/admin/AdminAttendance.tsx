@@ -20,7 +20,7 @@ export default function Attendance() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="oa-tabs">
-        <TabsList>
+        <TabsList className="oa-mb-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="events">Events</TabsTrigger>
           <TabsTrigger value="people">People</TabsTrigger>

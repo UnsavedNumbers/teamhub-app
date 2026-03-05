@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Huddles Page - Stream Chat Integration
  * 
  * Replaces the old Messages page with full Stream Chat functionality.
@@ -19,6 +19,7 @@ import 'stream-chat-react/dist/css/v2/index.css'
 
 import { useAuth } from '../hooks/useAuth'
 import { useUserContext } from '../hooks/useUserContext'
+import { useTheme } from '../hooks/useTheme'
 import { useT } from '../i18n/useI18n'
 import { getStreamToken } from '../data/services/huddlesService'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
@@ -28,8 +29,8 @@ import {
   disconnectUser,
   getUserTeamChannels,
   getUserOrgChannels,
-  getUserDMChannels,
 } from '../lib/streamChat'
+import { USE_FAKE_DATA } from '../data/config'
 
 import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle } from '../components/portal/Typography'
@@ -49,7 +50,9 @@ export default function Huddles() {
   useDebugLifecycle('Huddles')
   const { user } = useAuth()
   const { context, isReady } = useUserContext()
+  const { resolvedTheme } = useTheme()
   const t = useT()
+  const chatTheme = resolvedTheme === 'dark' ? 'messaging dark' : 'messaging light'
 
   // Stream Chat state
   const [streamClient, setStreamClient] = useState<StreamChat | null>(null)
@@ -57,7 +60,6 @@ export default function Huddles() {
   const [selectedChannel, setSelectedChannel] = useState<StreamChannel | null>(null)
   const [teamChannels, setTeamChannels] = useState<StreamChannel[]>([])
   const [orgChannels, setOrgChannels] = useState<StreamChannel[]>([])
-  const [dmChannels, setDMChannels] = useState<StreamChannel[]>([])
   const [threadMessageId, setThreadMessageId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [streamLoading, setStreamLoading] = useState(false)
@@ -66,6 +68,7 @@ export default function Huddles() {
 
   // Initialize Stream Chat connection (once)
   const hasInitializedStream = useRef(false)
+  const seededDemoTeamChannelIds = useRef<Set<string>>(new Set())
   useEffect(() => {
     if (!isReady || !user || hasInitializedStream.current) return
     hasInitializedStream.current = true
@@ -116,42 +119,76 @@ export default function Huddles() {
     try {
       const teamIds = teams.map(t => t.id)
       const orgIds = context.orgId ? [context.orgId] : []
+      const teamNamesById = new Map(teams.map(team => [team.id, team.name]))
+      const client = getStreamClient()
+
+      const seedTeamChannelIfNeeded = async (channel: StreamChannel, teamName: string) => {
+        if (!USE_FAKE_DATA || !channel.id) return
+        if (seededDemoTeamChannelIds.current.has(channel.id)) return
+        if (channel.state.messages.length > 0) {
+          seededDemoTeamChannelIds.current.add(channel.id)
+          return
+        }
+
+        try {
+          const demoSeedMessages = [
+            `${teamName} huddle created for demo. Share updates, reminders, and game-day logistics here.`,
+            `Practice reminder for ${teamName}: arrive 15 minutes early for warmups.`,
+            `Please post your player availability in this thread before Friday.`,
+          ]
+
+          for (const text of demoSeedMessages) {
+            await channel.sendMessage({
+              type: 'system',
+              text,
+            })
+          }
+        } catch (error) {
+          console.error('Error seeding demo huddle channel:', error)
+        } finally {
+          seededDemoTeamChannelIds.current.add(channel.id)
+        }
+      }
       
       // Auto-create team channels if they don't exist
-      const client = getStreamClient()
       for (const teamId of teamIds) {
         try {
           const channels = await client.queryChannels({
             type: 'messaging',
             team: teamId,
           })
+          const teamName = teamNamesById.get(teamId) || 'Team'
           
           if (channels.length === 0) {
             const channel = client.channel('messaging', `team-${teamId}`, {
-              name: `Team Channel`,
+              name: `${teamName} Huddle`,
               team: teamId,
               members: [user!.id],
             })
             await channel.create()
+            await channel.watch()
+            await seedTeamChannelIfNeeded(channel, teamName)
+          } else if (USE_FAKE_DATA) {
+            for (const channel of channels) {
+              await seedTeamChannelIfNeeded(channel, teamName)
+            }
           }
         } catch (error) {
           console.error('Error creating channel for team:', teamId, error)
         }
       }
       
-      const [teamResult, orgResult, dmResult] = await Promise.all([
+      const [teamResult, orgResult] = await Promise.all([
         getUserTeamChannels(teamIds),
         getUserOrgChannels(orgIds),
-        getUserDMChannels(),
       ])
 
       setTeamChannels(teamResult)
       setOrgChannels(orgResult)
-      setDMChannels(dmResult)
 
       // Auto-select first channel if none selected
       if (!selectedChannel) {
-        const firstChannel = teamResult[0] || orgResult[0] || dmResult[0]
+        const firstChannel = teamResult[0] || orgResult[0]
         if (firstChannel) {
           setSelectedChannel(firstChannel)
         }
@@ -205,7 +242,7 @@ export default function Huddles() {
     return (
       <PortalLayout>
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
         </div>
       </PortalLayout>
     )
@@ -222,23 +259,23 @@ export default function Huddles() {
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <PageTitle>Huddles</PageTitle>
-        <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide mt-1">
-          Team chat and messaging.
+        <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide mt-1">
+          Team and organization chat channels.
         </p>
       </div>
 
       {/* Two-column layout */}
       <div className="flex gap-6 h-[calc(100vh-280px)] min-h-[600px]">
         {/* Left: Channel List */}
-        <div className="w-[320px] flex-shrink-0 flex flex-col border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50">
+        <div className="w-[320px] flex-shrink-0 flex flex-col border border-gray-200 dark:border-neutral-700 bg-white dark:bg-black">
           {/* List Header */}
-          <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900 dark:text-white">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-900 dark:text-white">
                 Channels
               </h2>
-              <span className="text-xs font-bold text-slate-400">
-                {teamChannels.length + orgChannels.length + dmChannels.length}
+              <span className="text-xs font-bold text-gray-400">
+                {teamChannels.length + orgChannels.length}
               </span>
             </div>
           </div>
@@ -248,17 +285,17 @@ export default function Huddles() {
             {streamLoading ? (
               <div className="p-4 space-y-3">
                 {[1, 2, 3].map(i => (
-                  <div key={i} className="h-16 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                  <div key={i} className="h-16 bg-gray-100 dark:bg-neutral-900 rounded animate-pulse" />
                 ))}
               </div>
             ) : !streamConnected || !streamClient ? (
               <div className="p-8">
                 <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-slate-900 dark:border-white mx-auto mb-2"></div>
-                  <p className="text-xs text-slate-500">{t('portal.huddles.connectingToChat')}</p>
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-gray-900 dark:border-white mx-auto mb-2"></div>
+                  <p className="text-xs text-gray-500">{t('portal.huddles.connectingToChat')}</p>
                 </div>
               </div>
-            ) : teamChannels.length === 0 && orgChannels.length === 0 && dmChannels.length === 0 ? (
+            ) : teamChannels.length === 0 && orgChannels.length === 0 ? (
               <div className="p-8">
                 <EmptyState
                   icon="forum"
@@ -267,16 +304,26 @@ export default function Huddles() {
                 />
               </div>
             ) : (
-              <div className="divide-y divide-slate-200 dark:divide-slate-700">
+              <div className="divide-y divide-gray-200 dark:divide-neutral-700">
                 {streamClient && (
-                  <Chat client={streamClient}>
+                  <Chat client={streamClient} theme={chatTheme}>
                     <ChannelList
                       teamChannels={teamChannels}
                       orgChannels={orgChannels}
-                      dmChannels={dmChannels}
+                      dmChannels={[]}
                       selectedChannel={selectedChannel}
                       onChannelSelect={setSelectedChannel}
                       loading={streamLoading}
+                      resolveChannelName={(channel, fallbackName, type) => {
+                        if (type !== 'team') return fallbackName
+                        const teamId = typeof channel.data?.team === 'string' ? channel.data.team : ''
+                        const teamName = teams.find(team => team.id === teamId)?.name
+                        if (!teamName) return fallbackName
+                        if (!fallbackName || fallbackName === 'Team Channel' || fallbackName === 'Unnamed Channel') {
+                          return `${teamName} Huddle`
+                        }
+                        return fallbackName
+                      }}
                     />
                   </Chat>
                 )}
@@ -286,9 +333,9 @@ export default function Huddles() {
         </div>
 
         {/* Right: Chat Panel */}
-        <div className="flex-1 flex flex-col border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50">
+        <div className="flex-1 flex flex-col border border-gray-200 dark:border-neutral-700 bg-white dark:bg-black">
           {streamConnected && streamClient && selectedChannel ? (
-            <Chat client={streamClient}>
+            <Chat client={streamClient} theme={chatTheme}>
               <Channel channel={selectedChannel}>
                 <Window>
                   <PinnedMessages
@@ -321,3 +368,4 @@ export default function Huddles() {
     </PortalLayout>
   )
 }
+

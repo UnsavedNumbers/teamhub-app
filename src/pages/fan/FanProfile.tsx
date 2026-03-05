@@ -15,6 +15,10 @@ import {
   updateNotificationPreferences, 
   type NotificationPreferences 
 } from '../../data/services/fanService'
+import { USE_FAKE_DATA } from '../../data/config'
+import { resolveDemoUserId } from '../../data/fake/userContext'
+import { fakeChildren, getChildrenForUser } from '../../data/fake/fakeUsers'
+import { getActiveTeamMembershipsForChild, getTeamWithDetails } from '../../data/fake/fakeTeams'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import AthleteAvatar from '../../components/portal/AthleteAvatar'
@@ -699,8 +703,31 @@ export function FanProfileLinkedAthletes() {
 
   const loadLinkedAthletes = async () => {
     setLoading(true)
-    // In production: fetch linked athletes from API
-    setLinkedAthletes([])
+    if (USE_FAKE_DATA) {
+      const { data: userData } = await supabase.auth.getUser()
+      const userEmail = userData.user?.email ?? null
+      const userId = resolveDemoUserId(userEmail) ?? userData.user?.id ?? null
+      const userChildren = userId ? getChildrenForUser(userId) : []
+      const sourceChildren = (userChildren.length > 0 ? userChildren : fakeChildren).slice(0, 6)
+
+      const mapped = sourceChildren.map((child) => {
+        const membership = getActiveTeamMembershipsForChild(child.id)[0]
+        const team = membership ? getTeamWithDetails(membership.team_id) : undefined
+        return {
+          id: child.id,
+          first_name: child.first_name,
+          last_name: child.last_name,
+          photo_url: child.photo_url,
+          org_id: team?.org_id,
+          team_name: team?.name || 'Team',
+          verified: Boolean(membership),
+        }
+      })
+      setLinkedAthletes(mapped)
+    } else {
+      // In production: fetch linked athletes from API
+      setLinkedAthletes([])
+    }
     setLoading(false)
   }
 

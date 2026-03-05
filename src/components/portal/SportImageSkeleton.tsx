@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Sport Image Skeleton Component
  *
  * Loading placeholder for sport images with fixed aspect ratio
@@ -15,12 +15,13 @@ export function SportImageSkeleton({ type = 'hero', className = '' }: SportImage
 
     return (
         <div
-            className={`${aspectRatio} w-full bg-slate-200 dark:bg-slate-800 animate-pulse rounded-xl ${className}`}
+            className={`${aspectRatio} w-full bg-gray-200 dark:bg-gray-800 animate-pulse rounded-xl ${className}`}
             aria-label="Loading sport image"
         >
             <div className="w-full h-full flex items-center justify-center">
-                <div className="w-16 h-16 rounded-full bg-slate-300 dark:bg-slate-700"></div>
+                <div className="w-16 h-16 rounded-full bg-gray-300 dark:bg-gray-700"></div>
             </div>
         </div>
     )
 }
+

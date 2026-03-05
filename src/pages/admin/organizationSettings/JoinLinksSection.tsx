@@ -201,8 +201,8 @@ export default function JoinLinksSection({ orgId }: JoinLinksSectionProps) {
 
     return (
         <div className="space-y-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="mb-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="oa-tabs w-full">
+                <TabsList className="oa-mb-6">
                     <TabsTrigger value="links">{t('admin.organizationSettings.joinLinks.linksTab')}</TabsTrigger>
                     <TabsTrigger value="requests">
                         {t('admin.organizationSettings.joinLinks.requestsTab')}

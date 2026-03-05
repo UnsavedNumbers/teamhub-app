@@ -205,8 +205,8 @@ export default function DemoOrgDetail() {
 
       {error && <div className="pa-text-danger pa-mb-3">{error}</div>}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="oa-tabs">
+        <TabsList className="oa-mb-6">
           <TabsTrigger value="overview">{t('platformAdmin.demoManagement.detail.tabs.overview')}</TabsTrigger>
           <TabsTrigger value="pocs">{t('platformAdmin.demoManagement.detail.tabs.pocs')}</TabsTrigger>
           <TabsTrigger value="codes">{t('platformAdmin.demoManagement.detail.tabs.codes')}</TabsTrigger>

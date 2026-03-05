@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Admin Contact Page
  * 
  * Contact page for organization administrators.
@@ -10,6 +10,7 @@ import { AdminPageHeader, Card } from '../../components/admin'
 import { ADMIN_CONTACT_SUBJECTS } from '../../types/contact'
 import { useT } from '../../i18n/useI18n'
 import { useAuth } from '../../hooks/useAuth'
+import '../../styles/orgAdmin.css'
 
 export default function AdminContactPage() {
   const t = useT()

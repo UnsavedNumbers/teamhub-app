@@ -7,6 +7,7 @@ import EventForm from '../../components/calendar/EventForm'
 import { createEvent } from '../../data/services/eventsService'
 import { useUserContext } from '../../hooks/useUserContext'
 import { EventFormData } from '../../types/calendar'
+import { getLink, RouteKeys } from '../../utils/routes'
 
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 
@@ -26,12 +27,12 @@ export default function PortalCreateEvent() {
       setError(error.message)
       setLoading(false)
     } else {
-      navigate('/portal/calendar')
+      navigate(getLink(RouteKeys.PORTAL_CALENDAR))
     }
   }
 
   return (
-    <PortalLayout breadcrumbs={[{ label: 'Calendar', path: '/portal/calendar' }, { label: 'New Event' }]}>
+    <PortalLayout breadcrumbs={[{ label: 'Calendar', path: getLink(RouteKeys.PORTAL_CALENDAR) }, { label: 'New Event' }]}>
       <div className="mb-6">
         <PageTitle>Create Event</PageTitle>
       </div>

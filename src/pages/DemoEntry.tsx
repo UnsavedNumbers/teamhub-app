@@ -7,6 +7,17 @@ import { normalizeDemoCode, type DemoAllowedRole } from '@/types/demoManagement'
 import { validateDemoCode } from '@/data/services/demoCodeService'
 import { getDemoOrg } from '@/data/services/demoOrgService'
 import { AUTH_PAGE_HERO_IMAGES } from '@/utils/authImages'
+import { supabase } from '@/lib/supabase'
+
+const DEMO_ENTRY_SELECTED_ROLE_KEY = 'demo_entry_selected_role'
+
+const STALE_DEMO_SWITCH_KEYS = [
+  'DEMO_RETURN_TO',
+  'DEMO_RETURN_TS',
+  'DEMO_PREV_ROLE',
+  'DEMO_TARGET_ROLE',
+  'DEMO_SWITCH_IN_PROGRESS',
+]
 
 // Global role enablement - can be controlled via config/feature flags
 const GLOBALLY_ENABLED_ROLES: DemoAllowedRole[] = ['org_admin', 'coach', 'parent', 'athlete', 'staff', 'fan']
@@ -18,6 +29,42 @@ const ROLE_LABELS: Record<DemoAllowedRole, string> = {
   athlete: 'Athlete',
   staff: 'Volunteer',
   fan: 'Fan',
+}
+
+function isLocalHostname(hostname: string): boolean {
+  const host = hostname.toLowerCase()
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1'
+}
+
+function sanitizeMagicLinkUrl(rawUrl: string): string {
+  const currentOrigin = window.location.origin
+  const currentHostIsLocal = isLocalHostname(window.location.hostname)
+
+  try {
+    const url = new URL(rawUrl, currentOrigin)
+
+    const isAppCallbackPath = url.pathname === '/portal/auth/callback'
+    if (url.origin !== currentOrigin && isAppCallbackPath) {
+      return new URL(url.pathname + url.search + url.hash, currentOrigin).toString()
+    }
+
+    if (!currentHostIsLocal && isLocalHostname(url.hostname)) {
+      return new URL(url.pathname + url.search + url.hash, currentOrigin).toString()
+    }
+
+    const nested = url.searchParams.get('redirect_to')
+    if (!nested) return url.toString()
+
+    const nestedUrl = new URL(nested, currentOrigin)
+    if (nestedUrl.origin !== currentOrigin) {
+      const rewritten = new URL(nestedUrl.pathname + nestedUrl.search + nestedUrl.hash, currentOrigin)
+      url.searchParams.set('redirect_to', rewritten.toString())
+    }
+
+    return url.toString()
+  } catch {
+    return rawUrl
+  }
 }
 
 export default function DemoEntry() {
@@ -148,7 +195,9 @@ export default function DemoEntry() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          apikey: supabaseAnonKey,
           'Authorization': `Bearer ${supabaseAnonKey}`,
+          'X-App-Origin': window.location.origin,
         },
         body: JSON.stringify({
           code: normalizedCode,
@@ -156,20 +205,51 @@ export default function DemoEntry() {
         }),
       })
 
-      const result: { success: boolean; redirect_url?: string; error?: string; message?: string } = await response.json()
+      const result: { success: boolean; redirect_url?: string; access_token?: string; refresh_token?: string; error?: string; message?: string } = await response.json()
 
-      if (!result.success || !result.redirect_url) {
-        setError(result.error || 'Failed to enter demo. Please try again.')
+      if (!response.ok) {
+        setError(result.error || result.message || 'Failed to enter demo. Please try again.')
         setLoading(false)
         return
       }
 
-      // Set a flag in sessionStorage to indicate this is a demo callback
-      // This helps HostHomeRoute detect demo callbacks even if redirect URL doesn't preserve query params
-      sessionStorage.setItem('demo_entry_initiated', 'true')
+      if (!result.success) {
+        setError(result.error || result.message || 'Failed to enter demo. Please try again.')
+        setLoading(false)
+        return
+      }
 
-      // Redirect to the magic link which will sign the user in
-      window.location.href = result.redirect_url
+      // Set demo session flags before any navigation
+      sessionStorage.setItem('demo_entry_initiated', 'true')
+      sessionStorage.setItem(DEMO_ENTRY_SELECTED_ROLE_KEY, selectedRole)
+      for (const key of STALE_DEMO_SWITCH_KEYS) {
+        sessionStorage.removeItem(key)
+      }
+
+      // Preferred path: server verified OTP and returned session tokens directly.
+      // This bypasses Supabase redirect allowlist entirely — works on any origin.
+      if (result.access_token && result.refresh_token) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: result.access_token,
+          refresh_token: result.refresh_token,
+        })
+
+        if (!sessionError) {
+          // Navigate to auth callback which handles demo org-fetch and role routing
+          window.location.href = '/portal/auth/callback?demo=true'
+          return
+        }
+        console.error('[DemoEntry] setSession failed, falling back to redirect_url', sessionError)
+      }
+
+      // Fallback: redirect through Supabase magic link (requires redirect allowlist)
+      if (!result.redirect_url) {
+        setError('Failed to enter demo. Please try again.')
+        setLoading(false)
+        return
+      }
+      const safeRedirectUrl = sanitizeMagicLinkUrl(result.redirect_url)
+      window.location.href = safeRedirectUrl
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to enter demo.')
       setLoading(false)
@@ -177,7 +257,7 @@ export default function DemoEntry() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-white antialiased relative flex">
+    <div className="min-h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-white antialiased relative flex">
       {/* Background Field Markings (Grid) */}
       <div 
         className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1]"

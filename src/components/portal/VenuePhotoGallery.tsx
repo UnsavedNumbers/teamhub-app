@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Venue Photo Gallery Component
  * 
  * Displays a horizontal scrollable carousel of venue photos.
@@ -24,10 +24,10 @@ export default function VenuePhotoGallery({
 
   if (!photos || photos.length === 0) {
     return (
-      <div className={`flex items-center justify-center h-48 bg-slate-100 dark:bg-slate-800 rounded-lg ${className}`}>
+      <div className={`flex items-center justify-center h-48 bg-gray-100 dark:bg-gray-800 rounded-lg ${className}`}>
         <div className="text-center">
-          <Icon name="location_on" className="text-slate-400 text-4xl mb-2" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <Icon name="location_on" className="text-gray-400 text-4xl mb-2" />
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {venueName || 'No photos available'}
           </p>
         </div>
@@ -43,10 +43,10 @@ export default function VenuePhotoGallery({
 
   if (validPhotos.length === 0) {
     return (
-      <div className={`flex items-center justify-center h-48 bg-slate-100 dark:bg-slate-800 rounded-lg ${className}`}>
+      <div className={`flex items-center justify-center h-48 bg-gray-100 dark:bg-gray-800 rounded-lg ${className}`}>
         <div className="text-center">
-          <Icon name="location_on" className="text-slate-400 text-4xl mb-2" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <Icon name="location_on" className="text-gray-400 text-4xl mb-2" />
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {venueName || 'Photos unavailable'}
           </p>
         </div>
@@ -91,7 +91,7 @@ export default function VenuePhotoGallery({
           <div className="relative max-w-4xl max-h-[90vh]">
             <button
               onClick={() => setSelectedPhoto(null)}
-              className="absolute top-4 right-4 text-white hover:text-slate-300 z-10"
+              className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
               aria-label="Close"
             >
               <Icon name="close" className="text-2xl" />
@@ -108,3 +108,4 @@ export default function VenuePhotoGallery({
     </>
   )
 }
+

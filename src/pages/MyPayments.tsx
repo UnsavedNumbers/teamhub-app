@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useUserContext } from '../hooks/useUserContext'
@@ -421,7 +421,7 @@ export default function MyPayments() {
       case 'overdue':
         return <span className={`${base} bg-red-500/10 text-red-500 dark:text-red-400`}>{statusLabels[status]}</span>
       default:
-        return <span className={`${base} bg-slate-500/10 text-slate-500 dark:text-slate-400`}>{statusLabels[status] ?? status}</span>
+        return <span className={`${base} bg-gray-500/10 text-gray-500 dark:text-gray-400`}>{statusLabels[status] ?? status}</span>
     }
   }
 
@@ -434,7 +434,7 @@ export default function MyPayments() {
       >
         <div className="mb-8 sm:mb-12">
           <PageTitle>Payments</PageTitle>
-          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide">
+          <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
             Select fees to pay or filter to find a specific fee.
           </p>
         </div>
@@ -450,7 +450,7 @@ export default function MyPayments() {
           <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 items-stretch sm:items-center">
               <select
-                className="w-full sm:w-auto bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2.5 text-sm text-slate-900 dark:text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded px-4 py-2.5 text-sm text-gray-900 dark:text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as FeeAssignmentStatus | 'all')}
                 disabled={loading}
@@ -463,7 +463,7 @@ export default function MyPayments() {
                 <option value="overdue">Overdue</option>
               </select>
               <select
-                className="w-full sm:w-auto bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2.5 text-sm text-slate-900 dark:text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded px-4 py-2.5 text-sm text-gray-900 dark:text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 value={childFilter}
                 onChange={(e) => setChildFilter(e.target.value)}
                 disabled={loading}
@@ -474,7 +474,7 @@ export default function MyPayments() {
                 ))}
               </select>
               <select
-                className="w-full sm:w-auto bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2.5 text-sm text-slate-900 dark:text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded px-4 py-2.5 text-sm text-gray-900 dark:text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 value={teamFilter}
                 onChange={(e) => setTeamFilter(e.target.value)}
                 disabled={loading}
@@ -501,7 +501,7 @@ export default function MyPayments() {
           <div className="flex flex-col gap-3 sm:gap-4">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
               <input
-                className="flex-1 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
+                className="flex-1 bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded px-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder:text-gray-400"
                 placeholder={t('portal.payments.discountCode')}
                 value={discountCode}
                 onChange={(e) => {
@@ -545,10 +545,10 @@ export default function MyPayments() {
             {discountError && (
               <span className="text-red-500 dark:text-red-400 text-sm font-bold">{discountError}</span>
             )}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
               <div className="text-left sm:text-right">
-                <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Selected total</p>
-                <p className="text-lg font-black text-slate-900 dark:text-white">${(selectedTotal / 100).toFixed(2)}</p>
+                <p className="text-xs text-gray-400 uppercase tracking-widest font-bold">Selected total</p>
+                <p className="text-lg font-black text-gray-900 dark:text-white">${(selectedTotal / 100).toFixed(2)}</p>
               </div>
               <Button
                 variant="primary"
@@ -570,11 +570,11 @@ export default function MyPayments() {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
           </div>
         ) : filteredAssignments.length === 0 ? (
           <Card className="text-center py-12">
-            <p className="text-slate-500 dark:text-slate-400">No fees found.</p>
+            <p className="text-gray-500 dark:text-gray-400">No fees found.</p>
           </Card>
         ) : (
           <>
@@ -610,22 +610,22 @@ export default function MyPayments() {
                             }}
                             onClick={(e) => e.stopPropagation()}
                             disabled={loading || creatingCheckout}
-                            className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-[var(--org-link-color)] focus:ring-[var(--org-btn-primary-bg, #137fec)] disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                            className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-[var(--org-link-color)] focus:ring-[var(--org-btn-primary-bg, #137fec)] disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                           />
-                          <p className="font-black text-slate-900 dark:text-white text-base sm:text-lg uppercase break-words">{a.fee?.title || 'Fee'}</p>
+                          <p className="font-black text-gray-900 dark:text-white text-base sm:text-lg uppercase break-words">{a.fee?.title || 'Fee'}</p>
                           {renderStatus(a.status)}
                         </div>
-                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                        <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
                           {a.child ? `${a.child.first_name} ${a.child.last_name}` : 'Child'}
                         </p>
-                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
                           {a.fee?.season?.team?.name || 'Team not set'}
                         </p>
                         {a.fee?.description && (
-                          <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">{a.fee.description}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{a.fee.description}</p>
                         )}
                         {dueDate && (
-                          <p className={`text-xs font-bold uppercase tracking-widest ${isOverdue ? 'text-red-500 dark:text-red-400' : 'text-slate-400'}`}>
+                          <p className={`text-xs font-bold uppercase tracking-widest ${isOverdue ? 'text-red-500 dark:text-red-400' : 'text-gray-400'}`}>
                             Due {new Date(dueDate).toLocaleDateString()}
                           </p>
                         )}
@@ -634,12 +634,12 @@ export default function MyPayments() {
                         <div className="space-y-1">
                           {a.paid_cents_total > 0 ? (
                             <>
-                              <p className="text-xs font-bold text-slate-400">Total: ${(a.amount_cents / 100).toFixed(2)}</p>
+                              <p className="text-xs font-bold text-gray-400">Total: ${(a.amount_cents / 100).toFixed(2)}</p>
                               <p className="text-xs font-bold text-emerald-500 dark:text-emerald-400">Paid: ${(a.paid_cents_total / 100).toFixed(2)}</p>
-                              <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">Remaining: ${((a.balance_cents ?? 0) / 100).toFixed(2)}</p>
+                              <p className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white">Remaining: ${((a.balance_cents ?? 0) / 100).toFixed(2)}</p>
                             </>
                           ) : (
-                            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">${((a.balance_cents ?? a.amount_cents ?? 0) / 100).toFixed(2)}</p>
+                            <p className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white">${((a.balance_cents ?? a.amount_cents ?? 0) / 100).toFixed(2)}</p>
                           )}
                         </div>
                         {orgAllowsPartialPayments && 
@@ -670,10 +670,10 @@ export default function MyPayments() {
             <Card className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Total due</p>
-                  <p className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">${(totalDue / 100).toFixed(2)}</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Total due</p>
+                  <p className="text-lg sm:text-xl font-black text-gray-900 dark:text-white">${(totalDue / 100).toFixed(2)}</p>
                 </div>
-                <div className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                <div className="text-sm font-bold text-gray-500 dark:text-gray-400">
                   {unpaidAssignments.length} open {unpaidAssignments.length === 1 ? 'fee' : 'fees'}
                 </div>
               </div>
@@ -697,29 +697,29 @@ export default function MyPayments() {
               setPartialAmountCents('')
               setPartialPaymentError(null)
             }}>
-              <Card className="max-w-md w-full p-6 dark:bg-slate-900 dark:border-slate-700" onClick={(e) => e.stopPropagation()}>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4">Make a Partial Payment</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+              <Card className="max-w-md w-full p-6 dark:bg-gray-900 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
+                <h3 className="text-lg font-black text-gray-900 dark:text-white mb-4">Make a Partial Payment</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                   {assignment.fee?.title || 'Fee'}
                 </p>
                 <div className="space-y-2 mb-4">
                   {assignment.paid_cents_total > 0 ? (
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Total: ${(assignment.amount_cents / 100).toFixed(2)} · 
-                      Paid: ${(assignment.paid_cents_total / 100).toFixed(2)} · 
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Total: ${(assignment.amount_cents / 100).toFixed(2)} - 
+                      Paid: ${(assignment.paid_cents_total / 100).toFixed(2)} - 
                       Remaining: ${(assignment.balance_cents / 100).toFixed(2)}
                     </p>
                   ) : (
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       Amount due: ${(assignment.balance_cents / 100).toFixed(2)}
                     </p>
                   )}
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     Minimum partial payment (10% of total fee): ${(minAmountCents / 100).toFixed(2)}
                   </p>
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
                     Payment Amount ($)
                   </label>
                   <input
@@ -732,7 +732,7 @@ export default function MyPayments() {
                       setPartialAmountCents(e.target.value)
                       setPartialPaymentError(null)
                     }}
-                    className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-4 py-2.5 text-sm text-slate-900 dark:text-white"
+                    className="w-full bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded px-4 py-2.5 text-sm text-gray-900 dark:text-white"
                     placeholder={`Enter amount (min $${minAmount.toFixed(2)}, max $${maxAmount.toFixed(2)})`}
                     disabled={creatingPartialCheckout}
                   />
@@ -769,3 +769,4 @@ export default function MyPayments() {
       </PortalLayout>
   )
 }
+

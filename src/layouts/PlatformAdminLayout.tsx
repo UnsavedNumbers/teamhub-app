@@ -14,6 +14,7 @@ import GlobalNav from '../components/common/GlobalNav'
 import MobileMenu from '../components/common/MobileMenu'
 import type { NavSection as MobileNavSection } from '@/types/menu'
 import { getLink, getPath, RouteKeys } from '@/utils/routes'
+import { AppPage } from '../components/shared/AppPage'
 
 // Navigation structure per design spec
 type NavSection = {
@@ -204,16 +205,6 @@ function removeStuckOverlays() {
 }
 
 export default function PlatformAdminLayout() {
-  // #region agent log
-  const mountId = useRef(Math.random().toString(36).substr(2, 9))
-  useEffect(() => {
-    fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7451fa'},body:JSON.stringify({sessionId:'7451fa',location:'PlatformAdminLayout.tsx:137',message:'PlatformAdminLayout mounted',data:{mountId:mountId.current},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-    return () => {
-      fetch('http://127.0.0.1:7249/ingest/60db3259-e52f-44db-9b11-aee7014e1393',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7451fa'},body:JSON.stringify({sessionId:'7451fa',location:'PlatformAdminLayout.tsx:142',message:'PlatformAdminLayout unmounted',data:{mountId:mountId.current},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-    }
-  }, [])
-  // #endregion
-  
   // Clean up any stuck overlays on mount
   useEffect(() => {
     removeStuckOverlays()
@@ -353,7 +344,7 @@ export default function PlatformAdminLayout() {
   }
 
   return (
-    <div className="pa-root pa-app">
+    <AppPage className="pa-root pa-app">
       {/* Mobile hamburger button */}
       {isMobile && (
         <button
@@ -444,12 +435,12 @@ export default function PlatformAdminLayout() {
       )}
 
       {/* Main */}
-      <div className="pa-main">
+      <div className="pa-main min-w-0">
         {/* Global Navigation */}
         <GlobalNav variant="platform-admin" />
 
         {/* Content */}
-        <main className="pa-content">
+        <main className="pa-content min-w-0">
           <Outlet />
         </main>
       </div>
@@ -464,6 +455,6 @@ export default function PlatformAdminLayout() {
           brandSubtitle="Youth Sports"
         />
       )}
-    </div>
+    </AppPage>
   )
 }

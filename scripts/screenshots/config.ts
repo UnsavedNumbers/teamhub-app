@@ -68,7 +68,7 @@ export function loadConfig(): ScreenshotConfig {
   const baseUrl = process.env.YS_BASE_URL
   const environment = process.env.YS_ENV_LABEL || 'demo'
   const outputDir = process.env.YS_OUTPUT_DIR || 'artifacts/screenshots'
-  const rolesStr = process.env.YS_ROLES || 'org_admin,guardian'
+  const rolesStr = process.env.YS_ROLES || 'org_admin,guardian,fan'
   const viewportsStr = process.env.YS_VIEWPORTS || 'desktop,mobile'
   const authStrategy = (process.env.YS_AUTH_STRATEGY || 'demo_code') as AuthStrategy
   const demoCode = process.env.YS_DEMO_CODE

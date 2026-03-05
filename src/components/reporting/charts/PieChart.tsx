@@ -64,7 +64,7 @@ export function PieChart({
   }
 
   return (
-    <div className={`oa-chart-pie ${className}`} style={{ height: `${height}px`, padding: '16px', width: '100%' }}>
+    <div className={`oa-chart-pie overflow-safe-page ${className}`} style={{ height: `${height}px`, padding: '16px', width: '100%', minWidth: 0, overflow: 'hidden' }}>
       {title && (
         <h3
           style={{
@@ -78,7 +78,7 @@ export function PieChart({
           {title}
         </h3>
       )}
-      <ResponsiveContainer width="100%" height={title ? height - 40 : height}>
+      <ResponsiveContainer width="100%" minWidth={0} height={title ? height - 40 : height}>
         <RechartsPieChart>
           <Pie
             data={pieData}

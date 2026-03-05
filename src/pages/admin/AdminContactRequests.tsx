@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Admin Contact Requests Page
  *
  * Shows all contact requests submitted by guardians/athletes in the current org.
@@ -28,6 +28,7 @@ import {
   NoOrganizationEmptyState,
 } from '../../components/admin'
 import { getLink } from '../../utils/routes'
+import '../../styles/orgAdmin.css'
 
 // ============================================================================
 // Helpers
@@ -249,7 +250,7 @@ export default function AdminContactRequests() {
                     className="oa-table-row cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                     onClick={() => handleRowClick(req)}
                   >
-                    <td className="whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                    <td className="sm:whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                       {formatDate(req.created_at)}
                     </td>
                     <td>

@@ -10,9 +10,10 @@ import { showError } from '../../utils/toast'
 
 interface NotificationBellProps {
   viewAllPath?: string
+  neutralPalette?: boolean
 }
 
-export default function NotificationBell({ viewAllPath }: NotificationBellProps) {
+export default function NotificationBell({ viewAllPath, neutralPalette = false }: NotificationBellProps) {
   // All hooks must be called unconditionally at the top
   const userContextResult = useUserContext()
   const context = userContextResult.context
@@ -131,7 +132,7 @@ export default function NotificationBell({ viewAllPath }: NotificationBellProps)
   }
 
   return (
-    <div className="gn-notif" ref={containerRef}>
+    <div className={cn('gn-notif', neutralPalette && 'gn-notif--neutral')} ref={containerRef}>
       <button
         className={cn('gn-util-btn', unreadCount > 0 && 'gn-util-btn--active')}
         aria-label={t('portal.settings.notifications.title')}

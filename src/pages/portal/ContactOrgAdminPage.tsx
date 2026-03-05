@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Contact Org Admin Page
  *
  * Allows guardians and athletes to send structured requests to their org admin.
@@ -115,13 +115,13 @@ export default function ContactOrgAdminPage() {
     return (
       <PortalLayout>
         <div className="max-w-2xl mx-auto px-4 py-12 text-center">
-          <span className="material-symbols-outlined text-5xl text-slate-300 mb-4 block">
+          <span className="material-symbols-outlined text-5xl text-gray-300 mb-4 block">
             business
           </span>
           <h2 className="text-xl font-bold mb-2">
             {t('portal.contactOrgAdmin.notInOrg.title')}
           </h2>
-          <p className="text-slate-500 dark:text-slate-400">
+          <p className="text-gray-500 dark:text-gray-400">
             {t('portal.contactOrgAdmin.notInOrg.message')}
           </p>
         </div>
@@ -186,7 +186,7 @@ export default function ContactOrgAdminPage() {
       })
     }
 
-    // Suppress unused variable warning — result confirmed success
+    // Suppress unused variable warning - result confirmed success
     void data
 
     setSubmitted(true)
@@ -208,7 +208,7 @@ export default function ContactOrgAdminPage() {
           <h2 className="text-2xl font-bold mb-3">
             {t('portal.contactOrgAdmin.success.title')}
           </h2>
-          <p className="text-slate-500 dark:text-slate-400 mb-8">
+          <p className="text-gray-500 dark:text-gray-400 mb-8">
             {t('portal.contactOrgAdmin.success.message')}
           </p>
           <button
@@ -271,10 +271,10 @@ export default function ContactOrgAdminPage() {
       <div className="max-w-2xl mx-auto px-4 py-8">
         {/* Page header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold mb-1 text-slate-900 dark:text-white">
+          <h1 className="text-2xl font-bold mb-1 text-gray-900 dark:text-white">
             {t('portal.contactOrgAdmin.title')}
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {t('portal.contactOrgAdmin.subtitle')}
           </p>
         </div>
@@ -283,7 +283,7 @@ export default function ContactOrgAdminPage() {
 
           {/* Step 1: Select category */}
           <div className="mb-8">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4">
               {t('portal.contactOrgAdmin.selectReason')}
             </h2>
             <div className="grid gap-3">
@@ -295,14 +295,14 @@ export default function ContactOrgAdminPage() {
                   className={[
                     'w-full text-left px-4 py-3 rounded-lg border-2 transition-all',
                     category === cat
-                      ? 'border-[var(--org-primary,#3b82f6)] bg-[var(--org-primary,#3b82f6)]/5 text-slate-900 dark:text-white'
-                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600',
+                      ? 'border-[var(--org-primary,#3b82f6)] bg-[var(--org-primary,#3b82f6)]/5 text-gray-900 dark:text-white'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600',
                   ].join(' ')}
                 >
                   <div className="font-semibold text-sm">
                     {t(`portal.contactOrgAdmin.categories.${cat}`)}
                   </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     {t(`portal.contactOrgAdmin.categoryDescriptions.${cat}`)}
                   </div>
                 </button>
@@ -318,29 +318,29 @@ export default function ContactOrgAdminPage() {
               </h3>
 
               {featuresLoading && (
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {t('portal.contactOrgAdmin.featureRequest.loadingFeatures')}
                 </p>
               )}
 
               {!featuresLoading && !featuresError && unavailableFeatures.length === 0 && (
-                <p className="text-sm text-slate-600 dark:text-slate-300">
+                <p className="text-sm text-gray-600 dark:text-gray-300">
                   {t('portal.contactOrgAdmin.featureRequest.noFeatures')}
                 </p>
               )}
 
               {!featuresLoading && !featuresError && unavailableFeatures.length > 0 && (
                 <>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     {t('portal.contactOrgAdmin.featureRequest.selectFeature')}
                   </label>
                   <select
                     value={selectedFeatureKey}
                     onChange={e => setSelectedFeatureKey(e.target.value)}
                     required
-                    className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-primary,#3b82f6)] mb-4"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-primary,#3b82f6)] mb-4"
                   >
-                    <option value="">—</option>
+                    <option value="">-</option>
                     {unavailableFeatures.map(f => (
                       <option key={f.feature_key} value={f.feature_key}>
                         {f.display_name}
@@ -349,7 +349,7 @@ export default function ContactOrgAdminPage() {
                   </select>
 
                   {/* Use case quick-select */}
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                     {t('portal.contactOrgAdmin.featureRequest.useCaseLabel')}
                   </label>
                   <div className="flex flex-wrap gap-2 mb-4">
@@ -362,7 +362,7 @@ export default function ContactOrgAdminPage() {
                           'text-xs px-3 py-1.5 rounded-full border font-medium transition-colors',
                           featureUseCase === uc
                             ? 'bg-[var(--org-primary,#3b82f6)] text-white border-[var(--org-primary,#3b82f6)]'
-                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-slate-400',
+                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400',
                         ].join(' ')}
                       >
                         {t(`portal.contactOrgAdmin.featureRequest.useCases.${uc}`)}
@@ -371,7 +371,7 @@ export default function ContactOrgAdminPage() {
                   </div>
 
                   {/* Why do you want this */}
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                     {t('portal.contactOrgAdmin.featureRequest.whyLabel')}
                   </label>
                   <textarea
@@ -379,10 +379,10 @@ export default function ContactOrgAdminPage() {
                     onChange={e => setFeatureReason(e.target.value)}
                     placeholder={t('portal.contactOrgAdmin.featureRequest.whyPlaceholder')}
                     rows={2}
-                    className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-primary,#3b82f6)] mb-3"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-primary,#3b82f6)] mb-3"
                   />
 
-                  <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 italic">
                     {t('portal.contactOrgAdmin.featureRequest.consentNote')}
                   </p>
                 </>
@@ -394,7 +394,7 @@ export default function ContactOrgAdminPage() {
           {category && (category !== 'feature_request' || selectedFeatureKey) && (
             <>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                   {t('portal.contactOrgAdmin.message.label')}
                   <span className="text-red-500 ml-1">*</span>
                 </label>
@@ -404,12 +404,12 @@ export default function ContactOrgAdminPage() {
                   placeholder={t('portal.contactOrgAdmin.message.placeholder')}
                   rows={5}
                   required
-                  className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-primary,#3b82f6)]"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-primary,#3b82f6)]"
                 />
               </div>
 
               <div className="mb-8">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                   {t('portal.contactOrgAdmin.subject.label')}
                 </label>
                 <input
@@ -417,7 +417,7 @@ export default function ContactOrgAdminPage() {
                   value={subject}
                   onChange={e => setSubject(e.target.value)}
                   placeholder={t('portal.contactOrgAdmin.subject.placeholder')}
-                  className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-primary,#3b82f6)]"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-primary,#3b82f6)]"
                 />
               </div>
 
@@ -438,3 +438,4 @@ export default function ContactOrgAdminPage() {
     </PortalLayout>
   )
 }
+

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useUserContext } from '../hooks/useUserContext'
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
@@ -18,11 +18,14 @@ import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import AddToCalendarActions from '../components/calendar/AddToCalendarActions'
 import VenueInsights from '../components/portal/VenueInsights'
 import NearbyAmenities from '../components/portal/NearbyAmenities'
 import { PhotoSection } from '../components/galleries/PhotoSection'
 import { useNeighborhoodSummaryDirect } from '../hooks/useVenueInsights'
 import { useT } from '../i18n/useI18n'
+import type { CalendarExportEvent } from '../features/calendar/addToCalendar'
+import { getLink, RouteKeys } from '../utils/routes'
 
 interface MeetingLocation {
   name: string
@@ -81,58 +84,21 @@ function lyftLink(address: string | null | undefined): string | null {
   return `https://lyft.com/ride?destination[address]=${dest}`
 }
 
-function googleCalendarLink(event: { title: string; startTime: string; endTime: string; location?: string; notes?: string }): string | null {
-  try {
-    const startDate = new Date(event.startTime)
-    const endDate = new Date(event.endTime)
-    
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      console.error('Invalid date in calendar link:', event)
-      return null
-    }
-    
-    const start = startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    const end = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    const details = event.notes ? encodeURIComponent(event.notes) : ''
-    const location = event.location ? encodeURIComponent(event.location) : ''
-    const text = encodeURIComponent(event.title || 'Event')
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}/${end}&details=${details}&location=${location}`
-  } catch (err) {
-    console.error('Error generating Google Calendar link:', err)
-    return null
-  }
-}
-
-function appleCalendarLink(event: { title: string; startTime: string; endTime: string; location?: string }): string | null {
-  try {
-    const startDate = new Date(event.startTime)
-    const endDate = new Date(event.endTime)
-    
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      console.error('Invalid date in calendar link:', event)
-      return null
-    }
-    
-    // Download .ics file format
-    const start = startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    const end = endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    const location = event.location || ''
-    const title = event.title || 'Event'
-    
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-BEGIN:VEVENT
-DTSTART:${start}
-DTEND:${end}
-SUMMARY:${title.replace(/[,;\\]/g, '')}
-LOCATION:${location.replace(/[,;\\]/g, '')}
-END:VEVENT
-END:VCALENDAR`
-    
-    return `data:text/calendar;charset=utf8,${encodeURIComponent(icsContent)}`
-  } catch (err) {
-    console.error('Error generating Apple Calendar link:', err)
-    return null
+function toTravelCalendarExportEvent(event: {
+  id: string
+  title: string
+  startTime: string
+  endTime: string
+  location?: string | null
+  description?: string | null
+}): CalendarExportEvent {
+  return {
+    id: event.id,
+    title: event.title,
+    startTime: event.startTime,
+    endTime: event.endTime,
+    location: event.location,
+    description: event.description,
   }
 }
 
@@ -188,15 +154,16 @@ export default function TravelDetail() {
 
   // Validate route param
   useEffect(() => {
+    const componentId = componentIdRef.current
     effectRunCountRef.current++
-    console.log(`[TravelDetail:${componentIdRef.current}] Effect #${effectRunCountRef.current} - Route validation`, {
+    console.log(`[TravelDetail:${componentId}] Effect #${effectRunCountRef.current} - Route validation`, {
       timestamp: new Date().toISOString(),
       id,
       isReady,
     })
     if (isReady && (!id || typeof id !== 'string' || id.trim() === '')) {
-      console.error(`[TravelDetail:${componentIdRef.current}] Invalid travel plan ID in route params`)
-      navigate('/portal/travel', { replace: true })
+      console.error(`[TravelDetail:${componentId}] Invalid travel plan ID in route params`)
+      navigate(getLink(RouteKeys.PORTAL_TRAVEL), { replace: true })
     }
   }, [id, isReady, navigate])
   
@@ -227,27 +194,33 @@ export default function TravelDetail() {
   const { data: neighborhoodSummaryResult, isLoading: neighborhoodSummaryLoading } = useNeighborhoodSummaryDirect(venuePlaceIdForSummary)
 
   useEffect(() => {
+    const componentId = componentIdRef.current
+    const renderCountAtMount = renderCountRef.current
+    const effectRunsAtMount = effectRunCountRef.current
+    const fetchPlanCallsAtMount = fetchPlanCountRef.current
+    const fetchEventsCallsAtMount = fetchEventsCountRef.current
     const mountTime = new Date().toISOString()
-    console.log(`[TravelDetail:${componentIdRef.current}] MOUNT`, { timestamp: mountTime })
+    console.log(`[TravelDetail:${componentId}] MOUNT`, { timestamp: mountTime })
     isMountedRef.current = true
     return () => {
       const unmountTime = new Date().toISOString()
-      console.log(`[TravelDetail:${componentIdRef.current}] UNMOUNT`, { 
+      console.log(`[TravelDetail:${componentId}] UNMOUNT`, {
         timestamp: unmountTime,
         mountTime,
-        renderCount: renderCountRef.current,
-        effectRuns: effectRunCountRef.current,
-        fetchPlanCalls: fetchPlanCountRef.current,
-        fetchEventsCalls: fetchEventsCountRef.current,
+        renderCount: renderCountAtMount,
+        effectRuns: effectRunsAtMount,
+        fetchPlanCalls: fetchPlanCallsAtMount,
+        fetchEventsCalls: fetchEventsCallsAtMount,
       })
       isMountedRef.current = false
     }
   }, [])
 
   useEffect(() => {
+    const componentId = componentIdRef.current
     effectRunCountRef.current++
     const effectId = effectRunCountRef.current
-    console.log(`[TravelDetail:${componentIdRef.current}] Effect #${effectId} - Fetch plan`, {
+    console.log(`[TravelDetail:${componentId}] Effect #${effectId} - Fetch plan`, {
       timestamp: new Date().toISOString(),
       isReady,
       id,
@@ -256,7 +229,7 @@ export default function TravelDetail() {
     })
 
     if (!isReady || !id) {
-      console.log(`[TravelDetail:${componentIdRef.current}] Effect #${effectId} - Early return`, {
+      console.log(`[TravelDetail:${componentId}] Effect #${effectId} - Early return`, {
         reason: !isReady ? 'not ready' : 'no id',
       })
       if (!id) {
@@ -272,7 +245,7 @@ export default function TravelDetail() {
       fetchPlanCountRef.current++
       const fetchId = fetchPlanCountRef.current
       const fetchStartTime = Date.now()
-      console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} START`, {
+      console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} START`, {
         timestamp: new Date().toISOString(),
         id,
         effectId,
@@ -280,17 +253,17 @@ export default function TravelDetail() {
 
       try {
         if (!isMountedRef.current) {
-          console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Aborted (unmounted)`)
+          console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Aborted (unmounted)`)
           return
         }
         setLoading(true)
         setError(null)
         
-        console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Calling getTravelPlanById`)
+        console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Calling getTravelPlanById`)
         const apiStartTime = Date.now()
         const { data, error: fetchError } = await getTravelPlanById(context, id!)
         const apiDuration = Date.now() - apiStartTime
-        console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - getTravelPlanById completed`, {
+        console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - getTravelPlanById completed`, {
           duration: `${apiDuration}ms`,
           hasData: !!data,
           hasError: !!fetchError,
@@ -298,18 +271,18 @@ export default function TravelDetail() {
         })
         
         if (!isMountedRef.current) {
-          console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Aborted after API (unmounted)`)
+          console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Aborted after API (unmounted)`)
           return
         }
 
         if (fetchError || !data) {
-          console.error(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Error:`, fetchError)
+          console.error(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Error:`, fetchError)
           setError(fetchError || new Error('Travel plan not found'))
           setLoading(false)
           return
         }
 
-        console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Setting plan state`)
+        console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Setting plan state`)
         setPlan(data)
 
         // Fetch team name
@@ -319,7 +292,7 @@ export default function TravelDetail() {
           if (USE_FAKE_DATA) {
             setTeamName(data.team?.name || 'Travel Team')
           } else {
-            console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Fetching team name`)
+            console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Fetching team name`)
             const teamStartTime = Date.now()
             const { data: teamData, error: teamError } = await supabase
               .from('teams')
@@ -328,7 +301,7 @@ export default function TravelDetail() {
               .eq('org_id', context.orgId)
               .single()
             const teamDuration = Date.now() - teamStartTime
-            console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Team fetch completed`, {
+            console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Team fetch completed`, {
               duration: `${teamDuration}ms`,
               hasData: !!teamData,
               hasError: !!teamError,
@@ -343,7 +316,7 @@ export default function TravelDetail() {
           }
         } catch (err) {
           if (!isMountedRef.current) return
-          console.error(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Team fetch error:`, err)
+          console.error(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Team fetch error:`, err)
           setTeamName(USE_FAKE_DATA ? (data.team?.name || 'Travel Team') : 'Unknown Team')
         }
 
@@ -353,7 +326,7 @@ export default function TravelDetail() {
           if (USE_FAKE_DATA) {
             setEmergencyContact(null)
           } else {
-            console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Fetching emergency contact`)
+            console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Fetching emergency contact`)
             const coachStartTime = Date.now()
             const { data: coachData, error: coachError } = await supabase
               .from('organization_members')
@@ -363,7 +336,7 @@ export default function TravelDetail() {
               .limit(1)
               .maybeSingle()
             const coachDuration = Date.now() - coachStartTime
-            console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Coach fetch completed`, {
+            console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Coach fetch completed`, {
               duration: `${coachDuration}ms`,
               hasData: !!coachData,
               hasError: !!coachError,
@@ -384,14 +357,14 @@ export default function TravelDetail() {
           }
         } catch (err) {
           if (!isMountedRef.current) return
-          console.error(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Coach fetch error:`, err)
+          console.error(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Coach fetch error:`, err)
         }
         
 
         
         // Fetch resolved travel contacts
         try {
-            console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchId} - Resolving contacts`)
+            console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchId} - Resolving contacts`)
             const { data: contactsData, error: contactsError } = await resolveAllTravelContactsForPlan(context, id!)
             if (contactsError) throw contactsError
 
@@ -434,11 +407,11 @@ export default function TravelDetail() {
         }
       } catch (err) {
         if (!isMountedRef.current) return
-        console.error(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchPlanCountRef.current} - Unexpected error:`, err)
+        console.error(`[TravelDetail:${componentId}] fetchPlan #${fetchPlanCountRef.current} - Unexpected error:`, err)
         setError(err instanceof Error ? err : new Error('Failed to load travel plan'))
       } finally {
         const totalDuration = Date.now() - fetchStartTime
-        console.log(`[TravelDetail:${componentIdRef.current}] fetchPlan #${fetchPlanCountRef.current} - COMPLETE`, {
+        console.log(`[TravelDetail:${componentId}] fetchPlan #${fetchPlanCountRef.current} - COMPLETE`, {
           duration: `${totalDuration}ms`,
           isMounted: isMountedRef.current,
         })
@@ -449,12 +422,13 @@ export default function TravelDetail() {
     }
 
     fetchPlan()
-  }, [id, context.orgId, isReady, location.key]) // location.key changes when navigating back
+  }, [context, id, isReady, location.key]) // location.key changes when navigating back
 
   useEffect(() => {
+    const componentId = componentIdRef.current
     effectRunCountRef.current++
     const effectId = effectRunCountRef.current
-    console.log(`[TravelDetail:${componentIdRef.current}] Effect #${effectId} - Fetch events`, {
+    console.log(`[TravelDetail:${componentId}] Effect #${effectId} - Fetch events`, {
       timestamp: new Date().toISOString(),
       hasPlan: !!plan,
       planId: plan?.id,
@@ -463,7 +437,7 @@ export default function TravelDetail() {
     })
 
     if (!plan || !isReady) {
-      console.log(`[TravelDetail:${componentIdRef.current}] Effect #${effectId} - Early return`, {
+      console.log(`[TravelDetail:${componentId}] Effect #${effectId} - Early return`, {
         reason: !plan ? 'no plan' : 'not ready',
       })
       return
@@ -476,14 +450,14 @@ export default function TravelDetail() {
       fetchEventsCountRef.current++
       const fetchId = fetchEventsCountRef.current
       const fetchStartTime = Date.now()
-      console.log(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} START`, {
+      console.log(`[TravelDetail:${componentId}] fetchEvents #${fetchId} START`, {
         timestamp: new Date().toISOString(),
         planId: currentPlan.id,
         effectId,
       })
 
       if (cancelled || !isMountedRef.current) {
-        console.log(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} - Aborted`, {
+        console.log(`[TravelDetail:${componentId}] fetchEvents #${fetchId} - Aborted`, {
           cancelled,
           isMounted: isMountedRef.current,
         })
@@ -496,7 +470,7 @@ export default function TravelDetail() {
         const endDate = new Date(currentPlan.end_date)
         endDate.setHours(23, 59, 59, 999)
 
-        console.log(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} - Calling getEvents`)
+        console.log(`[TravelDetail:${componentId}] fetchEvents #${fetchId} - Calling getEvents`)
         const apiStartTime = Date.now()
         const { data, error: fetchError } = await getEvents(context, {
           startDate,
@@ -504,7 +478,7 @@ export default function TravelDetail() {
           teamId: currentPlan.team_id,
         })
         const apiDuration = Date.now() - apiStartTime
-        console.log(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} - getEvents completed`, {
+        console.log(`[TravelDetail:${componentId}] fetchEvents #${fetchId} - getEvents completed`, {
           duration: `${apiDuration}ms`,
           hasData: !!data,
           dataLength: data?.length,
@@ -513,7 +487,7 @@ export default function TravelDetail() {
         })
 
         if (cancelled || !isMountedRef.current) {
-          console.log(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} - Aborted after API`, {
+          console.log(`[TravelDetail:${componentId}] fetchEvents #${fetchId} - Aborted after API`, {
             cancelled,
             isMounted: isMountedRef.current,
           })
@@ -521,23 +495,23 @@ export default function TravelDetail() {
         }
 
         if (fetchError) {
-          console.error(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} - Error:`, fetchError)
+          console.error(`[TravelDetail:${componentId}] fetchEvents #${fetchId} - Error:`, fetchError)
           setEventsError(fetchError)
           setTripEvents([])
         } else {
-          console.log(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} - Setting events state`, {
+          console.log(`[TravelDetail:${componentId}] fetchEvents #${fetchId} - Setting events state`, {
             count: data?.length || 0,
           })
           setTripEvents(data || [])
         }
       } catch (err) {
         if (cancelled || !isMountedRef.current) return
-        console.error(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} - Unexpected error:`, err)
+        console.error(`[TravelDetail:${componentId}] fetchEvents #${fetchId} - Unexpected error:`, err)
         setEventsError(err instanceof Error ? err : new Error('Failed to load events'))
         setTripEvents([])
       } finally {
         const totalDuration = Date.now() - fetchStartTime
-        console.log(`[TravelDetail:${componentIdRef.current}] fetchEvents #${fetchId} - COMPLETE`, {
+        console.log(`[TravelDetail:${componentId}] fetchEvents #${fetchId} - COMPLETE`, {
           duration: `${totalDuration}ms`,
           cancelled,
           isMounted: isMountedRef.current,
@@ -551,10 +525,10 @@ export default function TravelDetail() {
     fetchEvents()
 
     return () => {
-      console.log(`[TravelDetail:${componentIdRef.current}] Effect #${effectId} - Cleanup (cancelling fetchEvents)`)
+      console.log(`[TravelDetail:${componentId}] Effect #${effectId} - Cleanup (cancelling fetchEvents)`)
       cancelled = true
     }
-  }, [plan?.id, plan?.start_date, plan?.end_date, plan?.team_id, context.orgId, isReady])
+  }, [context, isReady, plan])
 
   function formatEventTime(dateStr: string) {
     return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
@@ -596,13 +570,13 @@ export default function TravelDetail() {
     return (
       <PortalLayout
         breadcrumbs={[
-          { label: 'Home', path: '/portal/dashboard' },
-          { label: 'Travel', path: '/portal/travel' },
+          { label: 'Home', path: getLink(RouteKeys.PORTAL_DASHBOARD) },
+          { label: 'Travel', path: getLink(RouteKeys.PORTAL_TRAVEL) },
           { label: 'Loading...' },
         ]}
       >
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
         </div>
       </PortalLayout>
     )
@@ -612,19 +586,19 @@ export default function TravelDetail() {
     return (
       <PortalLayout
         breadcrumbs={[
-          { label: 'Home', path: '/portal/dashboard' },
-          { label: 'Travel', path: '/portal/travel' },
+          { label: 'Home', path: getLink(RouteKeys.PORTAL_DASHBOARD) },
+          { label: 'Travel', path: getLink(RouteKeys.PORTAL_TRAVEL) },
           { label: 'Error' },
         ]}
       >
         <Card className="text-center py-12">
           <Icon name="error" size="text-6xl" className="text-red-400 mb-4" />
           <CardTitle className="mb-2">Error loading travel plan</CardTitle>
-          <p className="text-slate-500 dark:text-slate-400 mb-4">
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
             {error?.message || 'Travel plan not found'}
           </p>
           <div className="flex gap-4 justify-center">
-            <Button variant="primary" onClick={() => navigate('/portal/travel')}>
+            <Button variant="primary" onClick={() => navigate(getLink(RouteKeys.PORTAL_TRAVEL))}>
               <Icon name="arrow_back" size="text-sm" className="mr-2" />
               Back to Travel
             </Button>
@@ -643,8 +617,8 @@ export default function TravelDetail() {
   return (
     <PortalLayout
       breadcrumbs={[
-        { label: 'Home', path: '/portal/dashboard' },
-        { label: 'Travel', path: '/portal/travel' },
+        { label: 'Home', path: getLink(RouteKeys.PORTAL_DASHBOARD) },
+        { label: 'Travel', path: getLink(RouteKeys.PORTAL_TRAVEL) },
         { label: plan.title },
       ]}
     >
@@ -653,10 +627,10 @@ export default function TravelDetail() {
         <div className="flex items-start justify-between mb-4">
           <div>
             <PageTitle>{plan.title}</PageTitle>
-            <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
-              {plan.location} • {formatDateRange(plan.start_date, plan.end_date)}
+            <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide mt-2">
+              {plan.location} - {formatDateRange(plan.start_date, plan.end_date)}
             </p>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mt-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mt-2">
               {teamName}
             </p>
           </div>
@@ -668,24 +642,24 @@ export default function TravelDetail() {
         </div>
 
         {/* Quick Summary Banner */}
-        <Card className="bg-gradient-to-r from-[var(--org-btn-primary-bg, #137fec)]/5 to-slate-50 dark:to-slate-800/50 border-l-4 border-[var(--org-btn-primary-bg, #137fec)] p-6">
+        <Card className="bg-gradient-to-r from-[var(--org-btn-primary-bg, #137fec)]/5 to-gray-50 dark:to-gray-800/50 border-l-4 border-[var(--org-btn-primary-bg, #137fec)] p-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Duration</p>
-              <p className="text-lg font-black text-slate-900 dark:text-white">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Duration</p>
+              <p className="text-lg font-black text-gray-900 dark:text-white">
                 {Math.ceil((new Date(plan.end_date).getTime() - new Date(plan.start_date).getTime()) / (1000 * 60 * 60 * 24))} Days
               </p>
             </div>
             {plan.hotel_name && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Lodging</p>
-                <p className="text-lg font-black text-slate-900 dark:text-white truncate">{plan.hotel_name}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Lodging</p>
+                <p className="text-lg font-black text-gray-900 dark:text-white truncate">{plan.hotel_name}</p>
               </div>
             )}
             {tripEvents.length > 0 && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Events</p>
-                <p className="text-lg font-black text-slate-900 dark:text-white">{tripEvents.length} scheduled</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Events</p>
+                <p className="text-lg font-black text-gray-900 dark:text-white">{tripEvents.length} scheduled</p>
               </div>
             )}
           </div>
@@ -715,7 +689,7 @@ export default function TravelDetail() {
                       <>
                         <CardTitle className="text-xl mb-2">{venueHeader}</CardTitle>
                         {showAddress && (
-                          <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-4">{plan.venue_address}</p>
+                          <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-4">{plan.venue_address}</p>
                         )}
                       </>
                     )
@@ -723,7 +697,7 @@ export default function TravelDetail() {
                 
                 {/* Smart Map Links */}
                 <div className="mb-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Open in Maps</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Open in Maps</p>
                   <div className="flex flex-wrap gap-2">
                     {googleMapsLink(plan.venue_address) ? (
                       <a href={googleMapsLink(plan.venue_address)!} target="_blank" rel="noreferrer">
@@ -781,7 +755,7 @@ export default function TravelDetail() {
 
                 {/* Ride-Share Shortcuts */}
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Need a Ride?</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Need a Ride?</p>
                   <div className="flex flex-wrap gap-2">
                     {uberLink(plan.venue_address) ? (
                       <a href={uberLink(plan.venue_address)!} target="_blank" rel="noreferrer">
@@ -831,8 +805,8 @@ export default function TravelDetail() {
                         <>
                           <div className="flex items-start justify-between">
                             <div>
-                              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Your Starting Point</p>
-                              <p className="text-sm font-bold text-slate-900 dark:text-white">{commuteStartLocation}</p>
+                              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Your Starting Point</p>
+                              <p className="text-sm font-bold text-gray-900 dark:text-white">{commuteStartLocation}</p>
                             </div>
                             <Button
                               variant="secondary"
@@ -862,8 +836,8 @@ export default function TravelDetail() {
                         </>
                       ) : (
                         <div>
-                          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Set Your Starting Location</p>
-                          <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+                          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Set Your Starting Location</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                             Save your home, work, or any starting point to quickly get directions with current traffic conditions.
                           </p>
                           <Button
@@ -879,13 +853,13 @@ export default function TravelDetail() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Enter Your Starting Location</p>
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Enter Your Starting Location</p>
                       <input
                         type="text"
                         value={commuteInputValue}
                         onChange={(e) => setCommuteInputValue(e.target.value)}
                         placeholder="e.g., 123 Main St, City, State"
-                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)]"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg,#137fec)]"
                         autoFocus
                       />
                       <div className="flex gap-2">
@@ -936,9 +910,9 @@ export default function TravelDetail() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mb-3">{meeting.address}</p>
+                    <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3">{meeting.address}</p>
                     {meeting.notes && (
-                      <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 whitespace-pre-wrap bg-slate-50 dark:bg-slate-800/50 p-3 rounded">
+                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 whitespace-pre-wrap bg-gray-50 dark:bg-gray-800/50 p-3 rounded">
                         {meeting.notes}
                       </p>
                     )}
@@ -990,56 +964,41 @@ export default function TravelDetail() {
               ) : eventsError ? (
                 <div className="text-center py-8">
                   <Icon name="error" size="text-5xl" className="text-red-400 mb-3" />
-                  <p className="text-slate-500 dark:text-slate-400 mb-2">Error loading events</p>
+                  <p className="text-gray-500 dark:text-gray-400 mb-2">Error loading events</p>
                   <p className="text-xs text-red-500">{eventsError.message}</p>
                 </div>
               ) : tripEvents.length === 0 ? (
                 <div className="text-center py-8">
-                  <Icon name="event_busy" size="text-5xl" className="text-slate-300 dark:text-slate-600 mb-3" />
-                  <p className="text-slate-500 dark:text-slate-400">No events scheduled during these dates.</p>
+                  <Icon name="event_busy" size="text-5xl" className="text-gray-300 dark:text-gray-600 mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400">No events scheduled during these dates.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {tripEvents.map((event) => (
-                    <div key={event.id} className="border-b border-slate-200 dark:border-slate-700 pb-4 last:border-b-0 last:pb-0">
+                    <div key={event.id} className="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-b-0 last:pb-0">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <CardTitle className="text-lg mb-1">{event.title}</CardTitle>
-                          <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                          <p className="text-sm font-bold text-gray-500 dark:text-gray-400">
                             {new Date(event.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{' '}
-                            • {formatEventTime(event.start_time)}–{formatEventTime(event.end_time)}
+                            - {formatEventTime(event.start_time)}-{formatEventTime(event.end_time)}
                           </p>
                           {/* venue row removed (duplicate shown in VenueInsights header) */}
                         </div>
-                        {googleCalendarLink({
-                          title: event.title,
-                          startTime: event.start_time,
-                          endTime: event.end_time,
-                          location: event.event_location?.venue_name || '',
-                          notes: event.notes || '',
-                        }) ? (
-                          <a
-                            href={googleCalendarLink({
-                              title: event.title,
-                              startTime: event.start_time,
-                              endTime: event.end_time,
-                              location: event.event_location?.venue_name || '',
-                              notes: event.notes || '',
-                            })!}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            <Button variant="secondary" className="text-xs px-3 py-1">
-                              <Icon name="calendar_today" size="text-xs" className="mr-1" />
-                              Add to Calendar
-                            </Button>
-                          </a>
-                        ) : (
-                          <Button variant="secondary" className="text-xs px-3 py-1" disabled>
-                            <Icon name="calendar_today" size="text-xs" className="mr-1" />
-                            Add to Calendar
-                          </Button>
-                        )}
+                        <AddToCalendarActions
+                          event={toTravelCalendarExportEvent({
+                            id: event.id,
+                            title: event.title,
+                            startTime: event.start_time,
+                            endTime: event.end_time,
+                            location: event.event_location?.venue_name || '',
+                            description: event.notes || '',
+                          })}
+                          layout="inline"
+                          googleVariant="secondary"
+                          icsVariant="secondary"
+                          buttonClassName="text-xs px-3 py-1"
+                        />
                       </div>
                       {/* Venue Information (Area Summary, etc.): use place_id from event_locations for this event */}
                       {(() => {
@@ -1067,7 +1026,7 @@ export default function TravelDetail() {
                   Additional Notes
                 </div>
                 <div className="pt-12">
-                  <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                     {plan.notes}
                   </p>
                 </div>
@@ -1080,25 +1039,25 @@ export default function TravelDetail() {
         <div className="space-y-6">
           {/* Single Contacts Card - iPhone contact list style */}
           {(emergencyContact?.phone || resolvedContacts || defaultContact || (orgFallbackContact && (orgFallbackContact.email || orgFallbackContact.phone))) && (
-            <Card className="p-0 overflow-hidden bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-              <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+            <Card className="p-0 overflow-hidden bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
                 <CardTitle className="flex items-center gap-2 mb-0">
-                  <Icon name="contacts" size="text-xl" className="text-slate-500 dark:text-slate-400" />
+                  <Icon name="contacts" size="text-xl" className="text-gray-500 dark:text-gray-400" />
                   Contacts
                 </CardTitle>
               </div>
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {/* Emergency (Coach) - first row if present */}
                 {emergencyContact?.phone && (
-                  <div className="flex items-center gap-4 px-5 py-3.5 active:bg-slate-50 dark:active:bg-slate-800/50">
+                  <div className="flex items-center gap-4 px-5 py-3.5 active:bg-gray-50 dark:active:bg-gray-800/50">
                     <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center text-red-600 dark:text-red-400 font-semibold text-base">
                       {(emergencyContact.name || 'C').charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-slate-900 dark:text-white truncate">{emergencyContact.name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Emergency · Coach</p>
+                      <p className="font-semibold text-gray-900 dark:text-white truncate">{emergencyContact.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Emergency - Coach</p>
                     </div>
-                    <a href={`tel:${emergencyContact.phone}`} className="flex-shrink-0 p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Call">
+                    <a href={`tel:${emergencyContact.phone}`} className="flex-shrink-0 p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Call">
                       <Icon name="phone" size="text-lg" />
                     </a>
                   </div>
@@ -1116,22 +1075,22 @@ export default function TravelDetail() {
                     const fullName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || 'Contact'
                     const initial = fullName.charAt(0).toUpperCase() || '?'
                     return (
-                      <div key={`custom-${category}`} className="flex items-center gap-4 px-5 py-3.5 active:bg-slate-50 dark:active:bg-slate-800/50">
-                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-semibold text-base">
+                      <div key={`custom-${category}`} className="flex items-center gap-4 px-5 py-3.5 active:bg-gray-50 dark:active:bg-gray-800/50">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold text-base">
                           {initial}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-slate-900 dark:text-white truncate">{fullName}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{label}</p>
+                          <p className="font-semibold text-gray-900 dark:text-white truncate">{fullName}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{label}</p>
                         </div>
                         <div className="flex-shrink-0 flex items-center gap-1">
                           {contact.phone && (
-                            <a href={`tel:${contact.phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Call">
+                            <a href={`tel:${contact.phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Call">
                               <Icon name="phone" size="text-lg" />
                             </a>
                           )}
                           {contact.email && (
-                            <a href={`mailto:${contact.email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Email">
+                            <a href={`mailto:${contact.email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Email">
                               <Icon name="email" size="text-lg" />
                             </a>
                           )}
@@ -1153,22 +1112,22 @@ export default function TravelDetail() {
                     const fullName = [contact.first_name, contact.last_name].filter(Boolean).join(' ') || 'Contact'
                     const initial = fullName.charAt(0).toUpperCase() || '?'
                     return (
-                      <div key={category} className="flex items-center gap-4 px-5 py-3.5 active:bg-slate-50 dark:active:bg-slate-800/50">
-                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-semibold text-base">
+                      <div key={category} className="flex items-center gap-4 px-5 py-3.5 active:bg-gray-50 dark:active:bg-gray-800/50">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold text-base">
                           {initial}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-slate-900 dark:text-white truncate">{fullName}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{label}</p>
+                          <p className="font-semibold text-gray-900 dark:text-white truncate">{fullName}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{label}</p>
                         </div>
                         <div className="flex-shrink-0 flex items-center gap-1">
                           {contact.phone && (
-                            <a href={`tel:${contact.phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Call">
+                            <a href={`tel:${contact.phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Call">
                               <Icon name="phone" size="text-lg" />
                             </a>
                           )}
                           {contact.email && (
-                            <a href={`mailto:${contact.email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Email">
+                            <a href={`mailto:${contact.email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Email">
                               <Icon name="email" size="text-lg" />
                             </a>
                           )}
@@ -1178,7 +1137,7 @@ export default function TravelDetail() {
                   })
                 })()}
 
-                {/* Last row: Everything Else — org default contact or org details fallback (always shown when either has email/phone) */}
+                {/* Last row: Everything Else - org default contact or org details fallback (always shown when either has email/phone) */}
                 {(() => {
                   const hasDefault = defaultContact && (defaultContact.email || defaultContact.phone)
                   const hasFallback = orgFallbackContact && (orgFallbackContact.email || orgFallbackContact.phone)
@@ -1190,22 +1149,22 @@ export default function TravelDetail() {
                   const email = hasDefault ? defaultContact!.email : orgFallbackContact!.email
                   const phone = hasDefault ? defaultContact!.phone : orgFallbackContact!.phone
                   return (
-                    <div className="flex items-center gap-4 px-5 py-3.5 active:bg-slate-50 dark:active:bg-slate-800/50">
-                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-semibold text-base">
+                    <div className="flex items-center gap-4 px-5 py-3.5 active:bg-gray-50 dark:active:bg-gray-800/50">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-300 font-semibold text-base">
                         {initial}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-slate-900 dark:text-white truncate">{displayName}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Everything Else</p>
+                        <p className="font-semibold text-gray-900 dark:text-white truncate">{displayName}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">Everything Else</p>
                       </div>
                       <div className="flex-shrink-0 flex items-center gap-1">
                         {phone && (
-                          <a href={`tel:${phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Call">
+                          <a href={`tel:${phone}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Call">
                             <Icon name="phone" size="text-lg" />
                           </a>
                         )}
                         {email && (
-                          <a href={`mailto:${email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Email">
+                          <a href={`mailto:${email}`} className="p-2 rounded-full text-[var(--org-btn-primary-bg)] hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Email">
                             <Icon name="email" size="text-lg" />
                           </a>
                         )}
@@ -1225,15 +1184,15 @@ export default function TravelDetail() {
                   <Icon name="place" size="text-xl" />
                   Area Overview
                 </CardTitle>
-                <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
                   Google
                 </span>
               </div>
               {neighborhoodSummaryLoading ? (
                 <div className="animate-pulse space-y-3">
-                  <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-full" />
-                  <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-5/6" />
-                  <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-4/6" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-4/6" />
                 </div>
               ) : (() => {
                 const summaryData = neighborhoodSummaryResult?.data
@@ -1241,7 +1200,7 @@ export default function TravelDetail() {
                 if (!blocks || blocks.length === 0) {
                   const venueName = plan?.venue_name || summaryData?.name || 'this venue'
                   return (
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       {t('portal.travel.areaSummaryNotAvailable', { venueName })}
                     </p>
                   )
@@ -1251,11 +1210,11 @@ export default function TravelDetail() {
                     {blocks.map((block, idx) => (
                       <div key={idx}>
                         {block.topic !== 'overview' && (
-                          <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                          <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
                             {block.topic}
                           </p>
                         )}
-                        <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                           {block.content}
                         </p>
                       </div>
@@ -1272,65 +1231,19 @@ export default function TravelDetail() {
               <Icon name="calendar_add_on" size="text-xl" />
               Add to Calendar
             </CardTitle>
-            <div>
-              {googleCalendarLink({
+            <AddToCalendarActions
+              event={toTravelCalendarExportEvent({
+                id: plan.id,
                 title: plan.title,
                 startTime: plan.start_date,
                 endTime: plan.end_date,
                 location: plan.location,
-                notes: plan.notes || '',
-              }) ? (
-                <a
-                  href={googleCalendarLink({
-                    title: plan.title,
-                    startTime: plan.start_date,
-                    endTime: plan.end_date,
-                    location: plan.location,
-                    notes: plan.notes || '',
-                  })!}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block mb-3"
-                >
-                  <Button variant="secondary" className="w-full text-sm justify-start">
-                    <Icon name="event" size="text-sm" className="mr-2" />
-                    Google Calendar
-                  </Button>
-                </a>
-              ) : (
-                <Button variant="secondary" className="w-full text-sm justify-start mb-3" disabled>
-                  <Icon name="event" size="text-sm" className="mr-2" />
-                  Google Calendar
-                </Button>
-              )}
-              {appleCalendarLink({
-                title: plan.title,
-                startTime: plan.start_date,
-                endTime: plan.end_date,
-                location: plan.location,
-              }) ? (
-                <a
-                  href={appleCalendarLink({
-                    title: plan.title,
-                    startTime: plan.start_date,
-                    endTime: plan.end_date,
-                    location: plan.location,
-                  })!}
-                  download={`${plan.title.replace(/[^a-z0-9]/gi, '_')}.ics`}
-                  className="block"
-                >
-                  <Button variant="primary" className="w-full text-sm justify-start">
-                    <Icon name="event" size="text-sm" className="mr-2" />
-                    Apple Calendar
-                  </Button>
-                </a>
-              ) : (
-                <Button variant="primary" className="w-full text-sm justify-start" disabled>
-                  <Icon name="event" size="text-sm" className="mr-2" />
-                  Apple Calendar
-                </Button>
-              )}
-            </div>
+                description: plan.notes || '',
+              })}
+              buttonClassName="w-full text-sm justify-start"
+              googleVariant="secondary"
+              icsVariant="primary"
+            />
           </Card>
 
           {/* Lodging */}
@@ -1348,9 +1261,9 @@ export default function TravelDetail() {
                 
                 return (
                   <>
-                    <p className="font-black text-slate-900 dark:text-white mb-1">{hotelHeader}</p>
+                    <p className="font-black text-gray-900 dark:text-white mb-1">{hotelHeader}</p>
                     {showAddress && (
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{plan.hotel_address}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{plan.hotel_address}</p>
                     )}
                   </>
                 )
@@ -1359,7 +1272,7 @@ export default function TravelDetail() {
               <div className="space-y-3 mb-4">
                 {plan.hotel_phone && (
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Phone</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Phone</p>
                     <a href={`tel:${plan.hotel_phone}`} className="text-[var(--org-link-color)] font-bold hover:underline">
                       {plan.hotel_phone}
                     </a>
@@ -1367,8 +1280,8 @@ export default function TravelDetail() {
                 )}
                 {plan.hotel_confirmation && (
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Confirmation</p>
-                    <p className="font-mono text-slate-900 dark:text-white font-bold">{plan.hotel_confirmation}</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Confirmation</p>
+                    <p className="font-mono text-gray-900 dark:text-white font-bold">{plan.hotel_confirmation}</p>
                   </div>
                 )}
               </div>
@@ -1435,7 +1348,7 @@ export default function TravelDetail() {
               <Icon name="wb_sunny" size="text-xl" />
               Weather
             </CardTitle>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               Check the forecast for {plan.location}
             </p>
             <a
@@ -1451,8 +1364,8 @@ export default function TravelDetail() {
           </Card>
 
           {/* Last Updated */}
-          <Card className="p-4 bg-slate-50 dark:bg-slate-800/50">
-            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <Card className="p-4 bg-gray-50 dark:bg-gray-800/50">
+            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
               <Icon name="info" size="text-sm" />
               <span>Last updated: {new Date(plan.updated_at || plan.created_at).toLocaleDateString()}</span>
             </div>
@@ -1462,3 +1375,4 @@ export default function TravelDetail() {
     </PortalLayout>
   )
 }
+

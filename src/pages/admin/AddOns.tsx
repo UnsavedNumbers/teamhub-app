@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Add-Ons List Page
  * 
  * Displays all available add-ons for purchase by org admins.
@@ -13,6 +13,7 @@ import { getAddOnsWithStatus } from '../../data/services/addOnsService'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { Card, Button, Badge, AdminPageHeader, OfflineBanner, ErrorState } from '../../components/admin'
 import { useI18n } from '../../i18n/useI18n'
+import '../../styles/orgAdmin.css'
 
 export default function AddOns() {
   const navigate = useNavigate()

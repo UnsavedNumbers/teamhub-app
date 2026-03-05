@@ -793,12 +793,12 @@ export default function AdminEventDetail() {
       />
 
       <div className="space-y-6">
-        <div className="oa-segmented" role="tablist" aria-label={t('admin.events.detailPage.tabs.ariaLabel')}>
+        <div className="pa-tabs-list oa-mb-4" role="tablist" aria-label={t('admin.events.detailPage.tabs.ariaLabel')}>
           <button
             type="button"
             role="tab"
             aria-selected={currentView === 'details'}
-            className={`oa-segmented__button ${currentView === 'details' ? 'is-active' : ''}`}
+            className={`pa-tabs-trigger ${currentView === 'details' ? 'active' : ''}`}
             onClick={() => setView('details')}
           >
             {t('admin.events.detailPage.tabs.details')}
@@ -807,7 +807,7 @@ export default function AdminEventDetail() {
             type="button"
             role="tab"
             aria-selected={currentView === 'ticketing'}
-            className={`oa-segmented__button ${currentView === 'ticketing' ? 'is-active' : ''}`}
+            className={`pa-tabs-trigger ${currentView === 'ticketing' ? 'active' : ''}`}
             onClick={() => setView('ticketing')}
           >
             {t('admin.events.detailPage.tabs.ticketing')}

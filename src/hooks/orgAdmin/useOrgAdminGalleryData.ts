@@ -5,7 +5,6 @@ import { useI18n } from '@/i18n/useI18n';
 import { usePhotoFilters } from '@/hooks/usePhotoFilters';
 import { useInfinitePhotos } from '@/hooks/useInfinitePhotos';
 import { buildPhotoQuery } from '@/utils/buildPhotoQuery';
-import { USE_FAKE_DATA } from '@/data/config';
 import { showError } from '@/utils/toast';
 import {
     getGalleryById,
@@ -16,7 +15,6 @@ import {
     type GalleryAlbum,
     type KeysetCursor,
 } from '@/data/services/galleryService';
-import { getMockGalleryById, getMockPhotosForGallery } from '@/data/fake/mockGalleries';
 
 const MAX_PHOTOS_PER_GALLERY = 25;
 const GRID_PAGE_SIZE_MOBILE = 30;
@@ -70,17 +68,6 @@ export function useOrgAdminGalleryData(galleryId?: string) {
 
     const loadGallery = useCallback(async () => {
         if (!id || !context) return;
-        if (USE_FAKE_DATA) {
-            const mockGalleryDb = getMockGalleryById(id);
-            if (mountedRef.current) {
-                setGallery(
-                    mockGalleryDb
-                        ? ({ ...mockGalleryDb, can_download: mockGalleryDb.can_download ?? undefined } as unknown as Gallery)
-                        : null,
-                );
-            }
-            return;
-        }
 
         const { data, error } = await getGalleryById(context, id);
         if (!mountedRef.current) return;
@@ -92,7 +79,7 @@ export function useOrgAdminGalleryData(galleryId?: string) {
     }, [id, context]);
 
     const loadAlbums = useCallback(async () => {
-        if (!id || !context || USE_FAKE_DATA) return;
+        if (!id || !context) return;
         const { data, error } = await getAlbumsForGallery(context, id);
         if (!mountedRef.current) return;
         if (error) {
@@ -114,21 +101,6 @@ export function useOrgAdminGalleryData(galleryId?: string) {
         } else {
             loadingMoreRef.current = true;
             setLoadingMore(true);
-        }
-
-        if (USE_FAKE_DATA) {
-            const mockPhotosDb = getMockPhotosForGallery(id);
-            const mockPhotos = mockPhotosDb.map(
-                (p) => ({ ...p, can_download: p.can_download ?? undefined }) as unknown as GalleryPhoto,
-            );
-            if (mountedRef.current) {
-                setPhotos(mockPhotos);
-                setHasMore(false);
-                setLoading(false);
-                loadingMoreRef.current = false;
-                setLoadingMore(false);
-            }
-            return mockPhotos;
         }
 
         const albumId = filters.album && filters.album !== 'favorites' ? filters.album : undefined;

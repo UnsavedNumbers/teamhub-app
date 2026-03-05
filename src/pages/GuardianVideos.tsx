@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Guardian / Athlete Video Library Page
  *
  * Fan-style video gallery for guardians and athletes. RLS restricts visible
@@ -82,7 +82,7 @@ export default function GuardianVideos() {
       <PortalLayout breadcrumbs={[{ label: 'Home', path: '/portal/dashboard' }, { label: 'Video Library' }]}>
         <div className="mb-8">
           <PageTitle>Video Library</PageTitle>
-          <p className="text-slate-500 dark:text-slate-400 mt-2">Select an organization to view videos.</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">Select an organization to view videos.</p>
         </div>
       </PortalLayout>
     )
@@ -96,8 +96,8 @@ export default function GuardianVideos() {
         </div>
         <Card className="text-center py-12">
           <Icon name="error" size="text-4xl" className="text-red-500 mb-4" />
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Failed to load videos</h3>
-          <p className="text-slate-500 mb-4">{error.message}</p>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Failed to load videos</h3>
+          <p className="text-gray-500 mb-4">{error.message}</p>
           <Button onClick={refresh}>Try Again</Button>
         </Card>
       </PortalLayout>
@@ -113,15 +113,15 @@ export default function GuardianVideos() {
     >
       <div className="mb-8">
         <PageTitle>Video Library</PageTitle>
-        <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
+        <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide mt-2">
           Watch team and athlete videos. Use search and filters to find what you need.
         </p>
       </div>
 
       {/* Search + Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <div className="mobile-stack-controls mb-6 sm:items-center">
         <div className="relative flex-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
             <Icon name="search" size="text-lg" />
           </span>
           <input
@@ -129,7 +129,7 @@ export default function GuardianVideos() {
             placeholder="Search videos..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-[var(--org-btn-primary-bg)] focus:border-transparent"
             aria-label="Search videos"
           />
         </div>
@@ -138,7 +138,7 @@ export default function GuardianVideos() {
             <select
               value={teamId ?? ''}
               onChange={(e) => setTeamId(e.target.value || null)}
-              className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-4 py-2.5 min-w-[140px] focus:ring-2 focus:ring-[var(--org-btn-primary-bg)]"
+              className="w-full sm:w-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-2.5 min-w-0 sm:min-w-[140px] focus:ring-2 focus:ring-[var(--org-btn-primary-bg)]"
               aria-label="Filter by team"
             >
               <option value="">All teams</option>
@@ -156,13 +156,13 @@ export default function GuardianVideos() {
               setSortBy(by)
               setSortOrder(order)
             }}
-            className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-4 py-2.5 min-w-[160px] focus:ring-2 focus:ring-[var(--org-btn-primary-bg)]"
+            className="w-full sm:w-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-2.5 min-w-0 sm:min-w-[160px] focus:ring-2 focus:ring-[var(--org-btn-primary-bg)]"
             aria-label="Sort"
           >
             <option value="recorded_at-desc">Newest first</option>
             <option value="recorded_at-asc">Oldest first</option>
             <option value="created_at-desc">Recently added</option>
-            <option value="title-asc">Title A–Z</option>
+            <option value="title-asc">Title A-Z</option>
           </select>
           {hasFilters && (
             <Button variant="secondary" onClick={handleClearFilters} className="shrink-0">
@@ -177,21 +177,21 @@ export default function GuardianVideos() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {Array.from({ length: 8 }).map((_, i) => (
             <Card key={i} noPadding className="animate-pulse">
-              <div className="aspect-video bg-slate-200 dark:bg-slate-700" />
+              <div className="aspect-video bg-gray-200 dark:bg-gray-700" />
               <div className="p-4 space-y-2">
-                <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-3/4" />
-                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/2" />
+                <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
               </div>
             </Card>
           ))}
         </div>
       ) : videos.length === 0 ? (
         <Card className="text-center py-12">
-          <Icon name="videocam_off" size="text-4xl" className="text-slate-400 mb-4" />
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+          <Icon name="videocam_off" size="text-4xl" className="text-gray-400 mb-4" />
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
             {hasFilters ? 'No videos match your filters' : 'No videos yet'}
           </h3>
-          <p className="text-slate-500 mb-4">
+          <p className="text-gray-500 mb-4">
             {hasFilters
               ? 'Try clearing filters or a different team.'
               : 'When your organization adds videos for your team or athlete, they will appear here.'}
@@ -202,7 +202,7 @@ export default function GuardianVideos() {
         </Card>
       ) : (
         <>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             {total} {total === 1 ? 'video' : 'videos'}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -232,9 +232,10 @@ function PortalVideoCard({ video }: { video: Video }) {
       showNewNotes={false}
       compact={false}
       className={cn(
-        'rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700',
+        'rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700',
         'hover:border-[var(--org-btn-primary-bg)] hover:shadow-md transition-all'
       )}
     />
   )
 }
+

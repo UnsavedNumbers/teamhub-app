@@ -1,4 +1,4 @@
-/**
+﻿/**
  * RequestAthleteAttachment Component
  *
  * Allows guardians to search for existing athletes and request attachment.
@@ -224,7 +224,7 @@ export default function RequestAthleteAttachment() {
         return (
             <PortalLayout>
                 <div className="flex justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
                 </div>
             </PortalLayout>
         )
@@ -239,11 +239,11 @@ export default function RequestAthleteAttachment() {
                 ]}
             >
                 <Card className="text-center py-12">
-                    <Icon name="info" className="mx-auto mb-4 text-slate-400 text-5xl" />
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                    <Icon name="info" className="mx-auto mb-4 text-gray-400 text-5xl" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                         No Organizations Found
                     </h3>
-                    <p className="text-slate-600 dark:text-slate-400">
+                    <p className="text-gray-600 dark:text-gray-400">
                         You need to have a parent role in at least one organization to request athlete attachment.
                     </p>
                 </Card>
@@ -261,7 +261,7 @@ export default function RequestAthleteAttachment() {
         >
             <div className="mb-8">
                 <PageTitle>Request Athlete Attachment</PageTitle>
-                <p className="text-slate-500 dark:text-slate-400 text-lg font-light tracking-wide mt-2">
+                <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide mt-2">
                     Search for an existing athlete and request to attach yourself as a guardian.
                 </p>
             </div>
@@ -288,7 +288,7 @@ export default function RequestAthleteAttachment() {
             {/* Org Selector */}
             {parentOrgs.length > 1 && (
                 <Card className="mb-6">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Organization
                     </label>
                     <select
@@ -298,7 +298,7 @@ export default function RequestAthleteAttachment() {
                             setSearchText('')
                             setSearchResults([])
                         }}
-                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)] focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)] focus:border-transparent"
                     >
                         {parentOrgs.map(org => (
                             <option key={org.id} value={org.id}>
@@ -311,7 +311,7 @@ export default function RequestAthleteAttachment() {
             
             {/* Search Input */}
             <Card className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Search Athletes
                 </label>
                 <div className="relative">
@@ -326,22 +326,22 @@ export default function RequestAthleteAttachment() {
                             }
                         }}
                         placeholder="Enter athlete's first or last name (minimum 2 characters)"
-                        className="w-full px-4 py-2 pl-10 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)] focus:border-transparent"
+                        className="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[var(--org-btn-primary-bg, #137fec)] focus:border-transparent"
                         disabled={!selectedOrgId}
                     />
                     <Icon 
                         name="search" 
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" 
+                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" 
                         size="20"
                     />
                     {isSearching && (
                         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-slate-900 dark:border-white"></div>
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
                         </div>
                     )}
                 </div>
                 {searchText.length > 0 && searchText.length < 2 && (
-                    <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                         Please enter at least 2 characters to search
                     </p>
                 )}
@@ -350,7 +350,7 @@ export default function RequestAthleteAttachment() {
             {/* Search Results */}
             {searchResults.length > 0 && (
                 <Card>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                         Search Results ({searchResults.length})
                     </h3>
                     <div className="space-y-4">
@@ -364,26 +364,26 @@ export default function RequestAthleteAttachment() {
                             return (
                                 <div
                                     key={athlete.id}
-                                    className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700"
+                                    className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700"
                                 >
                                     <div className="flex-1">
                                         <div className="flex items-center gap-3">
-                                            <h4 className="text-base font-semibold text-slate-900 dark:text-white">
+                                            <h4 className="text-base font-semibold text-gray-900 dark:text-white">
                                                 {athlete.first_name} {athlete.last_name}
                                             </h4>
                                             {athlete.gender && (
-                                                <span className="text-sm text-slate-500 dark:text-slate-400">
+                                                <span className="text-sm text-gray-500 dark:text-gray-400">
                                                     {athlete.gender}
                                                 </span>
                                             )}
                                             {ageDisplay && (
-                                                <span className="text-sm text-slate-500 dark:text-slate-400">
+                                                <span className="text-sm text-gray-500 dark:text-gray-400">
                                                     Age {ageDisplay}
                                                 </span>
                                             )}
                                         </div>
                                         {athlete.birthdate && (
-                                            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                                 Born: {new Date(athlete.birthdate).toLocaleDateString()}
                                             </p>
                                         )}
@@ -395,7 +395,7 @@ export default function RequestAthleteAttachment() {
                                                             Pending
                                                         </span>
                                                         {!isExpired && (
-                                                            <span className="text-slate-500 dark:text-slate-400">
+                                                            <span className="text-gray-500 dark:text-gray-400">
                                                                 Expires: {formatExpirationDate(existingRequest.expires_at)}
                                                             </span>
                                                         )}
@@ -417,7 +417,7 @@ export default function RequestAthleteAttachment() {
                                                             Denied
                                                         </span>
                                                         {existingRequest.decision_reason && (
-                                                            <p className="text-slate-600 dark:text-slate-400 mt-1">
+                                                            <p className="text-gray-600 dark:text-gray-400 mt-1">
                                                                 Reason: {existingRequest.decision_reason}
                                                             </p>
                                                         )}
@@ -461,11 +461,11 @@ export default function RequestAthleteAttachment() {
             
             {searchText.length >= 2 && !isSearching && searchResults.length === 0 && (
                 <Card className="text-center py-12">
-                    <Icon name="search_off" className="mx-auto mb-4 text-slate-400" size="48" />
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                    <Icon name="search_off" className="mx-auto mb-4 text-gray-400" size="48" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                         No Athletes Found
                     </h3>
-                    <p className="text-slate-600 dark:text-slate-400">
+                    <p className="text-gray-600 dark:text-gray-400">
                         No athletes found matching "{searchText}". Try a different search term.
                     </p>
                 </Card>
@@ -473,3 +473,4 @@ export default function RequestAthleteAttachment() {
         </PortalLayout>
     )
 }
+

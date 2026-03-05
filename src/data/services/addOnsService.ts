@@ -52,7 +52,9 @@ export async function getAvailableAddOns(_orgId: string): Promise<{
         external_name: f.addon_external_name!,
         external_description: f.addon_external_description || null,
         external_short_label: f.addon_external_short_label || null,
-        external_bullets: Array.isArray(f.addon_external_bullets) ? f.addon_external_bullets : null,
+        external_bullets: Array.isArray(f.addon_external_bullets)
+          ? f.addon_external_bullets.filter((bullet): bullet is string => typeof bullet === 'string')
+          : null,
         external_cta_label: f.addon_external_cta_label || `Add ${f.addon_external_name}`,
         display_order: f.addon_display_order || null,
         stripe_price_id: f.addon_stripe_price_id!,
@@ -216,7 +218,9 @@ export async function getAddOnByFeatureKey(featureKey: string): Promise<{
       external_name: data.addon_external_name,
       external_description: data.addon_external_description || null,
       external_short_label: data.addon_external_short_label || null,
-      external_bullets: Array.isArray(data.addon_external_bullets) ? data.addon_external_bullets : null,
+      external_bullets: Array.isArray(data.addon_external_bullets)
+        ? data.addon_external_bullets.filter((bullet): bullet is string => typeof bullet === 'string')
+        : null,
       external_cta_label: data.addon_external_cta_label || `Add ${data.addon_external_name}`,
       display_order: data.addon_display_order || null,
       stripe_price_id: data.addon_stripe_price_id,

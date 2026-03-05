@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Followed Organizations Page
  * 
  * Lists all organizations the user is following.
@@ -110,7 +110,7 @@ export default function FollowedOrgs() {
                     </h3>
                     {follow.org?.slug && (
                       <Link
-                        to={getLink('portal.orgLanding', { slug: follow.org.slug })}
+                        to={getLink('portal.orgLanding', { orgSlug: follow.org.slug })}
                         className="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium"
                       >
                         {tAny('View public page') || 'View public page'} <Icon name="arrow_forward" className="ml-1 text-base" />
@@ -154,7 +154,7 @@ export default function FollowedOrgs() {
             />
             
             {/* Modal Content */}
-            <div className="relative bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full p-6 transform transition-all">
+            <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 transform transition-all">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
                 Unfollow Organization
               </h3>
@@ -193,3 +193,4 @@ export default function FollowedOrgs() {
     </PortalLayout>
   )
 }
+

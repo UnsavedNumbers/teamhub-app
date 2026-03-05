@@ -19,8 +19,8 @@ interface TableProps<T> {
  */
 export function Table<T extends Record<string, any>>({ columns, data, onRowClick }: TableProps<T>) {
   return (
-    <div className="oa-table-wrapper">
-      <table className="oa-table">
+    <div className="oa-table-wrapper overflow-safe-scroll">
+      <table className="oa-table min-w-full">
         <thead>
           <tr>
             {columns.map((col) => (

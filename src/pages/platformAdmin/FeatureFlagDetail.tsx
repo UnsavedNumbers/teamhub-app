@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { PageHeader, Badge, Card, Button, PlatformDataTable, type ColumnConfig, OfflineBanner, ErrorState, Tabs, TabsTrigger, TabsContent, Modal, Input, Switch, Select, ConfirmDialog } from '../../components/platformAdmin'
+import { PageHeader, Badge, Card, Button, PlatformDataTable, type ColumnConfig, OfflineBanner, ErrorState, Tabs, TabsList, TabsTrigger, TabsContent, Modal, Input, Switch, Select, ConfirmDialog } from '../../components/platformAdmin'
 import { EntitySelect } from '../../components/common/EntitySelect'
 import { isRpcSuccessResponse } from '../../utils/typeAdapters'
 import { isValidUuid } from '../../utils/uuid'
@@ -1038,15 +1038,15 @@ export default function FeatureFlagDetail() {
       </div>
       
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'overrides' | 'audit')}>
-        <div className="pa-flex pa-flex-col sm:pa-flex-row pa-gap-2 pa-mb-4 pa-ff-tabs-bar">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'overrides' | 'audit')} className="oa-tabs">
+        <TabsList className="oa-mb-4 pa-ff-tabs-bar">
           <TabsTrigger value="overrides">
             {t('platformAdmin.featureFlags.detail.overridesTab')} ({overrides.length})
           </TabsTrigger>
           <TabsTrigger value="audit">
             {t('platformAdmin.featureFlags.detail.auditLogTab')} ({auditLog.length})
           </TabsTrigger>
-        </div>
+        </TabsList>
         
         {/* Overrides Tab */}
         <TabsContent value="overrides">

@@ -78,7 +78,9 @@ export const parentNavSections: NavigationSection[] = [
             {
                 label: 'Messages',
                 items: [
-                    { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', description: 'Team chat and announcements' },
+                    { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', description: 'Direct user-to-user messages' },
+                    { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', description: 'Team and organization chat channels' },
+                    { routeKey: 'portal.messages', text: 'Announcements', icon: 'campaign', description: 'Team announcements and updates' },
                 ],
             },
         ],
@@ -106,6 +108,7 @@ export const parentNavSections: NavigationSection[] = [
                         { routeKey: 'portal.photos', text: 'Photos', icon: 'photo_library', description: 'Team galleries' },
                         { routeKey: 'portal.videos', text: 'Video Library', icon: 'smart_display', description: 'Watch team and athlete videos' },
                         { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', description: 'Tryout sessions' },
+                        { routeKey: 'portal.tryoutRegistrations', text: 'My Tryout Registrations', icon: 'assignment', description: 'Track tryout status' },
                     ],
                 },
                 {
@@ -178,12 +181,12 @@ export const athleteNavSections: NavigationSection[] = [
     },
     {
         label: 'Announcements',
-        route: '/portal/messages',
+        route: '/portal/announcements',
         groups: [
             {
                 label: 'Announcements',
                 items: [
-                    { routeKey: 'portal.messages', text: 'Announcements', icon: 'forum', description: 'Team announcements' },
+                    { routeKey: 'portal.messages', text: 'Announcements', icon: 'campaign', description: 'Team announcements and updates' },
                 ],
             },
         ],
@@ -283,7 +286,9 @@ export const coachNavSections: NavigationSection[] = [
                 items: [
                     { routeKey: 'portal.tryouts', text: 'Tryouts', icon: 'emoji_events', description: 'Tryout sessions' },
                     { routeKey: 'portal.travel', text: 'Travel', icon: 'flight', description: 'Trip details' },
-                    { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', description: 'Team chat' },
+                    { routeKey: 'portal.messages', text: 'Messages', icon: 'mail', description: 'Direct user-to-user messages' },
+                    { routeKey: 'portal.messages', text: 'Huddles', icon: 'forum', description: 'Team and organization chat channels' },
+                    { routeKey: 'portal.messages', text: 'Announcements', icon: 'campaign', description: 'Team announcements and updates' },
                     { routeKey: 'portal.settings', text: 'Settings', icon: 'settings', description: 'Preferences' },
                 ],
             },
@@ -440,6 +445,17 @@ export const adminMenuItems: MenuItemDefinition[] = [
             { text: 'Facilities', icon: 'location_city', routeKey: 'admin.facilities.list', requiresOrg: true },
             { text: 'Attendance', icon: 'how_to_reg', routeKey: 'admin.attendance', requiresOrg: true },
             { text: 'Uniforms', icon: 'checkroom', routeKey: 'admin.uniforms.list', requiresOrg: true },
+        ],
+    },
+    {
+        label: 'Tryouts',
+        icon: 'emoji_events',
+        routeKey: 'admin.tryouts.list',
+        requiresOrg: true,
+        children: [
+            { text: 'All Tryouts', icon: 'list', routeKey: 'admin.tryouts.list', requiresOrg: true },
+            { text: 'Create Tryout', icon: 'add', routeKey: 'admin.tryouts.create', requiresOrg: true },
+            { text: 'My Assignments', icon: 'assignment_ind', routeKey: 'admin.tryouts.assigned', requiresOrg: true },
         ],
     },
     {

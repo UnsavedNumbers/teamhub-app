@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Comp Tickets Page
  * 
  * Admin page to issue complimentary tickets for events.
@@ -17,6 +17,7 @@ import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import type { TicketedEvent, TicketType } from '@/types/ticketing'
 
 import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+import '../../styles/orgAdmin.css'
 
 export default function CompTicketsPage() {
   useDebugLifecycle('CompTicketsPage')

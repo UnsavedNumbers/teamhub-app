@@ -1,10 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { t } from '../../i18n'
-import { 
-  AdminPageHeader, 
-  Card, 
-  Button 
-} from '../../components/admin'
+import { AdminPageHeader, Card, Button } from '../../components/admin'
+import '../../styles/orgAdmin.css'
 
 export default function CheckoutCancel() {
   const navigate = useNavigate()

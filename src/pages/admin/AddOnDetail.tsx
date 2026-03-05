@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Add-On Detail Page
  * 
  * Shows detailed information about a specific add-on and allows purchase/management.
@@ -15,6 +15,7 @@ import { showSuccess, showError } from '../../utils/toast'
 import { useI18n } from '../../i18n/useI18n'
 import { isDemoMode, getDemoModeError } from '../../utils/demoMode'
 import { supabase } from '../../lib/supabase'
+import '../../styles/orgAdmin.css'
 
 export default function AddOnDetail() {
   const navigate = useNavigate()
@@ -261,7 +262,7 @@ export default function AddOnDetail() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)', marginTop: 'var(--pa-space-2)' }}>
             <Button variant="ghost" onClick={() => navigate(getLink(RouteKeys.ADMIN_ORGANIZATION_ADDONS))} size="compact">
-              ← {t('common.back')} to Add-Ons
+              &larr; {t('common.back')} to Add-Ons
             </Button>
           </div>
         </AdminPageHeader>
@@ -294,7 +295,7 @@ export default function AddOnDetail() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--pa-space-2)', marginTop: 'var(--pa-space-2)' }}>
           <Button variant="ghost" onClick={() => navigate(getLink(RouteKeys.ADMIN_ORGANIZATION_ADDONS))} size="compact">
-            ← {t('common.back')} to Add-Ons
+            &larr; {t('common.back')} to Add-Ons
           </Button>
           {addOn.external_short_label && (
             <Badge>{addOn.external_short_label}</Badge>

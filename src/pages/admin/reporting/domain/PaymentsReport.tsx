@@ -10,6 +10,7 @@ import { useReporting } from '../../../../contexts/ReportingContext'
 import { useT } from '../../../../i18n/useI18n'
 import { TimeSeriesChart, BarChart, PieChart } from '../../../../components/reporting/charts'
 import { ExportButton } from '../../../../components/reporting/ExportButton'
+import { TopLevelStats } from '../../../../components/common/TopLevelStats'
 
 function PaymentsReportContent() {
   const t = useT()
@@ -39,36 +40,19 @@ function PaymentsReportContent() {
   return (
     <>
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
-        <div className="oa-kpi-card">
-          <p className="oa-kpi-label">Total Revenue</p>
-          <p className="oa-kpi-value">{formatCurrency(revenueMetrics.totalRevenue)}</p>
-        </div>
-        <div className="oa-kpi-card">
-          <p className="oa-kpi-label">Outstanding Balances</p>
-          <p className="oa-kpi-value">{formatCurrency(revenueMetrics.outstandingBalances)}</p>
-        </div>
-        <div className="oa-kpi-card">
-          <p className="oa-kpi-label">Average Payment</p>
-          <p className="oa-kpi-value">{formatCurrency(revenueMetrics.averagePaymentAmount)}</p>
-        </div>
-        <div className="oa-kpi-card">
-          <p className="oa-kpi-label">Payments Completed</p>
-          <p className="oa-kpi-value">{revenueMetrics.paymentsCompleted}</p>
-        </div>
-        <div className="oa-kpi-card">
-          <p className="oa-kpi-label">Payments Failed</p>
-          <p className="oa-kpi-value">{revenueMetrics.paymentsFailed}</p>
-        </div>
-        <div className="oa-kpi-card">
-          <p className="oa-kpi-label">Payment Plans On Track</p>
-          <p className="oa-kpi-value">{revenueMetrics.paymentPlansOnTrack}</p>
-        </div>
-        <div className="oa-kpi-card">
-          <p className="oa-kpi-label">Payment Plans Overdue</p>
-          <p className="oa-kpi-value">{revenueMetrics.paymentPlansOverdue}</p>
-        </div>
-      </div>
+      <TopLevelStats
+        className="oa-mb-8"
+        ariaLabel="Payments report summary metrics"
+        items={[
+          { id: 'revenue', label: 'Total Revenue', value: formatCurrency(revenueMetrics.totalRevenue), tone: 'success' },
+          { id: 'outstanding', label: 'Outstanding Balances', value: formatCurrency(revenueMetrics.outstandingBalances), tone: revenueMetrics.outstandingBalances > 0 ? 'warning' : 'default' },
+          { id: 'average-payment', label: 'Average Payment', value: formatCurrency(revenueMetrics.averagePaymentAmount) },
+          { id: 'completed', label: 'Payments Completed', value: revenueMetrics.paymentsCompleted, tone: 'success' },
+          { id: 'failed', label: 'Payments Failed', value: revenueMetrics.paymentsFailed, tone: revenueMetrics.paymentsFailed > 0 ? 'danger' : 'default' },
+          { id: 'plans-on-track', label: 'Payment Plans On Track', value: revenueMetrics.paymentPlansOnTrack, tone: 'success' },
+          { id: 'plans-overdue', label: 'Payment Plans Overdue', value: revenueMetrics.paymentPlansOverdue, tone: revenueMetrics.paymentPlansOverdue > 0 ? 'warning' : 'default' },
+        ]}
+      />
 
       {/* Revenue Over Time */}
       {revenueMetrics.revenueOverTime && revenueMetrics.revenueOverTime.length > 0 && (

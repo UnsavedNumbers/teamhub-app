@@ -10,9 +10,16 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { followOrg, unfollowOrg } from '../../data/services/fanService'
+import { followOrg, getTeamProfile, unfollowOrg } from '../../data/services/fanService'
+import { USE_FAKE_DATA } from '../../data/config'
+import { getFakeTicketingEvents } from '../../data/fake/fakeTicketingEvents'
+import { getMockGalleriesForOrg, getMockPhotosForGallery } from '../../data/fake/mockGalleries'
+import { getOrganizationById } from '../../data/fake/fakeOrganizations'
+import { getTeamMembersForSeason, getTeamWithDetails } from '../../data/fake/fakeTeams'
+import { getChildById } from '../../data/fake/fakeUsers'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import { TopLevelStats } from '../../components/common/TopLevelStats'
 import AthleteAvatar from '../../components/portal/AthleteAvatar'
 import { useUserContext } from '../../hooks/useUserContext'
 import { showError, showSuccess } from '../../utils/toast'
@@ -28,12 +35,13 @@ interface TeamProfile {
   org_id: string
   org_name: string
   org_slug?: string
+  org_logo_url?: string | null
   sport: string
   season?: string
   level?: string
   age_group?: string
   description?: string
-  privacy_level: 'public' | 'private' | 'followers_only'
+  privacy_level: 'public' | 'private' | 'followers_only' | 'unlisted'
   is_following: boolean
   follower_count: number
   athlete_count: number
@@ -44,7 +52,8 @@ import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycl
 export default function FanTeamProfile() {
   useDebugLifecycle('FanTeamProfile')
   
-  const { id } = useParams<{ id: string }>()
+  const { id, teamId } = useParams<{ id?: string; teamId?: string }>()
+  const resolvedTeamId = teamId || id
   const navigate = useNavigate()
   
   const { context } = useUserContext()
@@ -55,43 +64,148 @@ export default function FanTeamProfile() {
   const [followLoading, setFollowLoading] = useState(false)
   
   // Related content
-  const [upcomingEvents] = useState<any[]>([])
-  const [roster] = useState<any[]>([])
-  const [recentPhotos] = useState<any[]>([])
-  const [recentResults] = useState<any[]>([])
+  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([])
+  const [roster, setRoster] = useState<any[]>([])
+  const [recentPhotos, setRecentPhotos] = useState<any[]>([])
+  const [recentResults, setRecentResults] = useState<any[]>([])
 
   useEffect(() => {
-    if (!id) {
+    if (!resolvedTeamId) {
       setError('Team not found')
       setLoading(false)
       return
     }
 
     loadProfile()
-  }, [id])
+  }, [resolvedTeamId])
 
   const loadProfile = async () => {
-    if (!id) return
+    if (!resolvedTeamId) return
 
     setLoading(true)
     setError(null)
 
-    // In production: call getTeamProfile(id)
-    // For now, simulate with placeholder
-    setTimeout(() => {
+    const { data, error: profileError } = await getTeamProfile(resolvedTeamId)
+
+    if (profileError || !data) {
       setProfile(null)
-      setError('Team not found')
+      setError(profileError?.message || 'Team not found')
       setLoading(false)
-    }, 500)
+      return
+    }
+
+    const fakeTeam = USE_FAKE_DATA ? getTeamWithDetails(resolvedTeamId) : undefined
+    const fallbackOrg = fakeTeam ? getOrganizationById(fakeTeam.org_id) : undefined
+
+    const mappedProfile: TeamProfile = {
+      id: data.id,
+      name: data.name,
+      slug: undefined,
+      logo_url: data.logo_url,
+      cover_url: data.cover_url,
+      org_id: fakeTeam?.org_id || '',
+      org_name: data.parent_org_name || fallbackOrg?.name || 'Organization',
+      org_slug: fallbackOrg?.slug,
+      org_logo_url: fallbackOrg?.logo_url || null,
+      sport: data.sport || fakeTeam?.sport?.name || 'Sports',
+      season: data.season || fakeTeam?.activeSeason?.name,
+      level: fakeTeam?.level?.name || undefined,
+      age_group: fakeTeam?.age_group || undefined,
+      description: data.description || undefined,
+      privacy_level: data.privacy_level,
+      is_following: data.is_following,
+      follower_count: data.follower_count || 0,
+      athlete_count: 0,
+    }
+
+    setProfile(mappedProfile)
+    setIsFollowing(Boolean(data.is_following))
+
+    if (USE_FAKE_DATA && fakeTeam) {
+      const now = Date.now()
+      const orgTicketedEvents = getFakeTicketingEvents(fakeTeam.org_id, {
+        page: 1,
+        perPage: 60,
+        fanVisibleOnly: true,
+      }).data
+      const teamEvents = orgTicketedEvents
+        .map((event) => ({
+          id: event.id,
+          title: event.title,
+          start_time: event.starts_at,
+          end_time: event.ends_at || event.starts_at,
+          location: [event.venue_name, event.venue_city, event.venue_state].filter(Boolean).join(', ') || null,
+          event_type: event.event_type,
+          status: event.status,
+        }))
+        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+
+      const nextEvents = teamEvents.filter((event) => new Date(event.start_time).getTime() >= now).slice(0, 8)
+      setUpcomingEvents(nextEvents)
+
+      const pastResults = teamEvents
+        .filter((event) => new Date(event.start_time).getTime() < now && ['game', 'tournament'].includes(String(event.event_type || '')))
+        .slice(-5)
+        .reverse()
+        .map((event, index) => ({
+          id: `${event.id}-result`,
+          date: event.start_time,
+          opponent: `Opponent ${index + 1}`,
+          our_score: 2 + (index % 3),
+          their_score: 1 + ((index + 1) % 3),
+          outcome: index % 3 === 2 ? 'loss' : 'win',
+        }))
+      setRecentResults(pastResults)
+
+      const activeSeasonId = fakeTeam.activeSeason?.id
+      const rosterEntries = activeSeasonId
+        ? getTeamMembersForSeason(fakeTeam.id, activeSeasonId).filter((member) => member.status === 'active')
+        : []
+      const mappedRoster = rosterEntries
+        .map((member) => {
+          const child = getChildById(member.athlete_id)
+          if (!child) return null
+          return {
+            id: child.id,
+            first_name: child.first_name,
+            last_name: child.last_name,
+            jersey_number: member.jersey_number || child.jersey_number,
+            position: member.position,
+            org_id: fakeTeam.org_id,
+            photo_url: child.photo_url,
+          }
+        })
+        .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+      setRoster(mappedRoster)
+
+      setProfile((prev) => prev ? { ...prev, athlete_count: mappedRoster.length } : prev)
+
+      const photos = getMockGalleriesForOrg(fakeTeam.org_id)
+        .filter((gallery) => gallery.fans_can_see)
+        .flatMap((gallery) => getMockPhotosForGallery(gallery.id))
+        .slice(0, 12)
+      setRecentPhotos(photos)
+    } else {
+      setUpcomingEvents([])
+      setRecentResults([])
+      setRoster([])
+      setRecentPhotos([])
+    }
+
+    setLoading(false)
   }
 
   const handleFollowToggle = async () => {
     if (!profile) return
+    if (!profile.org_id) {
+      showError('Unable to update follow status for this team')
+      return
+    }
     
     setFollowLoading(true)
     
     if (isFollowing) {
-      const { error } = await unfollowOrg(profile.id)
+      const { error } = await unfollowOrg(profile.org_id)
       if (error) {
         showError('Failed to unfollow')
       } else {
@@ -99,7 +213,7 @@ export default function FanTeamProfile() {
         showSuccess(`Unfollowed ${profile.name}`)
       }
     } else {
-      const { error } = await followOrg(profile.id)
+      const { error } = await followOrg(profile.org_id)
       if (error) {
         showError('Failed to follow')
       } else {
@@ -169,9 +283,13 @@ export default function FanTeamProfile() {
             <h1 className="fan-entity-name">{profile.name}</h1>
             <button 
               className="fan-entity-parent"
-              onClick={() => profile.org_slug && navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { slug: profile.org_slug }))}
+              onClick={() => profile.org_slug && navigate(getLink(RouteKeys.FAN_ORG_PROFILE, { orgId: profile.org_slug }))}
             >
-              <span className="material-symbols-outlined">business</span>
+              {profile.org_logo_url ? (
+                <img src={profile.org_logo_url} alt={profile.org_name} className="size-4 rounded-full object-cover" />
+              ) : (
+                <span className="material-symbols-outlined">business</span>
+              )}
               {profile.org_name}
             </button>
             <div className="fan-entity-tags">
@@ -204,20 +322,15 @@ export default function FanTeamProfile() {
       </div>
 
       {/* Stats Bar */}
-      <div className="fan-entity-stats">
-        <div className="fan-entity-stat">
-          <span className="fan-entity-stat-value">{profile.follower_count || 0}</span>
-          <span className="fan-entity-stat-label">Followers</span>
-        </div>
-        <div className="fan-entity-stat">
-          <span className="fan-entity-stat-value">{profile.athlete_count || roster.length}</span>
-          <span className="fan-entity-stat-label">Athletes</span>
-        </div>
-        <div className="fan-entity-stat">
-          <span className="fan-entity-stat-value">{upcomingEvents.length}</span>
-          <span className="fan-entity-stat-label">Upcoming</span>
-        </div>
-      </div>
+      <TopLevelStats
+        className="fan-entity-stats"
+        ariaLabel="Team profile summary metrics"
+        items={[
+          { id: 'followers', label: 'Followers', value: profile.follower_count || 0 },
+          { id: 'athletes', label: 'Athletes', value: profile.athlete_count || roster.length },
+          { id: 'upcoming', label: 'Upcoming', value: upcomingEvents.length },
+        ]}
+      />
 
       {/* About Section */}
       {profile.description && (
@@ -316,7 +429,7 @@ export default function FanTeamProfile() {
               <div 
                 key={athlete.id} 
                 className="fan-athlete-card"
-                onClick={() => navigate(getLink(RouteKeys.FAN_ATHLETE_PROFILE, { id: athlete.id }))}
+                onClick={() => navigate(getLink(RouteKeys.FAN_ATHLETE_PROFILE, { athleteId: athlete.id }))}
               >
                 <div className="fan-athlete-photo">
                   <AthleteAvatar

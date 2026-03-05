@@ -148,10 +148,10 @@ serve(async (req) => {
     try {
         const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
         const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-        const apiKey = Deno.env.get('GOOGLE_PLACES_API_KEY') || Deno.env.get('GOOGLE_MAPS_API_KEY')
+        const apiManagerInternalToken = Deno.env.get('API_MANAGER_INTERNAL_TOKEN') ?? ''
 
-        if (!apiKey) {
-            console.error('Missing Google Maps/Places API Key')
+        if (!apiManagerInternalToken) {
+            console.error('Missing API manager internal token')
             return new Response(JSON.stringify({
                 error_code: 'UNKNOWN_ERROR',
                 error_message: 'Service configuration error'
@@ -195,49 +195,45 @@ serve(async (req) => {
         const originStr = resolveOriginToString(origin)
         const destStrs = destinations.map(resolveDestinationToString)
 
-        // Build Distance Matrix URL
-        const url = new URL('https://maps.googleapis.com/maps/api/distancematrix/json')
-        url.searchParams.set('origins', originStr)
-        url.searchParams.set('destinations', destStrs.join('|')) // Pipe separated
-        url.searchParams.set('mode', travel_mode)
-        url.searchParams.set('units', units === 'miles' ? 'imperial' : 'metric')
-        url.searchParams.set('key', apiKey)
-
-        if (travel_mode === 'driving') {
-            if (departure_time === 'now') {
-                url.searchParams.set('departure_time', 'now')
-            } else if (departure_time) {
+        const departureTimeValue = (() => {
+            if (travel_mode !== 'driving') return String(Math.floor(Date.now() / 1000))
+            if (departure_time === 'now') return String(Math.floor(Date.now() / 1000))
+            if (departure_time) {
                 const dt = new Date(departure_time).getTime() / 1000
-                if (!isNaN(dt)) {
-                    url.searchParams.set('departure_time', Math.floor(dt).toString())
-                } else {
-                    // Fallback or error?
-                    url.searchParams.set('departure_time', 'now')
-                }
+                if (!isNaN(dt)) return Math.floor(dt).toString()
             }
-
-            if (traffic_model && departure_time) {
-                url.searchParams.set('traffic_model', traffic_model)
-            }
-        }
-
-        // Fetch from Google
-        // 15s timeout
-        const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 15000)
+            return String(Math.floor(Date.now() / 1000))
+        })()
 
         let matrixData: any
         try {
-            const res = await fetch(url.toString(), { signal: controller.signal })
-            clearTimeout(timeout)
-            if (!res.ok) {
-                const text = await res.text()
-                console.error('Google Matrix Error:', res.status, text)
+            const functionsBaseUrl = supabaseUrl.replace('/rest/v1', '')
+            const res = await fetch(`${functionsBaseUrl}/functions/v1/api`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${supabaseServiceRoleKey}`,
+                },
+                body: JSON.stringify({
+                    operation: 'travel.distanceMatrix',
+                    input: {
+                        origins: originStr,
+                        destinations: destStrs.join('|'),
+                        mode: travel_mode,
+                        units: units === 'miles' ? 'imperial' : 'metric',
+                        departureTime: departureTimeValue,
+                        trafficModel: traffic_model || 'best_guess',
+                        internalToken: apiManagerInternalToken,
+                    },
+                }),
+            })
+            const json = await res.json().catch(() => null)
+            if (!res.ok || !json?.ok) {
+                console.error('API manager matrix error:', res.status, json)
                 return new Response(JSON.stringify({ error_code: 'UNKNOWN_ERROR', error_message: 'Provider error' }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
             }
-            matrixData = await res.json()
+            matrixData = json?.data?.providerResponse
         } catch (e) {
-            clearTimeout(timeout)
             console.error('Fetch error:', e)
             return new Response(JSON.stringify({ error_code: 'UNKNOWN_ERROR', error_message: 'Network or timeout error' }), { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
         }

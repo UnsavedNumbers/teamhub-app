@@ -5,20 +5,33 @@ import {
   getNotifications,
   markNotificationRead,
   markAllNotificationsRead,
-} from '../../data/services/messagesService'
+} from '../../data/services/userNotificationsService'
 import { NotificationRecord } from '../../types/notifications'
 import {
   AdminPageHeader,
-  Card,
   Button,
   Badge,
 } from '../../components/admin'
-import { AdminFilterPanel } from '../../components/platformAdmin'
-import type { FilterSectionConfig } from '../../components/platformAdmin/AdminFilterPanel'
 import { showSuccess, showError } from '../../utils/toast'
 import { cn } from '../../utils/cn'
 import { getTeams } from '../../data/services/teamsService'
 import '../../styles/orgAdmin.css'
+
+interface FilterItem {
+  id: string
+  label: string
+  count?: number
+  icon?: string
+}
+
+interface FilterSectionConfig {
+  id: string
+  title: string
+  items: FilterItem[]
+  searchable?: boolean
+  multiSelect?: boolean
+  layout?: 'list' | 'pills' | 'grid'
+}
 
 // Helper to get icon for notification
 const getIcon = (action: string) => {
@@ -29,12 +42,28 @@ const getIcon = (action: string) => {
   return 'notifications' // default
 }
 
-const getPresentationColor = (presentation: string) => {
-  switch (presentation) {
-    case 'urgent': return 'oa-text-danger'
-    case 'warning': return 'oa-text-warning'
-    default: return 'oa-text-primary'
-  }
+const formatTime = (value: string) =>
+  new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+const formatRelativeTime = (value: string) => {
+  const created = new Date(value).getTime()
+  const diffMs = Date.now() - created
+  const minutes = Math.max(0, Math.floor(diffMs / 60000))
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  const days = Math.floor(hours / 24)
+  return `${days} day${days === 1 ? '' : 's'} ago`
+}
+
+const getStatusTag = (notification: NotificationRecord, isUnread: boolean) => {
+  if (notification.archived_at) return { label: 'Archived', tone: 'muted' as const }
+  if (isUnread) return { label: 'New', tone: 'accent' as const }
+  if (notification.action.includes('payment')) return { label: 'Logged', tone: 'muted' as const }
+  if (notification.action.includes('message')) return { label: 'Updated', tone: 'muted' as const }
+  if (notification.action.includes('event')) return { label: 'Updated', tone: 'muted' as const }
+  return { label: 'Info', tone: 'muted' as const }
 }
 
 const STATIC_SECTIONS: FilterSectionConfig[] = [
@@ -76,12 +105,18 @@ const STATIC_SECTIONS: FilterSectionConfig[] = [
 export default function AdminNotifications() {
   const { context, isReady } = useUserContext()
   const isMountedRef = useRef(true)
+  const filterCloseTimeoutRef = useRef<number | null>(null)
 
   // State
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [teams, setTeams] = useState<any[]>([])
   const [searchText, setSearchText] = useState('')
+  const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'archived'>('all')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [filtersVisible, setFiltersVisible] = useState(false)
+  const [filtersClosing, setFiltersClosing] = useState(false)
+  const [sectionSearchQueries, setSectionSearchQueries] = useState<Record<string, string>>({})
   
   // Filter State
   const [selectedFilters, setSelectedFilters] = useState<Record<string, Set<string>>>({})
@@ -113,11 +148,57 @@ export default function AdminNotifications() {
     return base
   }, [notifications])
 
+  const activeFilterCount = useMemo(
+    () => Object.values(selectedFilters).reduce((count, selection) => count + (selection?.size ?? 0), 0),
+    [selectedFilters]
+  )
+
   // Clean up
   useEffect(() => {
     isMountedRef.current = true
-    return () => { isMountedRef.current = false }
+    return () => {
+      isMountedRef.current = false
+      if (filterCloseTimeoutRef.current !== null) {
+        window.clearTimeout(filterCloseTimeoutRef.current)
+      }
+    }
   }, [])
+
+  useEffect(() => {
+    if (!filtersVisible) return undefined
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        handleCloseFilters()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [filtersVisible])
+
+  const handleOpenFilters = () => {
+    if (filterCloseTimeoutRef.current !== null) {
+      window.clearTimeout(filterCloseTimeoutRef.current)
+      filterCloseTimeoutRef.current = null
+    }
+    setFiltersVisible(true)
+    setFiltersClosing(false)
+    requestAnimationFrame(() => {
+      setFiltersOpen(true)
+    })
+  }
+
+  const handleCloseFilters = () => {
+    setFiltersOpen(false)
+    setFiltersClosing(true)
+    if (filterCloseTimeoutRef.current !== null) {
+      window.clearTimeout(filterCloseTimeoutRef.current)
+    }
+    filterCloseTimeoutRef.current = window.setTimeout(() => {
+      setFiltersVisible(false)
+      setFiltersClosing(false)
+      filterCloseTimeoutRef.current = null
+    }, 260)
+  }
 
   // Data Fetching
   const fetchData = async () => {
@@ -162,6 +243,9 @@ export default function AdminNotifications() {
         if (searchText && !(n.title?.toLowerCase().includes(searchText.toLowerCase()) || n.body?.toLowerCase().includes(searchText.toLowerCase()))) {
             return false
         }
+        if (activeTab === 'unread' && n.read_at) return false
+        if (activeTab === 'archived' && !n.archived_at) return false
+        if (activeTab !== 'archived' && activeTab !== 'all' && n.archived_at) return false
         // Status Filter (only apply if something selected)
         const statusSet = selectedFilters['status']
         if (statusSet && statusSet.size > 0) {
@@ -191,7 +275,7 @@ export default function AdminNotifications() {
 
         return true
     })
-  }, [notifications, selectedFilters, searchText])
+  }, [notifications, selectedFilters, searchText, activeTab])
 
   // Grouping Logic
   const groupedNotifications = useMemo(() => {
@@ -244,9 +328,29 @@ export default function AdminNotifications() {
           [sectionId]: values
       }))
   }
+
+  const toggleFilterItem = (sectionId: string, itemId: string) => {
+      const current = selectedFilters[sectionId] || new Set<string>()
+      const next = new Set(current)
+      if (next.has(itemId)) next.delete(itemId)
+      else next.add(itemId)
+      handleFilterChange(sectionId, next)
+  }
+
+  const handleSectionSearch = (sectionId: string, query: string) => {
+      setSectionSearchQueries((prev) => ({
+          ...prev,
+          [sectionId]: query,
+      }))
+  }
   
   const handleClearFilters = () => {
-      setSelectedFilters({})
+      const resetFilters: Record<string, Set<string>> = { teams: new Set() }
+      STATIC_SECTIONS.forEach((section) => {
+        resetFilters[section.id] = new Set()
+      })
+      setSelectedFilters(resetFilters)
+      setSectionSearchQueries({})
   }
 
   // Filter Config
@@ -295,20 +399,10 @@ export default function AdminNotifications() {
   }, [teams, notifications, statusCounts, typeCounts, roleCounts])
 
   return (
-    <div 
-      className="oa-root"
-      style={{
-        background: 'var(--pa-surface-subtle)'
-      }}
-    >
+    <div className="oa-root">
       <AdminPageHeader
         breadcrumbs={[{ label: 'Notifications' }]}
-        title={
-          <span className="oa-flex oa-items-center oa-gap-2 oa-justify-start">
-            <span className="material-symbols-outlined oa-text-[1.25em] oa-align-middle" aria-hidden>notifications</span>
-            <span>Notifications</span>
-          </span>
-        }
+        title="Notifications"
         subtitle="Stay informed about important updates and activities across your organization"
         actions={
           <div className="oa-flex oa-gap-3">
@@ -317,7 +411,7 @@ export default function AdminNotifications() {
                 Analytics
               </Button>
             </Link>
-            <Link to="/admin/settings">
+            <Link to="/admin/organization?tab=notifications">
                  <Button variant="ghost" icon="settings">
                     Settings
                  </Button>
@@ -334,198 +428,266 @@ export default function AdminNotifications() {
         }
       />
 
-      <div className="oa-flex oa-flex-col lg:oa-flex-row oa-gap-6 oa-p-6">
-          {/* Sidebar Filters - Completely Redesigned */}
-          <aside className="oa-w-full lg:oa-w-80 oa-shrink-0">
-              <div className="oa-sticky oa-top-6">
-                  <AdminFilterPanel 
-                  sections={filterSections}
-                  selectedValues={selectedFilters}
-                  onSelectionChange={handleFilterChange}
-                  onClearAll={handleClearFilters}
-                  resultCount={filteredNotifications.length}
-                  searchValue={searchText}
-                  onSearchChange={setSearchText}
-              />
-              </div>
-          </aside>
-
-          {/* Content - Enhanced Cards */}
-          <div className="oa-flex-1 oa-flex oa-flex-col oa-gap-8 oa-min-w-0">
-            {loading ? (
-                <div className="oa-flex oa-justify-center oa-items-center oa-py-20">
-                    <div className="oa-flex oa-flex-col oa-items-center oa-gap-4">
-                        <div 
-                          className="oa-w-12 oa-h-12 oa-rounded-full oa-border-4 oa-border-t-[var(--org-btn-primary-bg)] oa-animate-spin"
-                          style={{
-                            borderColor: 'var(--pa-border-default)'
-                          }}
-                        ></div>
-                        <p 
-                          className="oa-text-sm oa-font-medium"
-                          style={{
-                            color: 'var(--pa-text-muted)'
-                          }}
-                        >
-                          Loading notifications...
-                        </p>
-                    </div>
-                </div>
-            ) : filteredNotifications.length === 0 ? (
-                <Card className="oa-border-2 oa-border-dashed">
-                    <div className="oa-flex oa-items-start oa-gap-4 oa-text-left">
-                        <span className="material-symbols-outlined oa-text-muted oa-shrink-0" style={{ fontSize: '48px' }} aria-hidden>notifications_off</span>
-                        <div className="oa-flex oa-flex-col oa-gap-2 oa-min-w-0">
-                            <h3 className="oa-h3 oa-mb-0">No Notifications Found</h3>
-                            <p className="oa-body-m oa-text-muted oa-mb-0">Try adjusting your filters to see more results, or check back later for new updates.</p>
-                        </div>
-                    </div>
-                </Card>
-            ) : (
-                groupedNotifications.map((group, idx) => (
-                    <div key={idx} className="oa-animate-in oa-fade-in oa-slide-in-from-bottom-2 oa-duration-300" style={{ animationDelay: `${idx * 50}ms` }}>
-                        <div className="oa-flex oa-items-center oa-gap-3 oa-mb-4">
-                            <div 
-                              className="oa-h-px oa-flex-1 oa-bg-gradient-to-r oa-from-transparent oa-to-transparent"
-                              style={{
-                                background: 'linear-gradient(to right, transparent, var(--pa-border-default), transparent)'
-                              }}
-                            ></div>
-                            <h3 
-                              className="oa-text-xs oa-font-black oa-uppercase oa-tracking-[0.2em] oa-px-3 oa-py-1 oa-rounded-full oa-border"
-                              style={{
-                                color: 'var(--pa-text-muted)',
-                                background: 'var(--pa-surface)',
-                                borderColor: 'var(--pa-border-default)'
-                              }}
-                            >
-                                {group.label}
-                            </h3>
-                            <div 
-                              className="oa-h-px oa-flex-1 oa-bg-gradient-to-r oa-from-transparent oa-to-transparent"
-                              style={{
-                                background: 'linear-gradient(to right, transparent, var(--pa-border-default), transparent)'
-                              }}
-                            ></div>
-                        </div>
-                        <div className="oa-flex oa-flex-col oa-gap-3">
-                            {group.items.map((notification, nIdx) => {
-                                const isUnread = !notification.read_at
-                                const icon = getIcon(notification.action)
-                                getPresentationColor(notification.presentation_type)
-
-                                return (
-                                    <Card 
-                                        key={notification.id} 
-                                        
-                                        className={cn(
-                                            'oa-group oa-transition-all oa-duration-200 oa-cursor-pointer hover:oa-shadow-lg hover:oa-translate-y-[-2px]',
-                                            isUnread 
-                                                ? 'oa-border-l-4 oa-border-l-[var(--org-btn-primary-bg)] oa-bg-gradient-to-r oa-from-[var(--org-btn-primary-bg)]/5 oa-to-transparent' 
-                                                : 'oa-opacity-90 hover:oa-opacity-100'
-                                        )}
-                                        style={{ animationDelay: `${(idx * 50) + (nIdx * 30)}ms` }}
-                                    >
-                                        <div className="oa-p-5 sm:oa-p-6 oa-flex oa-flex-col sm:oa-flex-row oa-gap-4 sm:oa-items-start">
-                                            {/* Icon with gradient background */}
-                                            <div className={cn(
-                                                "oa-relative oa-flex oa-items-center oa-justify-center oa-w-14 oa-h-14 oa-rounded-2xl oa-shrink-0 oa-transition-transform oa-duration-200 group-hover:oa-scale-110",
-                                                isUnread 
-                                                    ? "oa-bg-gradient-to-br oa-from-[var(--org-btn-primary-bg)] oa-to-[#7dd3fc] oa-shadow-lg oa-shadow-[var(--org-btn-primary-bg)]/20" 
-                                                    : "oa-bg-gray-100 dark:oa-bg-slate-800"
-                                            )}>
-                                                {isUnread && (
-                                                    <div className="oa-absolute oa-inset-0 oa-rounded-2xl oa-bg-gradient-to-br oa-from-white/20 oa-to-transparent"></div>
-                                                )}
-                                                <span className={cn(
-                                                    "material-symbols-outlined oa-text-2xl oa-relative oa-z-10",
-                                                    isUnread ? "oa-text-white" : "oa-text-slate-400"
-                                                )}>
-                                                    {icon}
-                                                </span>
-                                            </div>
-
-                                            {/* Content */}
-                                            <div className="oa-flex-1 oa-min-w-0">
-                                                <div className="oa-flex oa-flex-wrap oa-items-center oa-gap-2 oa-mb-2">
-                                                    <h4 
-                                                      className="oa-text-base oa-font-bold oa-leading-tight"
-                                                      style={{
-                                                        color: isUnread ? 'var(--pa-text-primary)' : 'var(--pa-text-secondary)'
-                                                      }}
-                                                    >
-                                                        {notification.title}
-                                                    </h4>
-                                                    {isUnread && (
-                                                        <span className="oa-inline-flex oa-items-center oa-gap-1 oa-px-2 oa-py-0.5 oa-bg-[var(--org-btn-primary-bg)] oa-text-white oa-text-[10px] oa-font-black oa-uppercase oa-tracking-wider oa-rounded-md oa-shadow-sm oa-animate-in oa-zoom-in">
-                                                            <span className="oa-w-1.5 oa-h-1.5 oa-rounded-full oa-bg-white oa-animate-pulse"></span>
-                                                            NEW
-                                                        </span>
-                                                    )}
-                                                    {notification.presentation_type === 'urgent' && (
-                                                        <Badge variant="danger" className="oa-animate-pulse">URGENT</Badge>
-                                                    )}
-                                                    {notification.role_context && (
-                                                        <Badge variant="neutral" className="oa-text-[10px]">
-                                                            {notification.role_context.toUpperCase()}
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                                <p className="oa-text-sm oa-text-slate-600 dark:oa-text-slate-300 oa-leading-relaxed oa-mb-3">
-                                                    {notification.body}
-                                                </p>
-                                                <div className="oa-flex oa-flex-wrap oa-items-center oa-gap-4">
-                                                    <div className="oa-flex oa-items-center oa-gap-1.5 oa-text-xs oa-text-slate-400">
-                                                        <span className="material-symbols-outlined oa-text-[14px]">schedule</span>
-                                                        {new Date(notification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </div>
-                                                    {notification.link_url && (
-                                                        <Link 
-                                                            to={notification.link_url} 
-                                                            className="oa-inline-flex oa-items-center oa-gap-1 oa-text-xs oa-font-bold oa-text-[var(--org-btn-primary-bg)] hover:oa-underline oa-transition-colors"
-                                                        >
-                                                            View Details 
-                                                            <span className="material-symbols-outlined oa-text-[14px] group-hover:oa-translate-x-1 oa-transition-transform">arrow_forward</span>
-                                                        </Link>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Actions */}
-                                            <div className="oa-flex oa-items-start oa-gap-2">
-                                                {isUnread && (
-                                                    <button
-                                                        onClick={(e) => handleMarkRead(notification.id, e)}
-                                                        className="oa-inline-flex oa-items-center oa-gap-1.5 oa-px-3 oa-py-2 oa-text-xs oa-font-bold oa-rounded-lg hover:oa-border-[var(--org-btn-primary-bg)] hover:oa-shadow-sm oa-transition-all oa-border"
-                                                        style={{
-                                                          color: 'var(--pa-text-secondary)',
-                                                          background: 'var(--pa-surface-panel)',
-                                                          borderColor: 'var(--pa-border-default)'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                          e.currentTarget.style.color = 'var(--org-btn-primary-bg)'
-                                                          e.currentTarget.style.borderColor = 'var(--org-btn-primary-bg)'
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                          e.currentTarget.style.color = 'var(--pa-text-secondary)'
-                                                          e.currentTarget.style.borderColor = 'var(--pa-border-default)'
-                                                        }}
-                                                    >
-                                                        <span className="material-symbols-outlined oa-text-[16px]">done</span>
-                                                        Dismiss
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </Card>
-                                )
-                            })}
-                        </div>
-                    </div>
-                ))
-            )}
+      <div className="oa-p-6">
+        <section className="oa-notif-feed oa-card">
+          <div className="oa-notif-feed__toolbar">
+            <div className="oa-notif-feed__toolbar-meta">
+              <span className="oa-notif-feed__toolbar-count">{filteredNotifications.length} updates</span>
+              {activeFilterCount > 0 && (
+                <span className="oa-notif-feed__toolbar-filter-count">{activeFilterCount} active filters</span>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              icon="tune"
+              onClick={handleOpenFilters}
+            >
+              Filters
+            </Button>
           </div>
+
+          <div className="oa-notif-feed__tabs" role="tablist">
+            {(['all', 'unread', 'archived'] as const).map((tab) => (
+              <button
+                key={tab}
+                role="tab"
+                aria-selected={activeTab === tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn('oa-notif-feed__tab', activeTab === tab && 'is-active')}
+              >
+                {tab === 'all' && 'All Activity'}
+                {tab === 'unread' && 'Unread'}
+                {tab === 'archived' && 'Archived'}
+              </button>
+            ))}
+          </div>
+
+          {loading ? (
+            <div className="oa-notif-feed__loading">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="oa-notif-feed__skeleton" />
+              ))}
+            </div>
+          ) : filteredNotifications.length === 0 ? (
+            <div className="oa-notif-feed__empty">
+              <div className="oa-notif-feed__empty-icon">
+                <span className="material-symbols-outlined" aria-hidden>
+                  notifications_off
+                </span>
+              </div>
+              <div>
+                <h3 className="oa-notif-feed__empty-title">No notifications found</h3>
+                <p className="oa-notif-feed__empty-copy">Try adjusting your filters or check back later.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="oa-notif-feed__list">
+              {groupedNotifications.map((group) => (
+                <div key={group.label} className="oa-notif-group">
+                  {group.label !== 'Today' && (
+                    <div className="oa-notif-group__header">
+                      <span className="oa-notif-feed__micro">{group.label}</span>
+                    </div>
+                  )}
+                  {group.items.map((notification) => {
+                    const isUnread = !notification.read_at
+                    const isArchived = Boolean(notification.archived_at)
+                    const icon = getIcon(notification.action)
+                    const statusTag = getStatusTag(notification, isUnread)
+                    return (
+                      <article
+                        key={notification.id}
+                        className={cn(
+                          'oa-notif-row',
+                          isUnread && 'oa-notif-row--unread',
+                          isArchived && 'oa-notif-row--archived'
+                        )}
+                      >
+                        <div className="oa-notif-row__time">{formatTime(notification.created_at)}</div>
+                        <div className="oa-notif-row__icon">
+                          <span className={cn('material-symbols-outlined', 'oa-notif-row__icon-symbol')}>
+                            {icon}
+                          </span>
+                          <span
+                            className={cn(
+                              'oa-notif-label',
+                              statusTag.tone === 'accent' ? 'oa-notif-label--accent' : 'oa-notif-label--muted'
+                            )}
+                          >
+                            {statusTag.label}
+                          </span>
+                        </div>
+                        <div className="oa-notif-row__body">
+                          <div className="oa-notif-row__title-line">
+                            <h3 className="oa-notif-row__title">{notification.title}</h3>
+                            {notification.presentation_type === 'urgent' && <Badge variant="danger">Urgent</Badge>}
+                            {isUnread && <Badge variant="info">New</Badge>}
+                          </div>
+                          <p className="oa-notif-row__text">{notification.body}</p>
+                        </div>
+                        <div className="oa-notif-row__meta">
+                          <div className="oa-notif-row__actions oa-notif-row__actions--meta">
+                            {notification.link_url && (
+                              <Link to={notification.link_url} className="oa-notif-row__action-link">
+                                View details
+                                <span className="material-symbols-outlined oa-notif-row__action-icon">
+                                  arrow_forward
+                                </span>
+                              </Link>
+                            )}
+                            {isUnread && (
+                              <button
+                                type="button"
+                                className="oa-notif-row__action-button"
+                                onClick={(e) => handleMarkRead(notification.id, e)}
+                              >
+                                Mark read
+                              </button>
+                            )}
+                          </div>
+                          <span className="oa-notif-row__meta-time">{formatRelativeTime(notification.created_at)}</span>
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
+
+      {filtersVisible && (
+        <div className={cn('oa-notif-filters-overlay', filtersOpen && 'is-open', filtersClosing && 'is-closing')}>
+          <button
+            type="button"
+            className="oa-notif-filters-overlay__backdrop"
+            aria-label="Close filters"
+            onClick={handleCloseFilters}
+          />
+          <section
+            className={cn('oa-slideout-container oa-notif-filters-slideout', filtersOpen && 'is-open')}
+            aria-modal="true"
+            aria-labelledby="admin-notification-filters-title"
+            role="dialog"
+          >
+            <div className="oa-slideout-header">
+              <div className="oa-slideout-brand">
+                <div className="oa-slideout-pill" aria-hidden />
+                <span id="admin-notification-filters-title" className="oa-slideout-title">Filters</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseFilters}
+                className="oa-header-btn"
+                aria-label="Close filters"
+              >
+                <span className="material-symbols-outlined" aria-hidden>close</span>
+              </button>
+            </div>
+
+            <div className="oa-slideout-body oa-notif-filters-slideout__body">
+              <div className="oa-notif-filters-slideout__intro">
+                <p className="oa-notif-filters-slideout__eyebrow">Notification filters</p>
+                <h2 className="oa-notif-filters-slideout__heading">Refine the feed</h2>
+                <p className="oa-notif-filters-slideout__copy">
+                  Narrow the activity stream by status, type, role, team, or search.
+                </p>
+              </div>
+
+              <div className="oa-notif-filters-panel__section">
+                <label className="oa-notif-filters-panel__section-title" htmlFor="admin-notifications-search">
+                  Search
+                </label>
+                <div className="oa-notif-filters-panel__search">
+                  <span className="material-symbols-outlined oa-notif-filters-panel__search-icon" aria-hidden>
+                    search
+                  </span>
+                  <input
+                    id="admin-notifications-search"
+                    type="text"
+                    className="oa-notif-filters-panel__search-input"
+                    value={searchText}
+                    onChange={(event) => setSearchText(event.target.value)}
+                    placeholder="Search notifications"
+                  />
+                </div>
+              </div>
+
+              {filterSections.map((section) => {
+                const sectionQuery = sectionSearchQueries[section.id] || ''
+                const selected = selectedFilters[section.id] || new Set<string>()
+                const visibleItems = section.items.filter((item) =>
+                  !sectionQuery || item.label.toLowerCase().includes(sectionQuery.toLowerCase())
+                )
+
+                return (
+                  <div key={section.id} className="oa-notif-filters-panel__section">
+                    <div className="oa-notif-filters-panel__section-header">
+                      <span className="oa-notif-filters-panel__section-title">{section.title}</span>
+                      <span className="oa-notif-filters-panel__section-count">{selected.size} selected</span>
+                    </div>
+
+                    {section.searchable && (
+                      <div className="oa-notif-filters-panel__search oa-notif-filters-panel__search--section">
+                        <span className="material-symbols-outlined oa-notif-filters-panel__search-icon" aria-hidden>
+                          search
+                        </span>
+                        <input
+                          type="text"
+                          className="oa-notif-filters-panel__search-input"
+                          value={sectionQuery}
+                          onChange={(event) => handleSectionSearch(section.id, event.target.value)}
+                          placeholder={`Search ${section.title.toLowerCase()}`}
+                        />
+                      </div>
+                    )}
+
+                    <div className="oa-notif-filters-panel__chips">
+                      {visibleItems.map((item) => {
+                        const isSelected = selected.has(item.id)
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className={cn(
+                              'oa-notif-filters-panel__chip',
+                              isSelected && 'is-selected'
+                            )}
+                            onClick={() => toggleFilterItem(section.id, item.id)}
+                          >
+                            {item.icon && (
+                              <span className="material-symbols-outlined oa-notif-filters-panel__chip-icon" aria-hidden>
+                                {item.icon}
+                              </span>
+                            )}
+                            <span>{item.label}</span>
+                            {item.count !== undefined && (
+                              <span className="oa-notif-filters-panel__chip-count">{item.count}</span>
+                            )}
+                          </button>
+                        )
+                      })}
+                      {visibleItems.length === 0 && (
+                        <p className="oa-notif-filters-panel__empty">No matching filters.</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="oa-slideout-footer oa-notif-filters-slideout__footer">
+              <Button variant="ghost" onClick={handleClearFilters}>
+                Clear filters
+              </Button>
+              <Button variant="primary" onClick={handleCloseFilters}>
+                Apply
+              </Button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }

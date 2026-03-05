@@ -127,7 +127,7 @@ export async function notifyUsers(options: NotifyUsersOptions): Promise<NotifyUs
         preferencesMap.set(userId, {
           inApp: channels.inApp,
           email: channels.email,
-          push: false, // Push not yet implemented
+          push: channels.push,
         })
       })
     }
@@ -342,9 +342,63 @@ export async function notifyUsers(options: NotifyUsersOptions): Promise<NotifyUs
       emailCount = emailUsers.length
     }
 
-    // Push - contract only for now
-    pushCount = pushUsers.length
-    // TODO: Phase 3 - enqueue push jobs when push delivery is implemented
+    // Enqueue push notifications (unified outbox channel)
+    if (pushUsers.length > 0 && !USE_FAKE_DATA && notificationTypeId) {
+      // Get notification type key for idempotency generation
+      const { data: notificationType, error: typeKeyError } = await supabaseAny
+        .from('notification_types')
+        .select('key')
+        .eq('id', notificationTypeId)
+        .single()
+
+      if (!typeKeyError && notificationType) {
+        const typeKey = (notificationType as { key: string }).key
+        const pushEntries = []
+
+        for (const userId of pushUsers) {
+          const idempotencyKey = `${generateIdempotencyKey(
+            typeKey,
+            orgId,
+            userId,
+            entityId || null,
+            undefined
+          )}:push`
+
+          const { data: entry, error: enqueueError } = await enqueueNotification({
+            notificationTypeId,
+            orgId,
+            actorUserId: null,
+            targetUserId: userId,
+            channel: 'push',
+            payload: {
+              action,
+              title,
+              body,
+              link_url: linkUrl,
+              entity_type: entityType,
+              entity_id: entityId,
+              ...metadata,
+            },
+            idempotencyKey,
+            entityId: entityId || null,
+            entityType: entityType || null,
+          })
+
+          if (!enqueueError && entry) {
+            pushEntries.push(entry)
+          }
+        }
+
+        pushCount = pushEntries.length
+      } else {
+        debug.error('NotificationServiceCore.notifyUsers', 'Failed to fetch notification type key for push', {
+          error: typeKeyError,
+          notificationTypeId,
+        })
+      }
+    } else if (pushUsers.length > 0 && USE_FAKE_DATA) {
+      pushCount = pushUsers.length
+    }
 
     debug.perf.end('notificationServiceCore.notifyUsers')
     debug.flow('NotificationServiceCore.notifyUsers', 'Notifications created', {

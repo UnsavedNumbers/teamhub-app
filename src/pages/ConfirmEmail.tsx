@@ -28,7 +28,7 @@ export default function ConfirmEmail() {
   const email = state?.email
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-white antialiased relative flex">
+    <div className="min-h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark font-impact text-slate-900 dark:text-white antialiased relative flex">
       {/* Background Field Markings (Grid) */}
       <div 
         className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.02] z-[-1]"

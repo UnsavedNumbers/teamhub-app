@@ -1,16 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useUserContext } from '../../hooks/useUserContext'
+import { useOrganization } from '../../contexts/OrganizationContext'
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
 import { getAnnouncementById, updateAnnouncement, type Announcement } from '../../data/services/messagesService'
 import { AdminPageHeader, Card, Button, Input, Select } from '../../components/admin'
 import { showSuccess, showError } from '../../utils/toast'
 import { getAnnouncementEmoji } from '../../utils/announcementTypes'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import '../../styles/orgAdmin.css'
 
 export default function AdminAnnouncementDetail() {
   const { announcementId } = useParams<{ announcementId: string }>()
   const { context, isReady } = useUserContext()
+  const { currentOrganization } = useOrganization()
   const navigate = useNavigate()
   const isMountedRef = useRef(true)
   
@@ -28,7 +31,7 @@ export default function AdminAnnouncementDetail() {
   const [editPriority, setEditPriority] = useState<'normal' | 'urgent'>('normal')
   const [editType, setEditType] = useState<'general' | 'reminder' | 'schedule_change' | 'urgent' | 'payment' | 'travel'>('general')
 
-  const isOrgAdmin = context.roles?.includes('org_admin') ?? false
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
   const canEdit = isOrgAdmin || announcement?.author_id === context.userId
 
   useEffect(() => {

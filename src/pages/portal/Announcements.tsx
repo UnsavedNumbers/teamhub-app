@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Announcements Page
  * 
  * Main announcements page for guardians and athletes.
@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useUserContext } from '@/hooks/useUserContext'
 import { useI18n } from '@/i18n/useI18n'
@@ -52,9 +53,11 @@ export default function Announcements() {
   useDebugLifecycle('Announcements')
   const { context, isReady } = useUserContext()
   const { t } = useI18n()
+  const navigate = useNavigate()
+  const { announcementId } = useParams<{ announcementId?: string }>()
   
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
-  const [selectedAnnouncementId, setSelectedAnnouncementId] = useState<string | null>(null)
+  const selectedAnnouncementId = announcementId || null
 
   // Fetch teams
   const { data: teams } = useQuery({
@@ -81,14 +84,17 @@ export default function Announcements() {
     enabled: isReady && !!context.orgId,
   })
 
-  const announcements = (announcementsResponse?.data || []) as Announcement[]
+  const announcements = useMemo(
+    () => (announcementsResponse?.data || []) as Announcement[],
+    [announcementsResponse]
+  )
 
-  // Auto-select first announcement if none selected
+  // Auto-select first announcement in the URL if none selected
   useEffect(() => {
     if (!selectedAnnouncementId && announcements.length > 0) {
-      setSelectedAnnouncementId(announcements[0].id)
+      navigate(`/portal/announcements/${announcements[0].id}`, { replace: true })
     }
-  }, [announcements, selectedAnnouncementId])
+  }, [announcements, selectedAnnouncementId, navigate])
 
   // Fetch selected announcement details
   const { data: selectedAnnouncementResponse } = useQuery({
@@ -125,7 +131,7 @@ export default function Announcements() {
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <PageTitle>{t('nav.announcements')}</PageTitle>
-        <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-light tracking-wide mt-1">
+        <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide mt-1">
           {t('portal.fan.announcements.subtitle', { defaultValue: 'Stay updated with important announcements from your organization' })}
         </p>
       </div>
@@ -133,14 +139,14 @@ export default function Announcements() {
       {/* Three-column layout */}
       <div className="flex gap-6 h-[calc(100vh-280px)] min-h-[600px]">
         {/* Left: Announcements List */}
-        <div className="w-[320px] flex-shrink-0 flex flex-col border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50">
+        <div className="w-[320px] flex-shrink-0 flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/50">
           {/* List Header */}
-          <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900 dark:text-white">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-900 dark:text-white">
                 {t('portal.fan.announcements.list', { defaultValue: 'Announcements' })}
               </h2>
-              <span className="text-xs font-bold text-slate-400">
+              <span className="text-xs font-bold text-gray-400">
                 {announcements.length}
               </span>
             </div>
@@ -150,7 +156,7 @@ export default function Announcements() {
               <select
                 value={selectedTeam || ''}
                 onChange={(e) => setSelectedTeam(e.target.value || null)}
-                className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg)]"
+                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--org-btn-primary-bg)]"
               >
                 {filterOptions.map(option => (
                   <option key={option.value || 'all'} value={option.value || ''}>
@@ -166,7 +172,7 @@ export default function Announcements() {
             {isLoading ? (
               <div className="p-4 space-y-3">
                 {[1, 2, 3].map(i => (
-                  <div key={i} className="h-20 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
+                  <div key={i} className="h-20 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
                 ))}
               </div>
             ) : announcements.length === 0 ? (
@@ -178,7 +184,7 @@ export default function Announcements() {
                 />
               </div>
             ) : (
-              <div className="divide-y divide-slate-200 dark:divide-slate-700">
+              <div className="divide-y divide-gray-200 dark:divide-gray-700">
                 {announcements.map(ann => {
                   const emoji = getAnnouncementEmoji(ann.type || 'general')
                   const isOrgWide = ann.team_id === null
@@ -187,9 +193,9 @@ export default function Announcements() {
                   return (
                     <button
                       key={ann.id}
-                      onClick={() => setSelectedAnnouncementId(ann.id)}
-                      className={`w-full text-left p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${
-                        isSelected ? 'bg-slate-100 dark:bg-slate-800' : ''
+                      onClick={() => navigate(`/portal/announcements/${ann.id}`)}
+                      className={`w-full text-left p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
+                        isSelected ? 'bg-gray-100 dark:bg-gray-800' : ''
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -209,13 +215,13 @@ export default function Announcements() {
                               {ann.author?.role || 'Admin'}
                             </span>
                           </div>
-                          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-1 truncate">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 truncate">
                             {ann.title}
                           </h3>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
                             {ann.content}
                           </p>
-                          <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                             {formatDate(ann.created_at)}
                           </p>
                         </div>
@@ -229,16 +235,16 @@ export default function Announcements() {
         </div>
 
         {/* Right: Detail Panel */}
-        <div className="flex-1 flex flex-col border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50">
+        <div className="flex-1 flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/50">
           {selectedAnnouncement ? (
             <>
               {/* Detail Header */}
-              <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{getAnnouncementEmoji(selectedAnnouncement.type || 'general')}</span>
                     <div>
-                      <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
+                      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
                         {selectedAnnouncement.title}
                       </h2>
                       <div className="flex items-center gap-2 flex-wrap">
@@ -248,7 +254,7 @@ export default function Announcements() {
                           </span>
                         )}
                         {selectedAnnouncement.team && (
-                          <span className="px-2 py-0.5 text-xs font-bold uppercase tracking-widest rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                          <span className="px-2 py-0.5 text-xs font-bold uppercase tracking-widest rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                             {selectedAnnouncement.team.name}
                           </span>
                         )}
@@ -259,7 +265,7 @@ export default function Announcements() {
                         }`}>
                           {selectedAnnouncement.author?.role || 'Admin'}
                         </span>
-                        <span className="px-2 py-0.5 text-xs font-bold uppercase tracking-widest rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                        <span className="px-2 py-0.5 text-xs font-bold uppercase tracking-widest rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                           {getAnnouncementLabel(selectedAnnouncement.type || 'general')}
                         </span>
                       </div>
@@ -272,18 +278,18 @@ export default function Announcements() {
               <div className="flex-1 overflow-y-auto p-6">
                 <div className="max-w-3xl">
                   {/* Metadata */}
-                  <div className="mb-6 pb-6 border-b border-slate-200 dark:border-slate-700">
+                  <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                       <div className="flex items-center gap-2">
-                        <Icon name="schedule" size="text-base" className="text-slate-400" />
-                        <span className="text-slate-600 dark:text-slate-400">
+                        <Icon name="schedule" size="text-base" className="text-gray-400" />
+                        <span className="text-gray-600 dark:text-gray-400">
                           {formatFullDate(selectedAnnouncement.created_at)}
                         </span>
                       </div>
                       {selectedAnnouncement.author?.email && (
                         <div className="flex items-center gap-2">
-                          <Icon name="person" size="text-base" className="text-slate-400" />
-                          <span className="text-slate-600 dark:text-slate-400">
+                          <Icon name="person" size="text-base" className="text-gray-400" />
+                          <span className="text-gray-600 dark:text-gray-400">
                             {selectedAnnouncement.author.email}
                           </span>
                         </div>
@@ -301,7 +307,7 @@ export default function Announcements() {
 
                   {/* Main Content */}
                   <div className="prose prose-sm max-w-none dark:prose-invert">
-                    <div className="whitespace-pre-wrap text-slate-700 dark:text-slate-300 leading-relaxed">
+                    <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300 leading-relaxed">
                       {selectedAnnouncement.content}
                     </div>
                   </div>
@@ -322,3 +328,4 @@ export default function Announcements() {
     </PortalLayout>
   )
 }
+

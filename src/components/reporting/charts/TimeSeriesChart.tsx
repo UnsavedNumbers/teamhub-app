@@ -65,7 +65,7 @@ export function TimeSeriesChart({
   const DataComponent = type === 'area' ? Area : Line
 
   return (
-    <div className={`oa-chart-time-series ${className}`} style={{ height: `${height}px`, width: '100%' }}>
+    <div className={`oa-chart-time-series overflow-safe-page ${className}`} style={{ height: `${height}px`, width: '100%', minWidth: 0, overflow: 'hidden' }}>
       {title && (
         <h3
           style={{
@@ -79,7 +79,7 @@ export function TimeSeriesChart({
           {title}
         </h3>
       )}
-      <ResponsiveContainer width="100%" height={title ? height - 40 : height}>
+      <ResponsiveContainer width="100%" minWidth={0} height={title ? height - 40 : height}>
         <ChartComponent
           data={chartData}
           margin={{ top: 5, right: 30, left: 20, bottom: 5 }}

@@ -10,7 +10,9 @@
 
 import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import { supabase } from '../../lib/supabase'
-import type { UserContext } from '../fake/userContext'
+import type { UserContext, PermissionSet } from '../fake/userContext'
+import { getCoachTeamIds, getGuardianCanonicalUserId } from '../fake/userContext'
+import { getChildrenForUserId, getFamiliesForUserId } from '../fake/relationships'
 import { logSportEvent } from '../../utils/eventLogger'
 import { debug } from '../../lib/debug'
 import { getCurrentDemoSessionSnapshot } from './demoSessionService'
@@ -19,6 +21,7 @@ import {
     getSportsForOrg,
     getProgramById,
     getProgramsForOrg,
+    getTeamById,
     fakeSports,
     type FakeSport,
     type FakeProgram,
@@ -162,7 +165,35 @@ export async function getSports(
             // If there's a demo session with generated data, it will also be in the arrays
             // but static fake data is keyed to DEMO_ORG_A_ID
             const fakeOrgId = USE_FAKE_DATA ? DEMO_ORG_A_ID : (isDemoSession && demoSession.demo_org_id ? demoSession.demo_org_id : context.orgId)
-            const sports = getSportsForOrg(fakeOrgId)
+            let sports = getSportsForOrg(fakeOrgId)
+            
+            // Filter sports for coaches - only show sports used by teams they're assigned to
+            if (context.roles.includes('coach') && !context.roles.includes('org_admin')) {
+                const guardianUserId = getGuardianCanonicalUserId(context)
+                const permissions: PermissionSet = {
+                    canViewAllOrgData: false,
+                    canViewAssignedTeams: true,
+                    canViewOwnChildrenData: false,
+                    assignedTeamIds: await getCoachTeamIds(context),
+                    ownedChildIds: getChildrenForUserId(guardianUserId),
+                    ownedFamilyIds: getFamiliesForUserId(guardianUserId),
+                }
+                
+                if (permissions.assignedTeamIds.length > 0) {
+                    const sportIds = new Set<string>()
+                    for (const teamId of permissions.assignedTeamIds) {
+                        const team = getTeamById(teamId)
+                        if (team?.sport_id) {
+                            sportIds.add(team.sport_id)
+                        }
+                    }
+                    sports = sports.filter(s => sportIds.has(s.id))
+                } else {
+                    // Coach with no assigned teams sees no sports
+                    sports = []
+                }
+            }
+            
             debug.perf.end('sportsService.getSports')
             debug.data('SportsService.getSports', 'Response (fake)', { sportCount: sports.length, fakeOrgId, USE_FAKE_DATA, isDemoSession })
             console.groupEnd()
@@ -1210,6 +1241,34 @@ export async function getPrograms(
     if (USE_FAKE_DATA) {
         await simulateDelay()
         let programs = getProgramsForOrg(DEMO_ORG_A_ID)
+        
+        // Filter programs for coaches - only show programs used by teams they're assigned to
+        if (context.roles.includes('coach') && !context.roles.includes('org_admin')) {
+            const guardianUserId = getGuardianCanonicalUserId(context)
+            const permissions: PermissionSet = {
+                canViewAllOrgData: false,
+                canViewAssignedTeams: true,
+                canViewOwnChildrenData: false,
+                assignedTeamIds: await getCoachTeamIds(context),
+                ownedChildIds: getChildrenForUserId(guardianUserId),
+                ownedFamilyIds: getFamiliesForUserId(guardianUserId),
+            }
+            
+            if (permissions.assignedTeamIds.length > 0) {
+                const programIds = new Set<string>()
+                for (const teamId of permissions.assignedTeamIds) {
+                    const team = getTeamById(teamId)
+                    if (team?.program_id) {
+                        programIds.add(team.program_id)
+                    }
+                }
+                programs = programs.filter(p => programIds.has(p.id))
+            } else {
+                // Coach with no assigned teams sees no programs
+                programs = []
+            }
+        }
+        
         if (sportId) {
             programs = programs.filter(p => p.sport_id === sportId)
         }

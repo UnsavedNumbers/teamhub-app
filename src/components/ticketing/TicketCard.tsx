@@ -107,12 +107,13 @@ export default function TicketCard({
         {/* QR Code */}
         {showQR && (
           <div className={`relative inline-block p-4 bg-white rounded-xl shadow-inner border border-gray-100 ${isUsed ? 'opacity-60 grayscale' : ''}`}>
-            <div className="w-[250px] h-[250px] bg-white flex items-center justify-center mx-auto">
+            <div className="w-full max-w-[250px] aspect-square bg-white flex items-center justify-center mx-auto overflow-hidden">
               <QRCodeSVG
                 value={qrValue}
-                size={250}
+                size={1024}
                 level="M"
                 includeMargin={false}
+                className="h-full w-full"
               />
             </div>
             {isUsed && (

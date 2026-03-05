@@ -64,6 +64,11 @@ import {
   createFakeExportHistory,
   updateFakeExportHistory,
 } from '../fake/fakeReporting'
+import {
+  getOrgDashboardKpis as getUnifiedOrgDashboardKpis,
+  getAttendanceSummary as getUnifiedAttendanceSummary,
+  getTicketingSummary as getUnifiedTicketingSummary,
+} from '../../services/reportingService'
 
 // ============================================================================
 // Helper Functions
@@ -1174,21 +1179,34 @@ export async function getOrgHealthMetrics(
       return await getFakeOrgHealthMetrics(filters)
     }
 
-    // Try RPC function first
-    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_org_health_metrics', {
-      p_org_id: filters.orgId,
-      p_sub_org_id: filters.subOrgId || null,
-      p_date_start: filters.dateRange?.start || null,
-      p_date_end: filters.dateRange?.end || null,
-    })
-
-    if (!rpcError && rpcData) {
-      return { data: (rpcData as unknown) as OrgHealthMetrics, error: null }
+    const { data: kpis, error } = await getUnifiedOrgDashboardKpis(filters.orgId)
+    if (error) {
+      debug.error('Failed to fetch org dashboard KPIs', error.message)
+      return { data: null, error }
     }
 
-    // When USE_FAKE_DATA is false, return error instead of falling back to fake data
-    debug.error('Failed to fetch org health metrics', rpcError?.message || String(rpcError))
-    return { data: null, error: rpcError ? classifySupabaseError(rpcError) : new Error('Failed to fetch org health metrics') }
+    const metrics: OrgHealthMetrics = {
+      totalSubOrgs: 1,
+      activeSubOrgs: (kpis?.activeSeasons ?? 0) > 0 ? 1 : 0,
+      inactiveSubOrgs: (kpis?.activeSeasons ?? 0) > 0 ? 0 : 1,
+      teamsPerSubOrg: [
+        {
+          subOrgId: filters.subOrgId || filters.orgId,
+          subOrgName: 'Organization',
+          teamCount: kpis?.totalTeams ?? 0,
+        },
+      ],
+      athletesPerSubOrg: [
+        {
+          subOrgId: filters.subOrgId || filters.orgId,
+          subOrgName: 'Organization',
+          athleteCount: kpis?.totalAthletes ?? 0,
+        },
+      ],
+      growthOverTime: [],
+    }
+
+    return { data: metrics, error: null }
   } catch (err) {
     debug.error('Error fetching org health metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }
@@ -1252,175 +1270,58 @@ export async function getSchedulingMetrics(
       return await getFakeSchedulingMetrics(filters)
     }
 
-    // Try RPC function first
-    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_scheduling_metrics', {
-      p_org_id: filters.orgId,
-      p_sub_org_id: filters.subOrgId || null,
-      p_season_id: filters.seasonId || null,
-      p_sport_id: filters.sportId || null,
-      p_program_id: filters.programId || null,
-      p_level_id: filters.levelId || null,
-      p_team_id: filters.teamId || null,
-      p_date_start: filters.dateRange?.start || null,
-      p_date_end: filters.dateRange?.end || null,
-    })
-
-    if (!rpcError && rpcData) {
-      return { data: (rpcData as unknown) as SchedulingMetrics, error: null }
+    const dateRange = {
+      start: filters.dateRange?.start || null,
+      end: filters.dateRange?.end || null,
     }
 
-    // When USE_FAKE_DATA is false, return error instead of falling back to fake data
-    debug.error('Failed to fetch scheduling metrics', rpcError?.message || String(rpcError))
-    return { data: null, error: rpcError ? classifySupabaseError(rpcError) : new Error('Failed to fetch scheduling metrics') }
-    let eventsQuery = supabase
-      .from('events')
-      .select('id, title, start_time, end_time, is_cancelled, team_id, type, teams(name)')
-      .eq('org_id', filters.orgId)
+    const [eventsResult, attendanceSummary] = await Promise.all([
+      supabase
+        .from('events')
+        .select('id, type')
+        .eq('org_id', filters.orgId)
+        .eq('is_cancelled', false)
+        .gte('start_time', dateRange.start || '1970-01-01T00:00:00Z')
+        .lte('start_time', dateRange.end || '2999-12-31T23:59:59Z'),
+      getUnifiedAttendanceSummary(
+        filters.orgId,
+        filters.teamId ? [filters.teamId] : undefined,
+        { start: dateRange.start, end: dateRange.end },
+      ),
+    ])
 
-    const dateRange = filters.dateRange
-    if (dateRange != null) {
-      const start = dateRange!.start
-      const end = dateRange!.end
-      if (start != null && end != null) {
-        eventsQuery = eventsQuery.gte('start_time', start).lte('start_time', end)
-      }
+    if (eventsResult.error) {
+      return { data: null, error: classifySupabaseError(eventsResult.error) }
+    }
+    if (attendanceSummary.error) {
+      return { data: null, error: attendanceSummary.error }
     }
 
-    const { data: events, error: eventsError } = await eventsQuery
-
-    if (eventsError) {
-      debug.error('Failed to fetch events', eventsError?.message || String(eventsError))
-      return { data: null, error: classifySupabaseError(eventsError) }
-    }
-
-    // Group events by type
     const eventsByTypeMap = new Map<string, number>()
-    ;(events || []).forEach((e: any) => {
-      const type = e.type || 'other'
-      eventsByTypeMap.set(type, (eventsByTypeMap.get(type) || 0) + 1)
+    ;(eventsResult.data || []).forEach((event: any) => {
+      const eventType = String(event.type || 'other')
+      eventsByTypeMap.set(eventType, (eventsByTypeMap.get(eventType) || 0) + 1)
     })
-
     const eventsByType = Array.from(eventsByTypeMap.entries()).map(([type, count]) => ({ type, count }))
 
-    // Query attendance data
-    const eventIds = (events || []).map((e: any) => e.id)
-    const { data: attendance } = eventIds.length > 0
-      ? await supabase
-          .from('attendance')
-          .select('event_id, status, events!inner(team_id, teams(name))')
-          .in('event_id', eventIds)
-      : { data: [] }
+    const attendanceRates =
+      attendanceSummary.data?.byTeam.map((team) => ({
+        teamId: team.teamId,
+        teamName: team.teamName,
+        rate:
+          team.totalResponses > 0
+            ? Number((((team.goingCount + team.lateCount) / team.totalResponses) * 100).toFixed(2))
+            : 0,
+      })) || []
 
-    // Query RSVP data
-    const { data: rsvps } = eventIds.length > 0
-      ? await supabase
-          .from('event_rsvps')
-          .select('event_id, status, events!inner(team_id, teams(name))')
-          .in('event_id', eventIds)
-      : { data: [] }
-
-    // Calculate attendance rates by team
-    const teamAttendanceMap = new Map<string, { total: number; going: number }>()
-    ;(attendance || []).forEach((a: any) => {
-      const teamName = a.events?.teams?.name || 'Unknown'
-      const current = teamAttendanceMap.get(teamName) || { total: 0, going: 0 }
-      teamAttendanceMap.set(teamName, {
-        total: current.total + 1,
-        going: current.going + (a.status === 'going' ? 1 : 0),
-      })
-    })
-
-    // Get team IDs for attendance rates
-    const teamIds = [...new Set((events || []).map((e: any) => e.team_id).filter(Boolean))]
-    const { data: teams } = teamIds.length > 0
-      ? await supabase
-          .from('teams')
-          .select('id, name')
-          .in('id', teamIds)
-      : { data: [] }
-
-    const teamMap = new Map<string, string>()
-    ;(teams || []).forEach((team: any) => {
-      teamMap.set(team.id, team.name || 'Unknown')
-    })
-
-    const attendanceRates = Array.from(teamAttendanceMap.entries()).map(([teamName, stats]) => {
-      // Find team ID by name
-      const teamId = Array.from(teamMap.entries()).find(([_, name]) => name === teamName)?.[0] || ''
-      return {
-        teamId,
-        teamName,
-        rate: stats.total > 0 ? (stats.going / stats.total) * 100 : 0,
-      }
-    })
-
-    // Calculate RSVP rates by team
-    const teamRsvpMap = new Map<string, { total: number; responded: number }>()
-    ;(rsvps || []).forEach((r: any) => {
-      const teamName = r.events?.teams?.name || 'Unknown'
-      const current = teamRsvpMap.get(teamName) || { total: 0, responded: 0 }
-      teamRsvpMap.set(teamName, {
-        total: current.total + 1,
-        responded: current.responded + 1,
-      })
-    })
-
-    const rsvpRates = Array.from(teamRsvpMap.entries()).map(([teamName, stats]) => {
-      const teamId = Array.from(teamMap.entries()).find(([_, name]) => name === teamName)?.[0] || ''
-      return {
-        teamId,
-        teamName,
-        rate: stats.total > 0 ? (stats.responded / stats.total) * 100 : 0,
-      }
-    })
-
-    // Detect scheduling conflicts (events with overlapping times for same team)
-    const conflicts: Array<{ teamId: string; teamName: string; conflictCount: number }> = []
-    const teamEventsMap = new Map<string, Array<{ id: string; starts_at: string; ends_at: string }>>()
-    ;(events || []).forEach((e: any) => {
-      if (e.team_id && e.start_time) {
-        const teamName = e.teams?.name || 'Unknown'
-        const current = teamEventsMap.get(teamName) || []
-        current.push({
-          id: e.id,
-          starts_at: e.start_time,
-          ends_at: e.end_time || e.start_time,
-        })
-        teamEventsMap.set(teamName, current)
-      }
-    })
-
-    teamEventsMap.forEach((teamEvents, teamName) => {
-      let conflictCount = 0
-      for (let i = 0; i < teamEvents.length; i++) {
-        for (let j = i + 1; j < teamEvents.length; j++) {
-          const e1 = teamEvents[i]
-          const e2 = teamEvents[j]
-          if (
-            (e1.starts_at <= e2.starts_at && e1.ends_at >= e2.starts_at) ||
-            (e2.starts_at <= e1.starts_at && e2.ends_at >= e1.starts_at)
-          ) {
-            conflictCount++
-          }
-        }
-      }
-      if (conflictCount > 0) {
-        const teamId = Array.from(teamMap.entries()).find(([_, name]) => name === teamName)?.[0] || ''
-        conflicts.push({ teamId, teamName, conflictCount })
-      }
-    })
-
-    // Calculate no-response list (athletes who haven't RSVP'd to events)
-    const noResponseList: Array<{ eventId: string; eventName: string; athleteId: string; athleteName: string }> = []
-    // This would require querying athletes assigned to teams and comparing with RSVPs
-    // For now, return empty array
+    const rsvpRates = attendanceRates.map((team) => ({ ...team }))
 
     const schedulingMetrics: SchedulingMetrics = {
       eventsByType,
       attendanceRates,
       rsvpRates,
-      conflicts,
-      noResponseList,
+      conflicts: [],
+      noResponseList: [],
     }
 
     return { data: schedulingMetrics, error: null }
@@ -1699,24 +1600,51 @@ export async function getTicketingMetrics(
       return await getFakeTicketingMetrics(filters)
     }
 
-    // Try RPC function first
-    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_ticketing_metrics', {
-      p_org_id: filters.orgId,
-      p_sub_org_id: filters.subOrgId || null,
-      p_season_id: filters.seasonId || null,
-      p_sport_id: filters.sportId || null,
-      p_program_id: filters.programId || null,
-      p_level_id: filters.levelId || null,
-      p_team_id: filters.teamId || null,
-      p_date_start: filters.dateRange?.start || null,
-      p_date_end: filters.dateRange?.end || null,
+    const { data: summary, error } = await getUnifiedTicketingSummary(filters.orgId, {
+      start: filters.dateRange?.start || null,
+      end: filters.dateRange?.end || null,
     })
-
-    if (!rpcError && rpcData) {
-      return { data: (rpcData as unknown) as TicketingMetrics, error: null }
+    if (error) {
+      debug.error('Failed to fetch unified ticketing summary', error.message)
+      return { data: null, error }
     }
-    debug.error('Failed to fetch ticketing metrics', rpcError?.message || String(rpcError))
-    return { data: null, error: rpcError ? classifySupabaseError(rpcError) : new Error('Failed to fetch ticketing metrics') }
+
+    const metrics: TicketingMetrics = {
+      ticketsSoldOverTime:
+        summary?.byMonth.map((row) => ({
+          date: `${row.month}-01`,
+          value: row.ticket_count,
+        })) || [],
+      ticketRevenueByEvent:
+        summary?.byEvent.map((row) => ({
+          eventId: row.ticketed_event_id,
+          eventName: row.event_title,
+          revenue: row.org_revenue_cents / 100,
+        })) || [],
+      checkInRateByEvent:
+        summary?.byEvent.map((row) => ({
+          eventId: row.ticketed_event_id,
+          eventName: row.event_title,
+          scanned: 0,
+          notScanned: row.ticket_count,
+        })) || [],
+      walkUpVsPreSale: {
+        walkUp: 0,
+        preSale: summary?.paidOrdersCount || 0,
+      },
+      totalTicketRevenue: (summary?.orgRevenueCents || 0) / 100,
+      topEventsByAttendance:
+        summary?.byEvent
+          .map((row) => ({
+            eventId: row.ticketed_event_id,
+            eventName: row.event_title,
+            attendance: row.ticket_count,
+          }))
+          .sort((a, b) => b.attendance - a.attendance)
+          .slice(0, 10) || [],
+    }
+
+    return { data: metrics, error: null }
   } catch (err) {
     debug.error('Error fetching ticketing metrics', err instanceof Error ? err.message : String(err))
     return { data: null, error: err instanceof Error ? err : new Error('Unknown error') }

@@ -11,11 +11,22 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { USE_FAKE_DATA } from '../../data/config'
+import { getOrganizationById } from '../../data/fake/fakeOrganizations'
+import { getSeasonById, getTeamById } from '../../data/fake/fakeTeams'
+import { getFakeTicketedEventByCalendarEventId, getFakeTicketTypesForEvent, getFakeTicketedEventById } from '../../data/fake/fakeTicketingEvents'
+import { followOrg, getBookmarkedEvents, getFollowedOrgs } from '../../data/services/fanService'
+import AddToCalendarActions from '../../components/calendar/AddToCalendarActions'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import BookmarkButton from '../../components/fan/BookmarkButton'
 import NearbyAmenities from '../../components/portal/NearbyAmenities'
 import { showError, showSuccess } from '../../utils/toast'
 import { getLink, RouteKeys } from '../../utils/routes'
+import { appendTicketCheckoutRole } from '../../utils/ticketCheckoutRole'
+import { useOnlineStatus } from '../../hooks/useOnlineStatus'
+import { readCalendarCache, writeCalendarCache } from '../../features/calendar/cache'
+import type { CalendarExportEvent } from '../../features/calendar/addToCalendar'
+import { isValidUUID } from '../../utils/routeValidation'
 import '../../styles/fan.css'
 import '../../styles/fan-layouts.css'
 
@@ -69,6 +80,155 @@ interface EventDetail {
   season_name: string | null
 }
 
+function hashSeed(value: string): number {
+  let hash = 0
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index)
+    hash |= 0
+  }
+  return Math.abs(hash)
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+function formatDurationFromMinutes(totalMinutes: number): string {
+  const safeMinutes = Math.max(1, Math.round(totalMinutes))
+  const hours = Math.floor(safeMinutes / 60)
+  const minutes = safeMinutes % 60
+
+  if (hours <= 0) return `${minutes} min`
+  if (minutes === 0) return `${hours} hour`
+  return `${hours} hour ${minutes} min`
+}
+
+function buildFakeWeather(startTime: string, seedInput: string): { temp: number; condition: string } {
+  const seed = hashSeed(`${seedInput}|${startTime}`)
+  const month = new Date(startTime).getMonth()
+  const isWinter = month === 11 || month <= 1
+  const isSummer = month >= 5 && month <= 8
+
+  const baseTemp = 58 + (seed % 20)
+  const seasonalAdjustment = isWinter ? -12 : isSummer ? 14 : 0
+  const temperature = clamp(baseTemp + seasonalAdjustment, 25, 102)
+
+  const warmConditions = ['Sunny', 'Partly Cloudy', 'Cloudy', 'Windy', 'Light Rain']
+  const coolConditions = ['Cloudy', 'Windy', 'Light Rain', 'Foggy', 'Overcast']
+  const winterConditions = ['Cloudy', 'Windy', 'Light Snow', 'Cold Rain', 'Partly Cloudy']
+  const conditionPool = isWinter ? winterConditions : isSummer ? warmConditions : coolConditions
+
+  return {
+    temp: temperature,
+    condition: conditionPool[seed % conditionPool.length],
+  }
+}
+
+function buildFakeCommuteSummary(origin: string, destination: string, startTime: string): {
+  distance: string
+  duration: string
+  durationInTraffic: string
+} {
+  const seed = hashSeed(`${origin}|${destination}`)
+  const distanceMiles = 3 + (seed % 280) / 10 // 3.0 - 30.9 mi
+  const baseMinutes = distanceMiles * (1.9 + ((seed >> 3) % 7) / 10)
+
+  const startDate = new Date(startTime)
+  const startHour = startDate.getHours()
+  const rushHour = (startHour >= 7 && startHour <= 9) || (startHour >= 16 && startHour <= 18)
+  const trafficPenaltyMinutes = rushHour ? 12 + (seed % 14) : 4 + (seed % 9)
+
+  return {
+    distance: `${distanceMiles >= 10 ? Math.round(distanceMiles) : distanceMiles.toFixed(1)} mi`,
+    duration: formatDurationFromMinutes(baseMinutes),
+    durationInTraffic: formatDurationFromMinutes(baseMinutes + trafficPenaltyMinutes),
+  }
+}
+
+function buildFakeEventDetail(eventId: string): EventDetail | null {
+  const ticketedFromCalendar = getFakeTicketedEventByCalendarEventId(eventId)
+  const standaloneTicketedEvent = getFakeTicketedEventById(eventId)
+  const ticketedEvent = ticketedFromCalendar || standaloneTicketedEvent
+
+  if (!ticketedEvent) return null
+
+  const teamId = ticketedEvent.team_id || null
+  const team = teamId ? getTeamById(teamId) : null
+  const orgId = ticketedEvent.org_id || team?.org_id || ''
+  const org = orgId ? getOrganizationById(orgId) : undefined
+  const season = ticketedEvent.season_id ? getSeasonById(ticketedEvent.season_id) : null
+
+  const ticketTypes = getFakeTicketTypesForEvent(ticketedEvent.id, ticketedEvent.org_id)
+  const ticketPrices = ticketTypes.map((type) => type.price_cents / 100)
+  const fakeWeather = buildFakeWeather(
+    ticketedEvent.starts_at || new Date().toISOString(),
+    `${orgId}|${teamId || 'org'}|${ticketedEvent?.venue_city || org?.city || ''}`,
+  )
+
+  const minPrice = ticketPrices.length > 0 ? Math.min(...ticketPrices) : null
+  const maxPrice = ticketPrices.length > 0 ? Math.max(...ticketPrices) : null
+
+  return {
+    id: ticketedEvent.id || eventId,
+    title: ticketedEvent.title || 'Event',
+    description: ticketedEvent.description || ticketedEvent.event_description || null,
+    start_time: ticketedEvent.starts_at || new Date().toISOString(),
+    end_time: ticketedEvent.ends_at || ticketedEvent.starts_at || new Date().toISOString(),
+    arrival_time: null,
+    timezone: ticketedEvent.timezone || org?.timezone || 'America/New_York',
+    location: ticketedEvent.venue_name || null,
+    type: String(ticketedEvent.event_type || 'event'),
+    is_cancelled: ticketedEvent.status === 'cancelled',
+    visibility: ticketedEvent.visibility || 'public',
+    weather_dependent: false,
+    external_link: null,
+    notes: ticketedEvent.event_description || null,
+    uniform_notes: null,
+    equipment_notes: null,
+    org_id: orgId,
+    org_name: org?.name || 'Organization',
+    org_slug: org?.slug || '',
+    org_logo_url: org?.logo_url || null,
+    org_public_description: org?.website || null,
+    venue_name: ticketedEvent?.venue_name || null,
+    venue_address: ticketedEvent?.venue_address_line1 || null,
+    venue_city: ticketedEvent?.venue_city || org?.city || null,
+    venue_state: ticketedEvent?.venue_state || org?.state || null,
+    venue_zip: ticketedEvent?.venue_postal_code || org?.postal_code || null,
+    place_id: null,
+    latitude: null,
+    longitude: null,
+    is_ticketed: true,
+    ticket_event_id: ticketedEvent.id,
+    ticket_price_min: minPrice,
+    ticket_price_max: maxPrice,
+    tickets_available: ticketedEvent ? ticketedEvent.status === 'published' : false,
+    weather_temp: fakeWeather.temp,
+    weather_condition: fakeWeather.condition,
+    weather_icon: getWeatherIcon(fakeWeather.condition),
+    team_name: team?.name || null,
+    season_name: season?.name || null,
+  }
+}
+
+function getFanEventDetailCacheScope(eventId: string): string {
+  return `fan-event-detail:${eventId}`
+}
+
+function toCalendarExportEvent(event: EventDetail, fullAddress: string): CalendarExportEvent {
+  return {
+    id: event.id,
+    title: event.title,
+    startTime: event.start_time,
+    endTime: event.end_time,
+    location: fullAddress || event.location,
+    description: event.description || event.notes,
+    url: typeof window === 'undefined'
+      ? undefined
+      : `${window.location.origin}${getLink(RouteKeys.FAN_EVENT_DETAIL, { eventId: event.id })}`,
+  }
+}
+
 // Weather icon mapping
 const getWeatherIcon = (condition: string | null): string => {
   if (!condition) return 'wb_sunny'
@@ -95,20 +255,14 @@ const formatTimezoneDisplay = (timeZone: string | null | undefined, referenceDat
   if (Number.isNaN(parsedDate.getTime())) return timeZone
 
   try {
-    const longParts = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      timeZoneName: 'long',
-    }).formatToParts(parsedDate)
     const shortParts = new Intl.DateTimeFormat('en-US', {
       timeZone,
       timeZoneName: 'short',
     }).formatToParts(parsedDate)
 
-    const longName = longParts.find(part => part.type === 'timeZoneName')?.value
     const shortName = shortParts.find(part => part.type === 'timeZoneName')?.value
 
-    if (longName && shortName) return `${longName} (${shortName})`
-    return longName || shortName || timeZone
+    return shortName || timeZone
   } catch {
     return timeZone
   }
@@ -121,6 +275,7 @@ export default function FanEventDetail() {
   
   const { eventId } = useParams<{ eventId: string }>()
   const navigate = useNavigate()
+  const { isOnline } = useOnlineStatus()
 
   // State
   const [event, setEvent] = useState<EventDetail | null>(null)
@@ -141,12 +296,33 @@ export default function FanEventDetail() {
     durationInTraffic?: string
   } | null>(null)
   const [loadingCommute, setLoadingCommute] = useState(false)
+  const [usingCachedEvent, setUsingCachedEvent] = useState(false)
 
   const loadEventDetail = useCallback(async (id: string) => {
     setLoading(true)
     setError(null)
+    setUsingCachedEvent(false)
+    const cacheScope = getFanEventDetailCacheScope(id)
 
     try {
+      if (USE_FAKE_DATA) {
+        const fakeEvent = buildFakeEventDetail(id)
+        if (!fakeEvent) {
+          setError('Event not found')
+          setLoading(false)
+          return
+        }
+
+        setEvent(fakeEvent)
+        writeCalendarCache(cacheScope, fakeEvent)
+        if (fakeEvent.org_id) {
+          checkFollowStatus(fakeEvent.org_id)
+        }
+        checkBookmarkStatus(id)
+        setLoading(false)
+        return
+      }
+
       // First check if user is authenticated
       const { data: { user } } = await supabase.auth.getUser()
       
@@ -195,6 +371,13 @@ export default function FanEventDetail() {
       }
 
       if (!data) {
+        const cached = readCalendarCache<EventDetail>(cacheScope)
+        if (cached) {
+          setEvent(cached.data)
+          setUsingCachedEvent(true)
+          setLoading(false)
+          return
+        }
         setError('Event not found')
         setLoading(false)
         return
@@ -253,6 +436,7 @@ export default function FanEventDetail() {
       }
 
       setEvent(eventDetail)
+      writeCalendarCache(cacheScope, eventDetail)
 
       // Check if following the org
       if (org?.id) {
@@ -263,7 +447,13 @@ export default function FanEventDetail() {
       checkBookmarkStatus(id)
     } catch (err) {
       console.error('Error loading event:', err)
-      setError('Failed to load event details')
+      const cached = readCalendarCache<EventDetail>(cacheScope)
+      if (cached) {
+        setEvent(cached.data)
+        setUsingCachedEvent(true)
+      } else {
+        setError('Failed to load event details')
+      }
     } finally {
       setLoading(false)
     }
@@ -271,6 +461,12 @@ export default function FanEventDetail() {
 
   const checkFollowStatus = async (orgId: string) => {
     try {
+      if (USE_FAKE_DATA) {
+        const { data } = await getFollowedOrgs()
+        setIsFollowingOrg((data || []).some((follow) => follow.org_id === orgId))
+        return
+      }
+
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
@@ -289,6 +485,12 @@ export default function FanEventDetail() {
 
   const checkBookmarkStatus = async (eventIdParam: string) => {
     try {
+      if (USE_FAKE_DATA) {
+        const { data } = await getBookmarkedEvents()
+        setIsBookmarked((data || []).some((bookmark) => bookmark.event_id === eventIdParam))
+        return
+      }
+
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
@@ -306,15 +508,35 @@ export default function FanEventDetail() {
   }
 
   useEffect(() => {
-    if (eventId) {
-      loadEventDetail(eventId)
+    if (!eventId) {
+      setError('Event not found')
+      setLoading(false)
+      return
     }
+
+    if (!USE_FAKE_DATA && !isValidUUID(eventId)) {
+      setError('Invalid event link')
+      setLoading(false)
+      return
+    }
+
+    loadEventDetail(eventId)
   }, [eventId, loadEventDetail])
 
   // Fetch commute summary when we have both start and destination
   useEffect(() => {
     const fetchCommuteSummary = async () => {
-      if (!commuteStartLocation || !event?.venue_address) {
+      const eventStartTime = event?.start_time ?? ''
+      const destination = [
+        event?.venue_address,
+        event?.venue_city,
+        event?.venue_state,
+        event?.venue_zip,
+      ]
+        .filter(Boolean)
+        .join(', ')
+
+      if (!commuteStartLocation || !destination) {
         setCommuteSummary(null)
         return
       }
@@ -323,8 +545,13 @@ export default function FanEventDetail() {
       setCommuteSummary(null)
       
       try {
+        if (USE_FAKE_DATA && eventStartTime) {
+          setCommuteSummary(buildFakeCommuteSummary(commuteStartLocation, destination, eventStartTime))
+          return
+        }
+
         const origins = encodeURIComponent(commuteStartLocation)
-        const destinations = encodeURIComponent(getFullAddress())
+        const destinations = encodeURIComponent(destination)
         
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/distance-matrix?origins=${origins}&destinations=${destinations}`
         const { data } = await supabase.auth.getSession()
@@ -362,7 +589,7 @@ export default function FanEventDetail() {
     }
     
     fetchCommuteSummary()
-  }, [commuteStartLocation, event?.venue_address])
+  }, [commuteStartLocation, event?.start_time, event?.venue_address, event?.venue_city, event?.venue_state, event?.venue_zip])
 
   // Helper functions for commute info
   const handleSaveCommuteLocation = () => {
@@ -409,16 +636,22 @@ export default function FanEventDetail() {
   // Format time
   const formatEventTime = (dateStr: string): string => {
     const date = new Date(dateStr)
+    const tz = formatTimezoneDisplay(event?.timezone, dateStr)
     return date.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
       ...(event?.timezone ? { timeZone: event.timezone } : {}),
-    })
+    }) + (tz ? ` ${tz}` : '')
+  }
+
+  const formatEventClockWithZone = (dateInput: string | Date): string => {
+    const value = typeof dateInput === 'string' ? dateInput : dateInput.toISOString()
+    return formatEventTime(value)
   }
 
   // Get full address
-  const getFullAddress = (): string => {
+  const getFullAddress = useCallback((): string => {
     if (!event) return ''
     const parts = [
       event.venue_address,
@@ -427,7 +660,7 @@ export default function FanEventDetail() {
       event.venue_zip,
     ].filter(Boolean)
     return parts.join(', ')
-  }
+  }, [event])
 
   // Handle share
   const handleShare = async (platform: 'copy' | 'twitter' | 'facebook') => {
@@ -475,7 +708,8 @@ export default function FanEventDetail() {
   // Handle get tickets
   const handleGetTickets = () => {
     if (event?.ticket_event_id) {
-      navigate(`/portal/tickets/events/${event.ticket_event_id}`)
+      const ticketEventPath = getLink(RouteKeys.PORTAL_TICKET_EVENT_DETAIL, { eventId: event.ticket_event_id })
+      navigate(appendTicketCheckoutRole(ticketEventPath, 'fan'))
     }
   }
 
@@ -516,8 +750,7 @@ export default function FanEventDetail() {
 
   const status = getEventStatus()
   const fullAddress = getFullAddress()
-  const timezoneLabel = formatTimezoneDisplay(event.timezone, event.start_time)
-
+  const calendarExportEvent = toCalendarExportEvent(event, fullAddress)
   return (
     <div className="fan-event-detail">
       {/* Breadcrumb */}
@@ -541,6 +774,20 @@ export default function FanEventDetail() {
       <div className="fan-event-layout">
         {/* Main Content */}
         <div className="fan-event-main">
+          {(!isOnline || usingCachedEvent) && (
+            <section className="fan-event-card">
+              <h2 className="fan-event-card-title">
+                <span className="material-symbols-outlined">wifi_off</span>
+                Offline mode
+              </h2>
+              <p className="fan-event-sidebar-text">
+                {usingCachedEvent
+                  ? 'Showing the last cached version of this event.'
+                  : 'Live updates are unavailable until your connection returns.'}
+              </p>
+            </section>
+          )}
+
           {/* Header Section */}
           <header className="fan-event-header-section">
             {/* Status Badge */}
@@ -574,12 +821,6 @@ export default function FanEventDetail() {
                   {event.end_time && ` - ${formatEventTime(event.end_time)}`}
                 </span>
               </div>
-              {timezoneLabel && (
-                <div className="fan-event-meta-item">
-                  <span className="material-symbols-outlined">public</span>
-                  <span>{timezoneLabel}</span>
-                </div>
-              )}
               {(event.venue_name || event.location) && (
                 <div className="fan-event-meta-item">
                   <span className="material-symbols-outlined">location_on</span>
@@ -790,21 +1031,14 @@ export default function FanEventDetail() {
                 className="fan-btn fan-btn-primary"
                 onClick={async () => {
                   try {
-                    const { data: { user } } = await supabase.auth.getUser()
-                    if (!user) {
-                      showError('Please sign in to follow organizations')
-                      return
-                    }
-                    const { error } = await supabase
-                      .from('fan_org_follows')
-                      .insert({ user_id: user.id, org_id: event.org_id })
+                    const { error } = await followOrg(event.org_id)
                     if (error) {
                       showError('Failed to follow organization')
                     } else {
                       setIsFollowingOrg(true)
                       showSuccess(`Now following ${event.org_name}`)
                     }
-                  } catch (err) {
+                  } catch {
                     showError('Failed to follow organization')
                   }
                 }}
@@ -820,6 +1054,14 @@ export default function FanEventDetail() {
           <div className="fan-event-sidebar-card">
             <h3 className="fan-event-sidebar-title">Quick Actions</h3>
             <div className="fan-event-quick-actions">
+              <div style={{ marginBottom: '12px' }}>
+                <AddToCalendarActions
+                  event={calendarExportEvent}
+                  googleVariant="secondary"
+                  icsVariant="secondary"
+                  buttonClassName="w-full justify-center"
+                />
+              </div>
               {fullAddress && (
                 <button 
                   className="fan-event-quick-action"
@@ -912,22 +1154,14 @@ export default function FanEventDetail() {
                             if (totalMinutes > 0) {
                               const targetDate = new Date(targetTime)
                               const leaveByDate = new Date(targetDate.getTime() - totalMinutes * 60 * 1000)
-                              const leaveByTime = leaveByDate.toLocaleTimeString('en-US', {
-                                hour: 'numeric',
-                                minute: '2-digit',
-                                ...(event.timezone ? { timeZone: event.timezone } : {}),
-                              })
+                              const leaveByTime = formatEventClockWithZone(leaveByDate)
                               
                               return (
                                 <div className="fan-commute-leave-by">
                                   <p className="fan-commute-label">Need to Leave By</p>
                                   <p className="fan-commute-leave-time">{leaveByTime}</p>
                                   <p className="fan-commute-leave-note">
-                                    To arrive by {new Date(targetTime).toLocaleTimeString('en-US', {
-                                      hour: 'numeric',
-                                      minute: '2-digit',
-                                      ...(event.timezone ? { timeZone: event.timezone } : {}),
-                                    })}
+                                    To arrive by {formatEventClockWithZone(targetTime)}
                                     {' (start time)'}
                                   </p>
                                 </div>

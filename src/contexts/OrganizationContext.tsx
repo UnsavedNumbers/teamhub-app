@@ -4,7 +4,7 @@ import { readDemoManagementStore } from '@/data/services/demoOrgService'
 import { getOrganizationById } from '@/data/fake/fakeOrganizations'
 import { getCurrentDemoSessionSnapshot } from '@/data/services/demoSessionService'
 
-export type OrgMemberRole = 'parent' | 'coach' | 'org_admin' | 'staff' | 'athlete'
+export type OrgMemberRole = 'parent' | 'guardian' | 'coach' | 'org_admin' | 'staff' | 'athlete' | 'fan'
 
 export interface Organization {
   id: string

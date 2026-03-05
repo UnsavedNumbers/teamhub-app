@@ -17,6 +17,33 @@ import { getLoginRedirect } from '../utils/loginRedirect'
 import { mapAuthError } from '../utils/authErrorMapper'
 import type { SupabaseExtended as Database } from '../lib/supabase.extended.types'
 import type { OrgMemberRole } from '../contexts/OrganizationContext'
+import type { DemoAllowedRole } from '../types/demoManagement'
+
+const DEMO_ENTRY_SELECTED_ROLE_KEY = 'demo_entry_selected_role'
+
+function getRedirectForDemoEntryRole(role: DemoAllowedRole): string {
+  if (role === 'org_admin' || role === 'coach') return '/admin'
+  if (role === 'fan') return '/fan'
+  return '/portal/dashboard'
+}
+
+function consumeDemoEntryRoleRedirect(): string | null {
+  if (typeof window === 'undefined' || typeof window.sessionStorage === 'undefined') {
+    return null
+  }
+
+  const raw = window.sessionStorage.getItem(DEMO_ENTRY_SELECTED_ROLE_KEY)
+  if (!raw) return null
+
+  window.sessionStorage.removeItem(DEMO_ENTRY_SELECTED_ROLE_KEY)
+  const normalized = raw.trim().toLowerCase()
+  const allowedRoles: DemoAllowedRole[] = ['org_admin', 'coach', 'parent', 'staff', 'athlete', 'fan']
+  if (!allowedRoles.includes(normalized as DemoAllowedRole)) {
+    return null
+  }
+
+  return getRedirectForDemoEntryRole(normalized as DemoAllowedRole)
+}
 
 export default function AuthCallback() {
   useDebugLifecycle('AuthCallback')
@@ -246,6 +273,17 @@ export default function AuthCallback() {
 
             console.log('[AuthCallback] Session set. isDemoCallback:', isDemoCallback, 'userId:', userId)
 
+            if (isDemoCallback) {
+              const roleRedirect = consumeDemoEntryRoleRedirect()
+              if (roleRedirect) {
+                logAuthCallback('Demo callback using selected role redirect', {
+                  roleRedirect,
+                })
+                setDemoRedirect(roleRedirect)
+                return
+              }
+            }
+
             // For demo callbacks, wait a moment for auth state to propagate before redirecting
             // This prevents a race condition where RouteGuard sees no user and redirects to login
             if (isDemoCallback) {
@@ -342,6 +380,15 @@ export default function AuthCallback() {
         // Priority -2: Check if this is a demo session callback
         const isDemoCallback = searchParams.get('demo') === 'true'
         if (isDemoCallback) {
+          const roleRedirect = consumeDemoEntryRoleRedirect()
+          if (roleRedirect) {
+            logAuthCallback('Demo callback using selected role redirect', {
+              roleRedirect,
+            })
+            setDemoRedirect(roleRedirect)
+            return
+          }
+
           // For demo sessions, fetch organizations and use getLoginRedirect to determine correct destination
           // This ensures org_admin goes to /admin, coach goes to /admin, parent/athlete go to /portal/dashboard, etc.
           try {
@@ -351,7 +398,30 @@ export default function AuthCallback() {
 
             if (orgError) {
               console.error('Error fetching demo user organizations for redirect:', orgError)
-              // Fallback to portal dashboard if org fetch fails
+              // Fallback: try to get role from demo_account_roles to determine redirect
+              try {
+                const { data: demoAccountRole } = await supabase
+                  .from('demo_account_roles')
+                  .select('role')
+                  .eq('user_id', userId)
+                  .maybeSingle()
+                
+                if (demoAccountRole?.role) {
+                  const role = demoAccountRole.role
+                  // Redirect based on role: coaches and org_admins go to /admin, others to /portal
+                  const fallbackRedirect = (role === 'coach' || role === 'org_admin') 
+                    ? '/admin' 
+                    : '/portal/dashboard'
+                  navigateWithTrace(fallbackRedirect, 'demo redirect org fetch error - using demo account role', {
+                    orgError: orgError.message,
+                    role,
+                  })
+                  return
+                }
+              } catch (roleError) {
+                console.error('Error fetching demo account role:', roleError)
+              }
+              // Final fallback to portal dashboard
               navigateWithTrace('/portal/dashboard', 'demo redirect org fetch error', {
                 orgError: orgError.message,
               })
@@ -374,6 +444,37 @@ export default function AuthCallback() {
                 get role() { return this.roles[0] ?? 'parent' }
               }
             })
+
+            // If organizations is empty, try to get role from demo_account_roles as fallback
+            if (organizations.length === 0) {
+              try {
+                const { data: demoAccountRole } = await supabase
+                  .from('demo_account_roles')
+                  .select('role')
+                  .eq('user_id', userId)
+                  .maybeSingle()
+                
+                if (demoAccountRole?.role) {
+                  const role = demoAccountRole.role
+                  // Create a minimal organization object for getLoginRedirect
+                  const fallbackOrg = {
+                    id: '',
+                    name: '',
+                    roles: role === 'coach' ? ['coach'] as OrgMemberRole[] : 
+                           role === 'org_admin' ? ['org_admin'] as OrgMemberRole[] :
+                           role === 'parent' ? ['parent'] as OrgMemberRole[] :
+                           role === 'staff' ? ['staff'] as OrgMemberRole[] : [],
+                    get role() { return this.roles[0] ?? 'parent' }
+                  }
+                  const isFan = role === 'fan'
+                  const finalRedirect = getLoginRedirect(false, [fallbackOrg], isFan)
+                  setDemoRedirect(finalRedirect)
+                  return
+                }
+              } catch (roleError) {
+                console.error('Error fetching demo account role as fallback:', roleError)
+              }
+            }
 
             // Check if user is a fan (for demo fan role)
             let isFan = false
@@ -398,6 +499,25 @@ export default function AuthCallback() {
             return
           } catch (err) {
             console.error('Exception fetching demo organizations for redirect:', err)
+            // Try to get role from demo_account_roles as final fallback
+            try {
+              const { data: demoAccountRole } = await supabase
+                .from('demo_account_roles')
+                .select('role')
+                .eq('user_id', userId)
+                .maybeSingle()
+              
+              if (demoAccountRole?.role) {
+                const role = demoAccountRole.role
+                const fallbackRedirect = (role === 'coach' || role === 'org_admin') 
+                  ? '/admin' 
+                  : '/portal/dashboard'
+                setDemoRedirect(fallbackRedirect)
+                return
+              }
+            } catch (roleError) {
+              console.error('Error fetching demo account role in catch block:', roleError)
+            }
             setDemoRedirect('/portal/dashboard')
             return
           }

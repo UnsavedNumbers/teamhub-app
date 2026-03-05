@@ -112,18 +112,18 @@ export default function AttachmentUpload({
       <button
         onClick={() => fileInputRef.current?.click()}
         disabled={uploading}
-        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed p-2"
+        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed p-2"
         title="Attach file"
       >
         <Icon name="attach_file" size="text-xl" />
       </button>
 
       {uploading && (
-        <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-slate-800 rounded shadow-lg p-3 min-w-[200px]">
-          <div className="text-sm font-medium text-slate-900 dark:text-white mb-2">
+        <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-neutral-900 rounded shadow-lg p-3 min-w-[200px]">
+          <div className="text-sm font-medium text-gray-900 dark:text-white mb-2">
             Uploading...
           </div>
-          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+          <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-2">
             <div
               className="bg-[var(--org-btn-primary-bg)] h-2 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}

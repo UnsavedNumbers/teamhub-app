@@ -58,8 +58,8 @@ export default function MobileResponsiveTable({
     <>
       {/* Desktop Table View - hidden on mobile */}
       <div className={`hidden md:block bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm ${className}`}>
-        <div className="overflow-x-auto">
-          <table className={`w-full text-left border-collapse ${tableClassName}`}>
+        <div className="overflow-safe-scroll">
+          <table className={`min-w-full text-left border-collapse ${tableClassName}`}>
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 {headers.map((header, index) => {
@@ -148,7 +148,7 @@ export default function MobileResponsiveTable({
                         <div className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">
                           {headerText}
                         </div>
-                        <div className="text-sm text-slate-900">
+                        <div className="text-sm text-slate-900 overflow-safe-content">
                           {cell}
                         </div>
                       </div>

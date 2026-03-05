@@ -6,6 +6,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { AdminPageHeader, Button, InlineNotice } from '../../components/admin'
 import OfflineBanner from '../../components/admin/OfflineBanner'
 import { getLink } from '../../utils/routes'
+import { hasAnyRole } from '../../utils/roleHelpers'
 import { getSports, getPrograms } from '../../data/services/sportsService'
 import { getLevels } from '../../data/services/levelsService'
 import { getTeams } from '../../data/services/teamsService'
@@ -22,6 +23,7 @@ export default function OrganizationStructureNew() {
   const { context, isReady } = useUserContext()
   const { user } = useAuth()
   const navigate = useNavigate()
+  const isOrgAdmin = hasAnyRole(currentOrganization, ['org_admin'])
   const [exampleType, setExampleType] = useState<'school' | 'club' | 'aau' | 'recreation'>('school')
   const [sports, setSports] = useState<Sport[]>([])
   const [programs, setPrograms] = useState<Program[]>([])
@@ -275,13 +277,15 @@ export default function OrganizationStructureNew() {
               disabled={!canCreateLevel}
               tooltip={!canCreateLevel ? 'Add a Program first' : undefined}
             />
-            <QuickActionButton
-              icon="groups"
-              label="Add Team"
-              onClick={() => navigate(`${getLink('admin.organization.forms')}?type=team`)}
-              disabled={!canCreateTeam}
-              tooltip={!canCreateTeam ? 'Add a Level first' : undefined}
-            />
+            {isOrgAdmin && (
+              <QuickActionButton
+                icon="groups"
+                label="Add Team"
+                onClick={() => navigate(`${getLink('admin.organization.forms')}?type=team`)}
+                disabled={!canCreateTeam}
+                tooltip={!canCreateTeam ? 'Add a Level first' : undefined}
+              />
+            )}
             <QuickActionButton
               icon="calendar_today"
               label="Add Season"

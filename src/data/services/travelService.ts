@@ -19,7 +19,7 @@ import { USE_FAKE_DATA, FAKE_DATA_DELAY_MS, DEMO_ORG_A_ID } from '../config'
 import { supabase } from '../../lib/supabase'
 import type { UserContext, PermissionSet } from '../fake/userContext'
 import { debug } from '../../lib/debug'
-import { calculatePermissions, getCoachTeamIds } from '../fake/userContext'
+import { calculatePermissions, getCoachTeamIds, getGuardianCanonicalUserId } from '../fake/userContext'
 import {
     type TravelEvent,
     type TravelTrip,
@@ -335,7 +335,8 @@ function sanitizeFilename(filename: string): string {
 }
 
 async function buildPermissions(context: UserContext): Promise<PermissionSet> {
-    const childIds = getChildrenForUserId(context.userId)
+    const guardianUserId = getGuardianCanonicalUserId(context)
+    const childIds = getChildrenForUserId(guardianUserId)
     const assignedTeamIds = context.roles.includes('coach')
         ? await getCoachTeamIds(context)
         : []
@@ -602,7 +603,8 @@ export async function getTravelEvents(
                 }
 
                 if (permissions.canViewOwnChildrenData) {
-                    getTeamsForUserChildren(context.userId).forEach(id => accessibleTeamIds.add(id))
+                    const guardianUserId = getGuardianCanonicalUserId(context)
+                    getTeamsForUserChildren(guardianUserId).forEach(id => accessibleTeamIds.add(id))
                 }
 
                 travelEvents = travelEvents.filter(e => (e.team_id ? accessibleTeamIds.has(e.team_id) : false))

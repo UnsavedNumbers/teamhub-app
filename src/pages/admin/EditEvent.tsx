@@ -1383,11 +1383,18 @@ export default function EditEvent() {
                             minHeight: 140,
                             borderRadius: 12,
                             overflow: 'hidden',
-                            backgroundImage: `linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.18) 65%, rgba(0,0,0,0) 100%), url(${bannerPreviewUrl})`,
+                            backgroundImage: `url(${bannerPreviewUrl})`,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
                           }}
                         >
+                          <div
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              background: 'rgba(0, 0, 0, 0.46)',
+                            }}
+                          />
                           <button
                             type="button"
                             onClick={handleRemoveBanner}
@@ -1415,7 +1422,7 @@ export default function EditEvent() {
                             </span>
                           </button>
 
-                          <div style={{ padding: '16px', color: '#fff' }}>
+                          <div style={{ position: 'relative', zIndex: 1, padding: '16px', color: '#fff' }}>
                             <p style={{ margin: 0, fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.95 }}>
                               Official Event
                             </p>
