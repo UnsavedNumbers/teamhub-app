@@ -2,7 +2,9 @@
  * Announcements Page
  * 
  * Main announcements page for guardians and athletes.
- * Three-column layout: list view (left) + detail panel (right).
+ * Responsive master-detail layout:
+ * - Mobile/tablet: list view OR detail view with back navigation.
+ * - Desktop: list view (left) + detail panel (right).
  * Follows portal design principles: clean, neutral, no gradients, no shadows.
  */
 
@@ -58,6 +60,19 @@ export default function Announcements() {
   
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
   const selectedAnnouncementId = announcementId || null
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(min-width: 1024px)').matches
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+    const handleChange = (event: MediaQueryListEvent) => setIsDesktop(event.matches)
+    setIsDesktop(mediaQuery.matches)
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [])
 
   // Fetch teams
   const { data: teams } = useQuery({
@@ -89,12 +104,12 @@ export default function Announcements() {
     [announcementsResponse]
   )
 
-  // Auto-select first announcement in the URL if none selected
+  // Auto-select first announcement only on desktop
   useEffect(() => {
-    if (!selectedAnnouncementId && announcements.length > 0) {
+    if (isDesktop && !selectedAnnouncementId && announcements.length > 0) {
       navigate(`/portal/announcements/${announcements[0].id}`, { replace: true })
     }
-  }, [announcements, selectedAnnouncementId, navigate])
+  }, [announcements, selectedAnnouncementId, navigate, isDesktop])
 
   // Fetch selected announcement details
   const { data: selectedAnnouncementResponse } = useQuery({
@@ -136,10 +151,14 @@ export default function Announcements() {
         </p>
       </div>
 
-      {/* Three-column layout */}
-      <div className="flex gap-6 h-[calc(100vh-280px)] min-h-[600px]">
+      {/* Responsive master-detail layout */}
+      <div className="flex min-w-0 flex-col gap-4 lg:h-[calc(100vh-280px)] lg:min-h-[600px] lg:flex-row lg:gap-6">
         {/* Left: Announcements List */}
-        <div className="w-[320px] flex-shrink-0 flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/50">
+        <div
+          className={`w-full lg:w-[320px] lg:flex-shrink-0 flex-col border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/50 ${
+            selectedAnnouncementId ? 'hidden lg:flex' : 'flex'
+          }`}
+        >
           {/* List Header */}
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-3">
@@ -235,7 +254,23 @@ export default function Announcements() {
         </div>
 
         {/* Right: Detail Panel */}
-        <div className="flex-1 flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/50">
+        <div
+          className={`w-full min-w-0 flex-col border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/50 lg:flex-1 ${
+            selectedAnnouncementId ? 'flex' : 'hidden lg:flex'
+          }`}
+        >
+          {selectedAnnouncementId && (
+            <div className="border-b border-gray-200 p-4 dark:border-gray-700 lg:hidden">
+              <button
+                type="button"
+                onClick={() => navigate('/portal/announcements')}
+                className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--org-link-color)] transition-colors hover:text-[var(--org-btn-primary-bg)]"
+              >
+                <Icon name="arrow_back" size="text-base" />
+                Back to announcements
+              </button>
+            </div>
+          )}
           {selectedAnnouncement ? (
             <>
               {/* Detail Header */}
