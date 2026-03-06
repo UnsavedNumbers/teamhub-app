@@ -15,8 +15,11 @@ import Card from '../../components/portal/Card'
 import Button from '../../components/portal/Button'
 import Icon from '../../components/portal/Icon'
 import EmptyState from '../../components/portal/EmptyState'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
+import CollapsibleHeader from '../../components/common/mobile/CollapsibleHeader'
 import { getLink } from '../../utils/routes'
 import { useI18n } from '../../i18n/useI18n'
+import { useMobile } from '../../hooks/useMobile'
 import type { FanOrgFollow } from '../../types/staffAndFan'
 
 import { useDebugLifecycle } from '../../lib/debug/integrations/useDebugLifecycle'
@@ -28,6 +31,7 @@ export default function FollowedOrgs() {
   const tAny = t as any
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const isMobile = useMobile()
 
   // State
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -35,7 +39,7 @@ export default function FollowedOrgs() {
   const [unfollowLoading, setUnfollowLoading] = useState(false)
 
   // Data Query
-  const { data: follows, isLoading } = useQuery({
+  const { data: follows, isLoading, refetch } = useQuery({
     queryKey: ['followed-orgs'],
     queryFn: async () => {
       const { data, error } = await getFollowedOrgs()
@@ -84,8 +88,20 @@ export default function FollowedOrgs() {
 
   return (
     <PortalLayout>
+      <PullToRefreshContainer onRefresh={async () => { await refetch() }}>
       <div className="max-w-4xl mx-auto px-4 py-8 relative">
-        <PageTitle>{t('portal.fan.followedOrgs.title')}</PageTitle>
+        {isMobile ? (
+          <>
+            <CollapsibleHeader
+              title={t('portal.fan.followedOrgs.title')}
+              mode="large"
+              scrollContainerSelector=".portal-workspace-main"
+            />
+            <PageTitle className="sr-only">{t('portal.fan.followedOrgs.title')}</PageTitle>
+          </>
+        ) : (
+          <PageTitle>{t('portal.fan.followedOrgs.title')}</PageTitle>
+        )}
         <p className="text-gray-600 dark:text-gray-400 mb-6">
           {t('portal.fan.followedOrgs.description')}
         </p>
@@ -190,6 +206,7 @@ export default function FollowedOrgs() {
           </div>
         )}
       </div>
+      </PullToRefreshContainer>
     </PortalLayout>
   )
 }

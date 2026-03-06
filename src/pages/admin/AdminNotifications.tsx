@@ -12,6 +12,7 @@ import {
   Button,
   Badge,
 } from '../../components/admin'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
 import { showSuccess, showError } from '../../utils/toast'
 import { cn } from '../../utils/cn'
 import { getTeams } from '../../data/services/teamsService'
@@ -400,6 +401,7 @@ export default function AdminNotifications() {
 
   return (
     <div className="oa-root">
+      <PullToRefreshContainer onRefresh={fetchData}>
       <AdminPageHeader
         breadcrumbs={[{ label: 'Notifications' }]}
         title="Notifications"
@@ -688,6 +690,7 @@ export default function AdminNotifications() {
           </section>
         </div>
       )}
+      </PullToRefreshContainer>
     </div>
   )
 }

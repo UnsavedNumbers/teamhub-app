@@ -968,6 +968,13 @@ const admin = {
             description: 'Team announcements',
             requiresOrg: true,
         },
+        detail: {
+            path: '/admin/announcements/:id',
+            params: ['id'] as const,
+            label: 'Announcement Details',
+            icon: 'campaign',
+            requiresOrg: true,
+        },
     },
 
     // Attendance

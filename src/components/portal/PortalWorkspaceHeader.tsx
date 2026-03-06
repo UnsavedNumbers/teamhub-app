@@ -123,7 +123,7 @@ export default function PortalWorkspaceHeader({
   return (
     <header
       className={cn(
-        'portal-workspace-header sticky top-0 z-40 border-b border-gray-200 bg-white px-4 py-2 dark:border-gray-800 dark:bg-black',
+        'portal-workspace-header sticky top-0 z-40 border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-800 dark:bg-black',
         'pwa-neutral',
       )}
     >

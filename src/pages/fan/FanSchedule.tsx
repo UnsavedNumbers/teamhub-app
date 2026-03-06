@@ -17,6 +17,7 @@ import type { CalendarEvent } from '../../types/staffAndFan'
 import { buildIcsDataUrl, sanitizeCalendarFilename } from '../../features/calendar/addToCalendar'
 import BookmarkButton from '../../components/fan/BookmarkButton'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
 import { showError } from '../../utils/toast'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { useOnlineStatus } from '../../hooks/useOnlineStatus'
@@ -189,9 +190,10 @@ export default function FanSchedule() {
   }
 
   return (
-    <div className="fan-schedule-page">
-      {/* Page Header - Matching Design */}
-      <div className="fan-schedule-header">
+    <PullToRefreshContainer onRefresh={loadEvents}>
+      <div className="fan-schedule-page">
+        {/* Page Header - Matching Design */}
+        <div className="fan-schedule-header">
         <div className="fan-schedule-header-left">
           <span className="fan-schedule-label">Global Schedule</span>
           <div className="fan-schedule-nav">
@@ -240,8 +242,8 @@ export default function FanSchedule() {
         </div>
       </div>
 
-      {/* Calendar Content */}
-      <div className="fan-schedule-content">
+        {/* Calendar Content */}
+        <div className="fan-schedule-content">
         {!isOnline && (
           <div className="fan-schedule-empty" style={{ marginBottom: '16px' }}>
             <div className="fan-schedule-empty-icon">
@@ -285,8 +287,8 @@ export default function FanSchedule() {
         )}
       </div>
 
-      {/* Legend & Actions */}
-      <div className="fan-schedule-legend">
+        {/* Legend & Actions */}
+        <div className="fan-schedule-legend">
         <div className="fan-schedule-legend-items">
           <div className="fan-schedule-legend-item">
             <span className="fan-schedule-legend-dot home"></span>
@@ -311,8 +313,9 @@ export default function FanSchedule() {
             Export
           </button>
         </div>
+        </div>
       </div>
-    </div>
+    </PullToRefreshContainer>
   )
 }
 

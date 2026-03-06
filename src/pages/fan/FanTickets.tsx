@@ -13,6 +13,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { transferTicket } from '../../data/services/fanService'
 import { getMyTicketOrders, getTicketsForOrder, requestTicketWalletPass } from '../../data/services/ticketingService'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
 import { showError, showSuccess } from '../../utils/toast'
 import { QRCodeSVG } from 'qrcode.react'
 import { getLink, RouteKeys } from '../../utils/routes'
@@ -251,7 +252,8 @@ export default function FanTickets() {
   }
 
   return (
-    <div className="fan-tickets-page">
+    <PullToRefreshContainer onRefresh={loadTickets}>
+      <div className="fan-tickets-page">
       {/* Page Header - Matching Design */}
       <div className="fan-tickets-header">
         <span className="fan-tickets-label">Account Access</span>
@@ -390,7 +392,8 @@ export default function FanTickets() {
           onTransfer={handleTransfer}
         />
       )}
-    </div>
+      </div>
+    </PullToRefreshContainer>
   )
 }
 

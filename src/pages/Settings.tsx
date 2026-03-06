@@ -24,6 +24,7 @@ import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import { ThemeSelector } from '../components/portal/ThemeToggle'
 import NotificationPreferences from '../components/common/NotificationPreferences'
+import PullToRefreshContainer from '../components/common/mobile/PullToRefreshContainer'
 import type { NotificationGroup } from '../types/notificationPreferences'
 import type { NotificationRole } from '../types/notifications'
 import { mergeNotificationPreferences, canonicalRole, loadNotificationGroupsFromRelational, convertNotificationGroupsToRelational } from '../utils/notificationPreferencesConfig'
@@ -894,6 +895,7 @@ export default function Settings() {
           { label: t('portal.settings.title') },
         ]}
       >
+        <PullToRefreshContainer onRefresh={fetchData}>
         <div className="mb-8 sm:mb-12 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 sm:gap-6">
           <div className="flex-1">
             <PageTitle>{t('portal.settings.title')}</PageTitle>
@@ -1670,6 +1672,7 @@ export default function Settings() {
             </Card>
           </div>
         )}
+        </PullToRefreshContainer>
       </PortalLayout>
   )
 }

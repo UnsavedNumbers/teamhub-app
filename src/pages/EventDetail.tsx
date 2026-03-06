@@ -763,7 +763,7 @@ export default function EventDetail() {
                 {venueAddress && (
                   <div>
                     <p className="quick-info-label">{t('calendar.event.location')}</p>
-                    <p className="quick-info-value truncate">{venueAddress.split(',')[0]}</p>
+                    <p className="quick-info-value break-words">{venueAddress.split(',')[0]}</p>
                   </div>
                 )}
                 <div>
@@ -837,11 +837,11 @@ export default function EventDetail() {
           <div className="flex items-start justify-between mb-4">
             <div>
               <PageTitle>{event.title}</PageTitle>
-              <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide mt-2">
+              <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-normal sm:tracking-wide mt-2 break-words leading-relaxed">
                 {formatDate(event.start_time, event.timezone)} - {formatTime(event.start_time, event.timezone)} - {formatTime(event.end_time, event.timezone)}
                 {timezoneLabel ? ` - ${timezoneLabel}` : ''}
               </p>
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mt-2">
+              <p className="text-xs font-semibold uppercase tracking-wide sm:tracking-widest text-gray-400 mt-2 break-words">
                 {event.team.name}
               </p>
             </div>
@@ -891,32 +891,32 @@ export default function EventDetail() {
         <Card className="bg-gradient-to-r from-[var(--org-btn-primary-bg, #137fec)]/5 to-gray-50 dark:to-gray-800/50 border-l-4 border-[var(--org-btn-primary-bg, #137fec)] p-6">
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('calendar.event.eventType')}</p>
-              <p className="text-lg font-black text-gray-900 dark:text-white capitalize">{event.type}</p>
+              <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.08em] sm:tracking-widest text-gray-400 mb-1">{t('calendar.event.eventType')}</p>
+              <p className="text-base sm:text-lg font-semibold sm:font-black text-gray-900 dark:text-white capitalize leading-snug break-words">{event.type}</p>
             </div>
             {event.arrival_time && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time, event.timezone) })}</p>
-                <p className="text-lg font-black text-gray-900 dark:text-white">{formatTime(event.arrival_time, event.timezone)}</p>
+                <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.08em] sm:tracking-widest text-gray-400 mb-1">{t('calendar.event.arriveBy', { time: formatTime(event.arrival_time, event.timezone) })}</p>
+                <p className="text-base sm:text-lg font-semibold sm:font-black text-gray-900 dark:text-white leading-snug break-words">{formatTime(event.arrival_time, event.timezone)}</p>
               </div>
             )}
             {venueAddress && (
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('calendar.event.location')}</p>
-                <p className="text-lg font-black text-gray-900 dark:text-white truncate">{venueAddress.split(',')[0]}</p>
+                <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.08em] sm:tracking-widest text-gray-400 mb-1">{t('calendar.event.location')}</p>
+                <p className="text-base sm:text-lg font-semibold sm:font-black text-gray-900 dark:text-white leading-snug break-words">{venueAddress.split(',')[0]}</p>
               </div>
             )}
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{t('calendar.event.weather')}</p>
+              <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.08em] sm:tracking-widest text-gray-400 mb-1">{t('calendar.event.weather')}</p>
               {loadingWeather ? (
-                <p className="text-lg font-black text-gray-900 dark:text-white">{t('calendar.event.loading')}</p>
+                <p className="text-base sm:text-lg font-semibold sm:font-black text-gray-900 dark:text-white">{t('calendar.event.loading')}</p>
               ) : weatherData ? (
                 <div>
-                  <p className="text-lg font-black text-gray-900 dark:text-white">{weatherData.temperature} deg F - <span className="capitalize">{weatherData.description}</span></p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{weatherData.precipitation}% precip - {weatherData.windSpeed} mph wind</p>
+                  <p className="text-base sm:text-lg font-semibold sm:font-black text-gray-900 dark:text-white leading-snug break-words">{weatherData.temperature} deg F - <span className="capitalize">{weatherData.description}</span></p>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 break-words">{weatherData.precipitation}% precip - {weatherData.windSpeed} mph wind</p>
                 </div>
               ) : (
-                <p className="text-lg font-black text-gray-500 dark:text-gray-400">{t('calendar.event.unavailable')}</p>
+                <p className="text-base sm:text-lg font-semibold sm:font-black text-gray-500 dark:text-gray-400">{t('calendar.event.unavailable')}</p>
               )}
             </div>
             {!isEventOver24HoursAgo && (
@@ -940,7 +940,7 @@ export default function EventDetail() {
                     {t('calendar.event.getTickets')}
                   </Button>
                 ) : (
-                  <p className="text-lg font-black text-gray-900 dark:text-white">{t('calendar.event.freeEntry')}</p>
+                  <p className="text-base sm:text-lg font-semibold sm:font-black text-gray-900 dark:text-white break-words">{t('calendar.event.freeEntry')}</p>
                 )}
               </div>
             )}

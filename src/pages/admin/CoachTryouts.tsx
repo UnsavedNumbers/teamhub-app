@@ -6,6 +6,7 @@ import type { TranslationKey } from '../../i18n'
 import { getCoachAssignedTryouts, getCoachTryoutDashboardStats, type Tryout } from '../../data/services/tryoutsService'
 import { AdminPageHeader, Badge, Button, Card } from '../../components/admin'
 import { TopLevelStats } from '../../components/common/TopLevelStats'
+import { getLink, RouteKeys } from '../../utils/routes'
 import '../../styles/orgAdmin.css'
 
 type StatusFilter = 'all' | 'open' | 'closed' | 'completed'
@@ -99,9 +100,9 @@ export default function CoachTryouts() {
                 className="oa-card oa-flex oa-items-center oa-justify-between oa-gap-3"
                 role="button"
                 tabIndex={0}
-                onClick={() => navigate(`/admin/tryouts/${tryout.id}/evaluation`)}
+                onClick={() => navigate(getLink(RouteKeys.ADMIN_TRYOUTS_EVALUATION, { tryoutId: tryout.id }))}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter') navigate(`/admin/tryouts/${tryout.id}/evaluation`)
+                  if (event.key === 'Enter') navigate(getLink(RouteKeys.ADMIN_TRYOUTS_EVALUATION, { tryoutId: tryout.id }))
                 }}
               >
                 <div>
@@ -112,7 +113,7 @@ export default function CoachTryouts() {
                 </div>
                 <div className="oa-flex oa-items-center oa-gap-2">
                   <Badge variant={tryout.status === 'open' ? 'success' : 'neutral'}>{t(`admin.tryouts.status.${tryout.status}` as TranslationKey)}</Badge>
-                  <Button variant="ghost" size="compact" onClick={() => navigate(`/admin/tryouts/${tryout.id}/evaluation`)}>
+                  <Button variant="ghost" size="compact" onClick={() => navigate(getLink(RouteKeys.ADMIN_TRYOUTS_EVALUATION, { tryoutId: tryout.id }))}>
                     {t('admin.tryouts.coach.evaluate' as TranslationKey)}
                   </Button>
                 </div>

@@ -9,6 +9,7 @@ import { AdminPageHeader, Badge, Button, Card, Input } from '../../components/ad
 import OrgDataTable from '../../components/admin/OrgDataTable'
 import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { hasAnyRole } from '../../utils/roleHelpers'
+import { getLink, RouteKeys } from '../../utils/routes'
 import '../../styles/orgAdmin.css'
 
 type StatusFilter = 'all' | 'draft' | 'open' | 'closed' | 'completed' | 'cancelled'
@@ -110,7 +111,7 @@ export default function AdminTryouts() {
             size="compact"
             onClick={(event: MouseEvent<HTMLButtonElement>) => {
               event.stopPropagation()
-              navigate(`/admin/tryouts/${row.id}`)
+              navigate(getLink(RouteKeys.ADMIN_TRYOUT_DETAIL, { tryoutId: row.id }))
             }}
           >
             {t('common.viewDetails')}
@@ -120,7 +121,7 @@ export default function AdminTryouts() {
             size="compact"
             onClick={(event: MouseEvent<HTMLButtonElement>) => {
               event.stopPropagation()
-              navigate(`/admin/tryouts/${row.id}/registrations`)
+              navigate(getLink(RouteKeys.ADMIN_TRYOUTS_REGISTRATIONS, { tryoutId: row.id }))
             }}
           >
             {t('admin.tryouts.registrations.title' as TranslationKey)}
@@ -130,7 +131,7 @@ export default function AdminTryouts() {
             size="compact"
             onClick={(event: MouseEvent<HTMLButtonElement>) => {
               event.stopPropagation()
-              navigate(`/admin/tryouts/${row.id}/evaluators`)
+              navigate(getLink(RouteKeys.ADMIN_TRYOUTS_EVALUATORS, { tryoutId: row.id }))
             }}
           >
             {t('admin.tryouts.evaluators.title' as TranslationKey)}
@@ -147,7 +148,7 @@ export default function AdminTryouts() {
         subtitle={t('admin.tryouts.subtitle')}
         actions={
           isOrgAdmin ? (
-            <Button variant="primary" onClick={() => navigate('/admin/tryouts/new')}>
+            <Button variant="primary" onClick={() => navigate(getLink(RouteKeys.ADMIN_TRYOUTS_CREATE))}>
               <span className="material-symbols-outlined">add</span>
               {t('admin.tryouts.actions.create' as TranslationKey)}
             </Button>
@@ -193,7 +194,7 @@ export default function AdminTryouts() {
         rows={filteredRows}
         loading={loading}
         emptyMessage={t('admin.tryouts.empty' as TranslationKey)}
-        onRowClick={(row) => navigate(`/admin/tryouts/${row.id}`)}
+        onRowClick={(row) => navigate(getLink(RouteKeys.ADMIN_TRYOUT_DETAIL, { tryoutId: row.id }))}
         page={page}
         rowsPerPage={rowsPerPage}
         totalCount={filteredRows.length}

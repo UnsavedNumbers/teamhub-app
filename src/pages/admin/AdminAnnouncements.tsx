@@ -17,10 +17,12 @@ import {
 } from '../../components/admin'
 import OrgDataTable from '../../components/admin/OrgDataTable'
 import type { ColumnConfig } from '../../components/admin/OrgDataTable'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
 import { cn } from '../../utils/cn'
 import CreateAnnouncementModal from '../../components/admin/CreateAnnouncementModal'
 import { getAnnouncementEmoji, type AnnouncementType } from '../../utils/announcementTypes'
 import { hasAnyRole } from '../../utils/roleHelpers'
+import { getLink, RouteKeys } from '../../utils/routes'
 import '../../styles/orgAdmin.css'
 
 interface AnnouncementDisplay {
@@ -512,6 +514,11 @@ export default function AdminAnnouncements() {
 
   return (
     <div className="oa-root">
+      <PullToRefreshContainer
+        onRefresh={async () => {
+          await Promise.all([fetchTeams(), fetchAnnouncements()])
+        }}
+      >
       <AdminPageHeader 
         title="Announcements" 
         subtitle={t('admin.announcements.subtitle')}
@@ -661,7 +668,7 @@ export default function AdminAnnouncements() {
           rowsPerPage={rowsPerPage} 
           onPageChange={setPage} 
           onRowsPerPageChange={setRowsPerPage}
-          onRowClick={(row) => navigate(`/admin/announcements/${row.id}`)}
+          onRowClick={(row) => navigate(getLink(RouteKeys.ADMIN_ANNOUNCEMENT_DETAIL, { id: row.id }))}
         />
       )}
 
@@ -687,6 +694,7 @@ export default function AdminAnnouncements() {
           setActionError(null)
         }}
       />
+      </PullToRefreshContainer>
     </div>
   )
 }

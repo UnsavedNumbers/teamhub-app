@@ -11,6 +11,7 @@ import { useOrganization } from '../../contexts/OrganizationContext'
 import { getSeasons, deleteSeason, isSeasonEmpty } from '../../data/services/seasonsService'
 import type { Season } from '../../data/types/organization'
 import { AdminPageHeader, Card, Button, ConfirmDialog, Badge, InlineNotice } from '../../components/admin'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
 import OrgDataTable from '../../components/admin/OrgDataTable'
 import { OrgAdminButton } from '../../components/admin/OrgAdminButton'
 import type { ColumnConfig } from '../../components/admin/OrgDataTable'
@@ -244,6 +245,7 @@ export default function SeasonsManagement() {
 
   return (
     <div className="oa-root">
+      <PullToRefreshContainer onRefresh={load}>
       <OfflineBanner />
       <AdminPageHeader
         title="Seasons"
@@ -330,6 +332,7 @@ export default function SeasonsManagement() {
           setDeleteError(null)
         }}
       />
+      </PullToRefreshContainer>
     </div>
   )
 }

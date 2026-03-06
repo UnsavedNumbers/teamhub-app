@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { cn } from '@/utils/cn'
+import { useMobile } from '@/hooks/useMobile'
 
 interface PullToRefreshContainerProps {
   onRefresh: () => Promise<void>
@@ -16,6 +17,7 @@ export default function PullToRefreshContainer({
   disabled = false,
   triggerDistance = 80,
 }: PullToRefreshContainerProps) {
+  const isMobile = useMobile()
   const [pullDistance, setPullDistance] = useState(0)
   const [loading, setLoading] = useState(false)
   const startYRef = useRef<number | null>(null)
@@ -42,6 +44,10 @@ export default function PullToRefreshContainer({
       reset()
     }
   }, [onRefresh, reset])
+
+  if (!isMobile) {
+    return <div className={cn(className)}>{children}</div>
+  }
 
   return (
     <div

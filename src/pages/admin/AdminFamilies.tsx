@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AdminPageHeader, Button, Badge, ErrorState, Card } from '../../components/admin'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
 import OrgDataTable from '../../components/admin/OrgDataTable'
 import AdminLoadingSpinner from '../../components/admin/AdminLoadingSpinner'
 import type { ColumnConfig } from '../../components/admin/OrgDataTable'
@@ -192,6 +193,7 @@ export default function AdminFamilies() {
 
   return (
     <div className="oa-root">
+      <PullToRefreshContainer onRefresh={fetchFamilies}>
       <AdminPageHeader 
         title={t('admin.families.title')} 
         subtitle={t('admin.families.subtitle')}
@@ -246,6 +248,7 @@ export default function AdminFamilies() {
           onSort={handleSort}
         />
       )}
+      </PullToRefreshContainer>
     </div>
   )
 }

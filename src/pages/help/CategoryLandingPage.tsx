@@ -32,6 +32,7 @@ import { HelpFeatureLayout } from '../../components/help/HelpFeatureLayout'
 import { HelpHeaderSearch } from '../../components/help/HelpHeaderSearch'
 import { HelpRoleSwitcher } from '../../components/help/HelpRoleSwitcher'
 import { CategoryLandingPageSkeleton } from '../../components/help/HelpSkeletons'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
 import '../../styles/helpCenter.css'
 
 type UserRole = 'parent' | 'coach' | 'org_admin' | 'athlete' | 'platform_admin'
@@ -435,6 +436,7 @@ export default function CategoryLandingPage() {
       headerActions={<HelpHeaderSearch scopeRole={userRole || undefined} />}
       headerRoleSwitcher={<HelpRoleSwitcher currentRoleSlug={currentRoleSlug} />}
     >
+      <PullToRefreshContainer onRefresh={loadCategoryData}>
 
       <nav className="help-uber-breadcrumb" aria-label={t('portal.settings.helpCenter.breadcrumbHelpCenter')}>
         <Link to={getLink('portal.help')}>{t('portal.settings.helpCenter.breadcrumbHelpCenter')}</Link>
@@ -583,6 +585,7 @@ export default function CategoryLandingPage() {
           </div>
         </div>
       )}
+      </PullToRefreshContainer>
     </HelpFeatureLayout>
   )
 }

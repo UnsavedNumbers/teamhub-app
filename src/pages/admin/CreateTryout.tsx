@@ -8,6 +8,7 @@ import { createTryout, type TryoutSession } from '../../data/services/tryoutsSer
 import { getErrorMessage } from '../../utils/errorUtils'
 import { AdminPageHeader, Button, Card, DatePicker, Input } from '../../components/admin'
 import { TimePicker } from '../../components/platformAdmin/TimePicker'
+import { getLink, RouteKeys } from '../../utils/routes'
 import '../../styles/orgAdmin.css'
 
 type WizardStep = 0 | 1 | 2 | 3 | 4 | 5
@@ -185,7 +186,7 @@ export default function CreateTryout() {
         throw response.error ?? new Error(t('common.error.updateFailed'))
       }
 
-      navigate(`/admin/tryouts/${response.data.id}`)
+      navigate(getLink(RouteKeys.ADMIN_TRYOUT_DETAIL, { tryoutId: response.data.id }))
     } catch (saveError) {
       setError(getErrorMessage(saveError) || t('common.error.updateFailed'))
     } finally {
@@ -199,7 +200,7 @@ export default function CreateTryout() {
         title={t('admin.tryouts.actions.create' as TranslationKey)}
         subtitle={t('admin.tryouts.createSubtitle')}
         breadcrumbs={[
-          { label: t('admin.tryouts.title'), path: '/admin/tryouts' },
+          { label: t('admin.tryouts.title'), path: getLink(RouteKeys.ADMIN_TRYOUTS) },
           { label: t('admin.tryouts.actions.create' as TranslationKey) },
         ]}
       />

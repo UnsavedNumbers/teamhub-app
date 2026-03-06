@@ -13,6 +13,7 @@ import { AdminPageHeader, Badge, Button, Card, Input } from '../../components/ad
 import OrgDataTable from '../../components/admin/OrgDataTable'
 import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { showError, showSuccess } from '../../utils/toast'
+import { getLink, RouteKeys } from '../../utils/routes'
 import '../../styles/orgAdmin.css'
 
 const STATUS_OPTIONS: Array<TryoutRegistration['status'] | 'all'> = [
@@ -199,12 +200,12 @@ export default function AdminTryoutRegistrations() {
         title={t('admin.tryouts.registrations.title' as TranslationKey)}
         subtitle={tryoutTitle || t('admin.tryouts.registrations.subtitle' as TranslationKey)}
         breadcrumbs={[
-          { label: t('admin.tryouts.title'), path: '/admin/tryouts' },
-          { label: tryoutTitle || t('admin.tryouts.registrations.title' as TranslationKey), path: `/admin/tryouts/${tryoutId}` },
+          { label: t('admin.tryouts.title'), path: getLink(RouteKeys.ADMIN_TRYOUTS) },
+          { label: tryoutTitle || t('admin.tryouts.registrations.title' as TranslationKey), path: getLink(RouteKeys.ADMIN_TRYOUT_DETAIL, { tryoutId }) },
           { label: t('admin.tryouts.registrations.title' as TranslationKey) },
         ]}
         actions={
-          <Button variant="ghost" onClick={() => navigate(`/admin/tryouts/${tryoutId}`)}>
+          <Button variant="ghost" onClick={() => navigate(getLink(RouteKeys.ADMIN_TRYOUT_DETAIL, { tryoutId }))}>
             {t('common.back')}
           </Button>
         }

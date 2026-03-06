@@ -19,6 +19,7 @@ import { useT } from '../../i18n/useI18n'
 import { HelpFeatureLayout } from '../../components/help/HelpFeatureLayout'
 import { HelpHeaderSearch } from '../../components/help/HelpHeaderSearch'
 import { HelpHomepageSkeleton } from '../../components/help/HelpSkeletons'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
 import '../../styles/helpCenter.css'
 
 type UserRole = 'parent' | 'coach' | 'org_admin' | 'athlete' | 'platform_admin'
@@ -217,103 +218,105 @@ export default function HelpHomepage() {
       headerActions={<HelpHeaderSearch scopeRole={null} />}
       headerRoleSwitcher={undefined}
     >
-      <section className="help-uber-panel" style={{ marginBottom: '1.5rem', maxWidth: '920px', marginInline: 'auto' }}>
-        <form onSubmit={handleSearchSubmit} className="help-uber-search-wrap">
-          <span className="material-symbols-outlined help-uber-search-icon">search</span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => {
-              if (searchResults.length > 0) {
-                setShowSearchResults(true)
-              }
-            }}
-            onBlur={() => {
-              setTimeout(() => setShowSearchResults(false), 200)
-            }}
-            className="help-uber-search-input"
-            placeholder={t('portal.settings.helpCenter.searchPlaceholder')}
-            aria-label={t('portal.settings.helpCenter.searchPlaceholder')}
-          />
-          <button type="submit" className="help-uber-search-button">
-            {t('common.search')}
-          </button>
-
-          {showSearchResults && searchResults.length > 0 && (
-            <div className="help-uber-search-results" role="listbox" aria-label={t('portal.settings.helpCenter.searchPlaceholder')}>
-              {searchResults.map((article) => (
-                <Link
-                  key={article.id}
-                  to={resolveArticleLink(article)}
-                  className="help-uber-search-result-item"
-                  onClick={() => {
-                    setShowSearchResults(false)
-                    setSearchQuery('')
-                  }}
-                >
-                  <div className="help-uber-search-result-title">{article.title || ''}</div>
-                  <div className="help-uber-search-result-meta">{article.excerpt || ''}</div>
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {showSearchResults && searchQuery && searchResults.length === 0 && !searching && (
-            <div className="help-uber-search-results">
-              <div className="help-uber-search-result-item">{t('portal.settings.helpCenter.noResults', { query: searchQuery })}</div>
-            </div>
-          )}
-        </form>
-      </section>
-
-      <section className="help-uber-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', maxWidth: '920px', margin: '0 auto' }}>
-        {roleCards.map((card) => {
-          const categoryLink = card.categorySlug
-            ? getLink('portal.helpCategory', { categorySlug: card.categorySlug })
-            : getLink('portal.helpCategory', { categorySlug: card.slug })
-          const hasFeaturedImage = Boolean(card.featuredImageUrl)
-          
-          return (
-            <Link
-              key={card.role}
-              to={categoryLink}
-              className={`help-role-card help-role-card--square${hasFeaturedImage ? ' help-role-card--with-image' : ''}`}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                textAlign: 'center',
-                justifyContent: 'center',
-                width: '100%',
-                padding: '1rem 0.875rem',
+      <PullToRefreshContainer onRefresh={loadData}>
+        <section className="help-uber-panel" style={{ marginBottom: '1.5rem', maxWidth: '920px', marginInline: 'auto' }}>
+          <form onSubmit={handleSearchSubmit} className="help-uber-search-wrap">
+            <span className="material-symbols-outlined help-uber-search-icon">search</span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => {
+                if (searchResults.length > 0) {
+                  setShowSearchResults(true)
+                }
               }}
-            >
-              {hasFeaturedImage && (
-                <>
-                  <span
-                    className="help-role-card-media"
-                    aria-hidden="true"
-                    style={{ backgroundImage: `url(${card.featuredImageUrl})` }}
-                  />
-                  <span className="help-role-card-overlay" aria-hidden="true" />
-                </>
-              )}
-              <h3
-                className="help-role-card-title"
+              onBlur={() => {
+                setTimeout(() => setShowSearchResults(false), 200)
+              }}
+              className="help-uber-search-input"
+              placeholder={t('portal.settings.helpCenter.searchPlaceholder')}
+              aria-label={t('portal.settings.helpCenter.searchPlaceholder')}
+            />
+            <button type="submit" className="help-uber-search-button">
+              {t('common.search')}
+            </button>
+
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="help-uber-search-results" role="listbox" aria-label={t('portal.settings.helpCenter.searchPlaceholder')}>
+                {searchResults.map((article) => (
+                  <Link
+                    key={article.id}
+                    to={resolveArticleLink(article)}
+                    className="help-uber-search-result-item"
+                    onClick={() => {
+                      setShowSearchResults(false)
+                      setSearchQuery('')
+                    }}
+                  >
+                    <div className="help-uber-search-result-title">{article.title || ''}</div>
+                    <div className="help-uber-search-result-meta">{article.excerpt || ''}</div>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {showSearchResults && searchQuery && searchResults.length === 0 && !searching && (
+              <div className="help-uber-search-results">
+                <div className="help-uber-search-result-item">{t('portal.settings.helpCenter.noResults', { query: searchQuery })}</div>
+              </div>
+            )}
+          </form>
+        </section>
+
+        <section className="help-uber-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', maxWidth: '920px', margin: '0 auto' }}>
+          {roleCards.map((card) => {
+            const categoryLink = card.categorySlug
+              ? getLink('portal.helpCategory', { categorySlug: card.categorySlug })
+              : getLink('portal.helpCategory', { categorySlug: card.slug })
+            const hasFeaturedImage = Boolean(card.featuredImageUrl)
+            
+            return (
+              <Link
+                key={card.role}
+                to={categoryLink}
+                className={`help-role-card help-role-card--square${hasFeaturedImage ? ' help-role-card--with-image' : ''}`}
                 style={{
-                  marginTop: 0,
-                  marginBottom: 0,
-                  color: hasFeaturedImage ? '#ffffff' : undefined,
-                  textShadow: hasFeaturedImage ? '0 1px 6px rgba(0, 0, 0, 0.35)' : undefined,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  padding: '1rem 0.875rem',
                 }}
               >
-                {card.label}
-              </h3>
-            </Link>
-          )
-        })}
-      </section>
+                {hasFeaturedImage && (
+                  <>
+                    <span
+                      className="help-role-card-media"
+                      aria-hidden="true"
+                      style={{ backgroundImage: `url(${card.featuredImageUrl})` }}
+                    />
+                    <span className="help-role-card-overlay" aria-hidden="true" />
+                  </>
+                )}
+                <h3
+                  className="help-role-card-title"
+                  style={{
+                    marginTop: 0,
+                    marginBottom: 0,
+                    color: hasFeaturedImage ? '#ffffff' : undefined,
+                    textShadow: hasFeaturedImage ? '0 1px 6px rgba(0, 0, 0, 0.35)' : undefined,
+                  }}
+                >
+                  {card.label}
+                </h3>
+              </Link>
+            )
+          })}
+        </section>
+      </PullToRefreshContainer>
     </HelpFeatureLayout>
   )
 }

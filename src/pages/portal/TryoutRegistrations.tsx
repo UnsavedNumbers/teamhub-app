@@ -8,7 +8,10 @@ import PortalLayout from '../../components/portal/PortalLayout'
 import Card from '../../components/portal/Card'
 import Button from '../../components/portal/Button'
 import { PageTitle, CardTitle } from '../../components/portal/Typography'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
+import CollapsibleHeader from '../../components/common/mobile/CollapsibleHeader'
 import { showError, showSuccess } from '../../utils/toast'
+import { getLink, RouteKeys } from '../../utils/routes'
 
 export default function TryoutRegistrations() {
   const { context, isReady } = useUserContext()
@@ -79,12 +82,18 @@ export default function TryoutRegistrations() {
   return (
     <PortalLayout
       breadcrumbs={[
-        { label: t('common.home'), path: '/portal/dashboard' },
+        { label: t('common.home'), path: getLink(RouteKeys.PORTAL_DASHBOARD) },
         { label: t('portal.tryouts.registrations.title' as TranslationKey) },
       ]}
     >
+      <PullToRefreshContainer onRefresh={fetchData}>
       <div className="mb-10">
-        <PageTitle>{t('portal.tryouts.registrations.title' as TranslationKey)}</PageTitle>
+        <CollapsibleHeader
+          title={t('portal.tryouts.registrations.title' as TranslationKey)}
+          mode="large"
+          scrollContainerSelector=".portal-workspace-main"
+        />
+        <PageTitle className="sr-only">{t('portal.tryouts.registrations.title' as TranslationKey)}</PageTitle>
         <p className="text-gray-500 dark:text-gray-400">
           {t('portal.tryouts.registrations.subtitle' as TranslationKey)}
         </p>
@@ -106,7 +115,7 @@ export default function TryoutRegistrations() {
           <p className="mt-2 text-gray-500 dark:text-gray-400">
             {t('portal.tryouts.registrations.emptyBody' as TranslationKey)}
           </p>
-          <Button variant="primary" className="mt-5" onClick={() => navigate('/portal/tryouts')}>
+          <Button variant="primary" className="mt-5" onClick={() => navigate(getLink(RouteKeys.PORTAL_TRYOUTS))}>
             {t('portal.tryouts.registrations.browseAction' as TranslationKey)}
           </Button>
         </Card>
@@ -133,7 +142,7 @@ export default function TryoutRegistrations() {
                     <span className="inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                       {t(`admin.tryouts.registrations.statuses.${registration.status}` as TranslationKey)}
                     </span>
-                    <Button variant="secondary" onClick={() => navigate(`/portal/tryouts/${registration.tryout_id}`)}>
+                    <Button variant="secondary" onClick={() => navigate(getLink(RouteKeys.PORTAL_TRYOUT_DETAIL, { tryoutId: registration.tryout_id }))}>
                       {t('common.viewDetails')}
                     </Button>
                     {canCancel(registration.status) && (
@@ -150,6 +159,7 @@ export default function TryoutRegistrations() {
           })}
         </div>
       )}
+      </PullToRefreshContainer>
     </PortalLayout>
   )
 }

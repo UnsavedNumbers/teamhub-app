@@ -8,6 +8,7 @@ import { AdminPageHeader, Card, Button, Input, Select } from '../../components/a
 import { showSuccess, showError } from '../../utils/toast'
 import { getAnnouncementEmoji } from '../../utils/announcementTypes'
 import { hasAnyRole } from '../../utils/roleHelpers'
+import { getLink, RouteKeys } from '../../utils/routes'
 import '../../styles/orgAdmin.css'
 
 export default function AdminAnnouncementDetail() {
@@ -44,7 +45,7 @@ export default function AdminAnnouncementDetail() {
     if (!announcementId || !isReady) {
       if (!announcementId) {
         setLoading(false)
-        navigate('/admin/announcements', { replace: true })
+        navigate(getLink(RouteKeys.ADMIN_ANNOUNCEMENTS), { replace: true })
       }
       return
     }
@@ -57,7 +58,7 @@ export default function AdminAnnouncementDetail() {
       if (error || !data) {
         if (!isMountedRef.current) return
         setLoading(false)
-        navigate('/admin/announcements', { replace: true })
+        navigate(getLink(RouteKeys.ADMIN_ANNOUNCEMENTS), { replace: true })
         return
       }
 
@@ -71,7 +72,7 @@ export default function AdminAnnouncementDetail() {
       if (!isMountedRef.current) return
       console.error('Error fetching announcement:', err)
       setLoading(false)
-      navigate('/admin/announcements', { replace: true })
+      navigate(getLink(RouteKeys.ADMIN_ANNOUNCEMENTS), { replace: true })
     }
   }, [announcementId, context, isReady, navigate])
 
@@ -80,6 +81,8 @@ export default function AdminAnnouncementDetail() {
       fetchData()
     }
   }, [isReady, announcementId, fetchData])
+
+  const detailPath = announcementId ? getLink(RouteKeys.ADMIN_ANNOUNCEMENT_DETAIL, { id: announcementId }) : undefined
 
   const handleSave = useCallback(async () => {
     if (!announcement || !canEdit) return
@@ -144,7 +147,7 @@ export default function AdminAnnouncementDetail() {
         <Card>
           <div className="oa-p-8 oa-text-center">
             <p className="oa-text-slate-600 dark:oa-text-slate-400">Announcement not found</p>
-            <Button variant="primary" onClick={() => navigate('/admin/announcements')} className="oa-mt-4">
+            <Button variant="primary" onClick={() => navigate(getLink(RouteKeys.ADMIN_ANNOUNCEMENTS))} className="oa-mt-4">
               Back to Announcements
             </Button>
           </div>
@@ -181,9 +184,9 @@ export default function AdminAnnouncementDetail() {
       <AdminPageHeader 
         title={isEditingTitle ? 'Edit Announcement' : announcement.title}
         breadcrumbs={[
-          { label: 'Admin', path: '/admin/dashboard' },
-          { label: 'Announcements', path: '/admin/announcements' },
-          { label: announcement.title },
+          { label: 'Admin', path: getLink(RouteKeys.ADMIN_DASHBOARD) },
+          { label: 'Announcements', path: getLink(RouteKeys.ADMIN_ANNOUNCEMENTS) },
+          { label: announcement.title, path: detailPath },
         ]}
       />
 
@@ -338,7 +341,7 @@ export default function AdminAnnouncementDetail() {
                     Edit Announcement
                   </Button>
                 )}
-                <Button variant="ghost" onClick={() => navigate('/admin/announcements')}>
+                <Button variant="ghost" onClick={() => navigate(getLink(RouteKeys.ADMIN_ANNOUNCEMENTS))}>
                   Back to Announcements
                 </Button>
               </div>

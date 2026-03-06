@@ -22,6 +22,7 @@ import {
 import type { GalleryPhoto, KeysetCursor } from '../../data/services/galleryService'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
 import { showError } from '../../utils/toast'
 import { useI18n } from '../../i18n/useI18n'
 import { usePhotoFilters } from '../../hooks/usePhotoFilters'
@@ -199,7 +200,8 @@ export default function FanPhotos() {
   }
 
   return (
-    <div className="fan-photos-page">
+    <PullToRefreshContainer onRefresh={async () => { await loadGalleries(true) }}>
+      <div className="fan-photos-page">
       {/* Page Header - Matching Design */}
       <div className="fan-photos-header">
         <div>
@@ -292,7 +294,8 @@ export default function FanPhotos() {
           <LoadingSpinner size="small" />
         </div>
       )}
-    </div>
+      </div>
+    </PullToRefreshContainer>
   )
 }
 

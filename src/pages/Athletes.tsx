@@ -4,12 +4,16 @@ import { useUserContext } from '../hooks/useUserContext'
 import { useOrganization } from '../contexts/OrganizationContext'
 import { getAthletes } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
-import { PageTitle, CardTitle } from '../components/portal/Typography'
+import { CardTitle, PageTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import { useT } from '../i18n/useI18n'
 import AthleteAvatar from '../components/portal/AthleteAvatar'
+import PullToRefreshContainer from '../components/common/mobile/PullToRefreshContainer'
+import CollapsibleHeader from '../components/common/mobile/CollapsibleHeader'
+import SwipeableRow from '../components/common/mobile/SwipeableRow'
+import { useMobile } from '../hooks/useMobile'
 import type { Athlete } from '../types/family'
 import { getDisplayName, calculateAge, getGenderLabel, formatSports } from '../utils/athleteHelpers'
 import { showError } from '../utils/toast'
@@ -25,6 +29,7 @@ export default function Athletes() {
   
   const t = useT()
   const navigate = useNavigate()
+  const isMobile = useMobile()
   const [athletes, setAthletes] = useState<Athlete[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -300,9 +305,18 @@ export default function Athletes() {
         { label: isAthlete ? 'My Team' : 'My Athletes' },
       ]}
     >
+      <PullToRefreshContainer onRefresh={async () => { fetchAthletes() }}>
       <div className="mb-8 sm:mb-12 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 sm:gap-6">
         <div className="flex-1">
-          <PageTitle>{isAthlete ? 'My Team' : 'My Athletes'}</PageTitle>
+          {isMobile ? (
+            <CollapsibleHeader
+              title={isAthlete ? 'My Team' : 'My Athletes'}
+              mode="large"
+              scrollContainerSelector=".portal-workspace-main"
+            />
+          ) : (
+            <PageTitle>{isAthlete ? 'My Team' : 'My Athletes'}</PageTitle>
+          )}
           <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
             {isAthlete ? 'View your team members and their profiles.' : 'Manage your children\'s profiles and information.'}
           </p>
@@ -358,25 +372,34 @@ export default function Athletes() {
             const { plays, interested } = formatSports(athlete.sports)
 
             return (
-              <Card
+              <SwipeableRow
                 key={athlete.id}
+                rightActions={[
+                  {
+                    id: `${athlete.id}-edit`,
+                    label: isAthlete ? 'View Profile' : 'Edit',
+                    tone: 'primary',
+                    onSelect: () => handleCardClick(athlete.id),
+                  },
+                ]}
+              >
+              <Card
                 noPadding
-                className="relative overflow-hidden rounded-xl hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/20 transition-all duration-300 cursor-pointer group"
+                className="relative overflow-hidden rounded-xl transition-all duration-300 cursor-pointer group"
                 onClick={() => handleCardClick(athlete.id)}
               >
                 {/* Image spans full card */}
                 <div className="w-full aspect-[4/3] relative bg-gray-100 dark:bg-neutral-900 flex items-center justify-center overflow-hidden">
                   <AthleteAvatar athlete={athlete} size="xl" className="w-full h-full rounded-none object-cover" />
                   {/* Gradient overlay for better text readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/20 to-transparent opacity-50 group-hover:opacity-70 transition-opacity" />
                 </div>
 
-                {/* Content Overlay - enough bottom padding so full name is visible */}
-                <div className="absolute inset-0 flex flex-col justify-end pb-6 pt-4 px-4">
-                  <div className="text-white">
-                    <CardTitle className="text-xl font-bold mb-1 text-white drop-shadow-lg break-words">{displayName}</CardTitle>
+                <div className="p-4">
+                  <div className="text-gray-900 dark:text-gray-100">
+                    <CardTitle className="text-[17px] font-semibold mb-1 break-words">{displayName}</CardTitle>
                     
-                    <div className="flex flex-wrap gap-2 text-sm font-medium text-white/95 mb-3 drop-shadow">
+                    <div className="flex flex-wrap gap-2 text-[13px] font-medium text-gray-600 dark:text-gray-400 mb-3">
                       {age !== null && (
                         <span>Age {age}</span>
                       )}
@@ -390,17 +413,17 @@ export default function Athletes() {
 
                     {/* Sports */}
                     {(plays.length > 0 || interested.length > 0) && (
-                      <div className="mb-3 text-sm space-y-1">
+                      <div className="mb-3 text-[13px] space-y-1">
                         {plays.length > 0 && (
                           <div>
-                            <span className="font-semibold text-white/90">Plays: </span>
-                            <span className="text-white/85">{plays.join(', ')}</span>
+                            <span className="font-semibold text-gray-700 dark:text-gray-200">Plays: </span>
+                            <span className="text-gray-600 dark:text-gray-400">{plays.join(', ')}</span>
                           </div>
                         )}
                         {interested.length > 0 && (
                           <div>
-                            <span className="font-semibold text-white/90">Interested: </span>
-                            <span className="text-white/85">{interested.join(', ')}</span>
+                            <span className="font-semibold text-gray-700 dark:text-gray-200">Interested: </span>
+                            <span className="text-gray-600 dark:text-gray-400">{interested.join(', ')}</span>
                           </div>
                         )}
                       </div>
@@ -409,7 +432,7 @@ export default function Athletes() {
                     {/* Action Button */}
                     <Button
                       variant="secondary"
-                      className="w-full text-sm px-4 py-2 bg-white/95 hover:bg-white text-gray-900 dark:text-gray-900 font-semibold border-0 shadow-lg opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-200"
+                      className="w-full text-sm px-4 py-2"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleCardClick(athlete.id)
@@ -421,6 +444,7 @@ export default function Athletes() {
                   </div>
                 </div>
               </Card>
+              </SwipeableRow>
             )
           })}
         </div>
@@ -500,6 +524,7 @@ export default function Athletes() {
         </div>,
         document.body
       )}
+      </PullToRefreshContainer>
     </PortalLayout>
   )
 }

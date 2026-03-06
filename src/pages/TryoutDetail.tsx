@@ -10,6 +10,7 @@ import { PageTitle, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import TryoutRegistrationForm from '../components/tryouts/TryoutRegistrationForm'
+import { getLink, RouteKeys } from '../utils/routes'
 
 function formatDate(dateValue: string | null, fallback: string): string {
   if (!dateValue) return fallback
@@ -79,7 +80,7 @@ export default function TryoutDetail() {
         <PortalLayout>
           <Card className="text-center py-12">
             <CardTitle>{error || t('common.error.notFound')}</CardTitle>
-            <Button variant="primary" onClick={() => navigate('/portal/tryouts')} className="mt-4">
+            <Button variant="primary" onClick={() => navigate(getLink(RouteKeys.PORTAL_TRYOUTS))} className="mt-4">
               {t('common.back')}
             </Button>
           </Card>
@@ -91,8 +92,8 @@ export default function TryoutDetail() {
   return (
     <PortalLayout
       breadcrumbs={[
-        { label: t('common.home'), path: '/portal/dashboard' },
-        { label: t('admin.tryouts.title'), path: '/portal/tryouts' },
+        { label: t('common.home'), path: getLink(RouteKeys.PORTAL_DASHBOARD) },
+        { label: t('admin.tryouts.title'), path: getLink(RouteKeys.PORTAL_TRYOUTS) },
         { label: tryout.title },
       ]}
     >

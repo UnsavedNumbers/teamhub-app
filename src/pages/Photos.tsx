@@ -24,6 +24,7 @@ import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle } from '../components/portal/Typography'
 import Icon from '../components/portal/Icon'
 import EmptyState from '../components/portal/EmptyState'
+import PullToRefreshContainer from '../components/common/mobile/PullToRefreshContainer'
 import { PhotoFilterBar } from '../components/gallery/PhotoFilterBar'
 import { getLink } from '../utils/routes'
 import type { Athlete } from '../types/family'
@@ -106,6 +107,32 @@ export default function Photos() {
     loadGalleries()
     // Use stable deps so the effect doesn't re-run every render (context is often a new object reference)
   }, [isReady, context.userId, context.orgId])
+
+  const refreshGalleries = async () => {
+    setLoading(true)
+
+    const [athleteGalleries, teamGalleries, eventGalleries, travelGalleries, programGalleries, seasonGalleries, orgGalleries] = await Promise.all([
+      getGalleriesForUser(context, { gallery_type: 'athlete' }),
+      getGalleriesForUser(context, { gallery_type: 'team' }),
+      getGalleriesForUser(context, { gallery_type: 'event' }),
+      getGalleriesForUser(context, { gallery_type: 'travel' }),
+      getGalleriesForUser(context, { gallery_type: 'program' }),
+      getGalleriesForUser(context, { gallery_type: 'season' }),
+      getGalleriesForUser(context, { gallery_type: 'org' }),
+    ])
+
+    setGalleries({
+      athlete: athleteGalleries.data || [],
+      team: teamGalleries.data || [],
+      event: eventGalleries.data || [],
+      travel: travelGalleries.data || [],
+      program: programGalleries.data || [],
+      season: seasonGalleries.data || [],
+      org: orgGalleries.data || [],
+    })
+
+    setLoading(false)
+  }
 
   const sortOptions = useMemo(
     () => [
@@ -342,6 +369,7 @@ export default function Photos() {
         { label: t('nav.photos') },
       ]}
     >
+      <PullToRefreshContainer onRefresh={refreshGalleries}>
       <div className="mb-8">
         <PageTitle>{t('photos.title')}</PageTitle>
         <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide">
@@ -375,6 +403,7 @@ export default function Photos() {
           {renderGallerySection(t('photos.landing.sections.org'), filteredGalleries.org, 'org')}
         </>
       )}
+      </PullToRefreshContainer>
     </PortalLayout>
   )
 }

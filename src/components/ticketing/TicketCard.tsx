@@ -65,7 +65,7 @@ export default function TicketCard({
       )}
 
       {/* Ticket Header with Notched Edges */}
-      <div className="p-6 text-center border-b border-dashed border-gray-200 dark:border-gray-700 relative">
+      <div className="p-4 sm:p-6 text-center border-b border-dashed border-gray-200 dark:border-gray-700 relative">
         {/* Left Notch */}
         <div className="absolute -left-3 bottom-0 translate-y-1/2 w-6 h-6 rounded-full bg-[#f6f7f8] dark:bg-[#101922]" />
         {/* Right Notch */}
@@ -74,18 +74,18 @@ export default function TicketCard({
         <p className="text-[#137fec] text-xs font-bold tracking-widest uppercase mb-4">
           YouthSports.team Official Ticket
         </p>
-        <h2 className="text-[#111418] dark:text-white text-3xl font-black leading-tight mb-2 uppercase">
+        <h2 className="text-[#111418] dark:text-white text-2xl sm:text-3xl font-black leading-tight mb-2 break-words">
           {event?.title || 'Event Ticket'}
         </h2>
         <div className="flex flex-col items-center gap-1 mb-6">
-          <p className="text-gray-600 dark:text-gray-400 text-lg font-medium">
+          <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg font-medium break-words">
             {dateStr} {timeStr && ` - ${timeStr}`}
           </p>
-          <p className="text-gray-500 dark:text-gray-500 text-sm">{venue}</p>
+          <p className="text-gray-500 dark:text-gray-500 text-sm break-words">{venue}</p>
         </div>
 
         {/* Entry Code - Prominent */}
-        <div className={`border-2 rounded-xl p-6 mb-6 ${
+        <div className={`border-2 rounded-xl p-4 sm:p-6 mb-6 ${
           isUsed
             ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/30 dark:border-amber-800'
             : 'bg-[#137fec]/10 border-[#137fec]/20'
@@ -94,7 +94,7 @@ export default function TicketCard({
             ENTRY CODE
           </p>
           <p
-            className={`text-5xl font-black font-mono tracking-wider ${isUsed ? 'text-amber-800 dark:text-amber-200' : 'text-[#137fec]'}`}
+            className={`text-3xl sm:text-5xl font-black font-mono tracking-wider break-all ${isUsed ? 'text-amber-800 dark:text-amber-200' : 'text-[#137fec]'}`}
             style={{ userSelect: 'none', letterSpacing: '0.1em' }}
           >
             {entryCodeFormatted}
@@ -133,17 +133,17 @@ export default function TicketCard({
       </div>
 
       {/* Ticket Footer Info */}
-      <div className="p-6 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+      <div className="p-4 sm:p-6 flex flex-wrap justify-between items-start gap-4 bg-gray-50 dark:bg-gray-800/50">
         <div>
           <p className="text-gray-500 dark:text-gray-400 text-xs uppercase font-bold tracking-tighter">Ticket Type</p>
-          <p className="text-[#111418] dark:text-white text-xl font-bold">
+          <p className="text-[#111418] dark:text-white text-lg sm:text-xl font-bold break-words">
             {ticket.ticket_types?.name || 'General Admission'}
           </p>
         </div>
         {orderId && (
-          <div className="text-right">
+          <div className="text-left sm:text-right">
             <p className="text-gray-500 dark:text-gray-400 text-xs uppercase font-bold tracking-tighter">Order Ref</p>
-            <p className="text-[#111418] dark:text-white text-xl font-bold font-mono">
+            <p className="text-[#111418] dark:text-white text-lg sm:text-xl font-bold font-mono">
               {orderId.slice(-6).toUpperCase()}
             </p>
           </div>

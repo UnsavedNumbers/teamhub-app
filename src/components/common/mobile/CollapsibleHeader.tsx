@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/utils/cn'
+import { useMobile } from '@/hooks/useMobile'
+import { PageTitle } from '@/components/portal/Typography'
 
 interface CollapsibleHeaderProps {
   title: string
@@ -20,6 +22,7 @@ export default function CollapsibleHeader({
   scrollContainerSelector,
   className,
 }: CollapsibleHeaderProps) {
+  const isMobile = useMobile()
   const [collapsed, setCollapsed] = useState(mode === 'inline')
 
   const scrollContainer = useMemo(() => {
@@ -60,6 +63,20 @@ export default function CollapsibleHeader({
       target.removeEventListener('scroll', handleScroll)
     }
   }, [mode, scrollContainer])
+
+  if (!isMobile) {
+    return (
+      <header className={className}>
+        {(leftSlot || rightSlot) ? (
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div>{leftSlot}</div>
+            <div>{rightSlot}</div>
+          </div>
+        ) : null}
+        <PageTitle>{title}</PageTitle>
+      </header>
+    )
+  }
 
   return (
     <header className={cn('ios-collapsible-header', collapsed && 'ios-collapsible-header--collapsed', className)}>

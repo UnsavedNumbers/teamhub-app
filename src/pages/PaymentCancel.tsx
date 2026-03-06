@@ -6,6 +6,7 @@ import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import { captureEvent } from '../lib/analytics/analytics'
+import { getLink, RouteKeys } from '../utils/routes'
 
 export default function PaymentCancel() {
   useDebugLifecycle('PaymentCancel')
@@ -20,15 +21,15 @@ export default function PaymentCancel() {
   }, [])
 
   useEffect(() => {
-    const timer = setTimeout(() => navigate('/portal/payments'), 5000)
+    const timer = setTimeout(() => navigate(getLink(RouteKeys.PORTAL_PAYMENTS)), 5000)
     return () => clearTimeout(timer)
   }, [navigate])
 
   return (
       <PortalLayout
         breadcrumbs={[
-          { label: 'Home', path: '/portal/dashboard' },
-          { label: 'Payments', path: '/portal/payments' },
+          { label: 'Home', path: getLink(RouteKeys.PORTAL_DASHBOARD) },
+          { label: 'Payments', path: getLink(RouteKeys.PORTAL_PAYMENTS) },
           { label: 'Payment canceled' },
         ]}
       >
@@ -44,12 +45,12 @@ export default function PaymentCancel() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/portal/payments">
+            <Link to={getLink(RouteKeys.PORTAL_PAYMENTS)}>
               <Button variant="primary">
                 Return to payments
               </Button>
             </Link>
-            <Link to="/portal/dashboard" className="text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+            <Link to={getLink(RouteKeys.PORTAL_DASHBOARD)} className="text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
               Go to dashboard
             </Link>
           </div>

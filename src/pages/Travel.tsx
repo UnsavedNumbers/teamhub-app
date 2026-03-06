@@ -8,12 +8,15 @@ import {
 import type { FakeTravelPlan } from '../data/fake/fakeTravel'
 import { getSportFromTeam, type SportInfo } from '../utils/sportContext'
 import PortalLayout from '../components/portal/PortalLayout'
-import { PageTitle, CardTitle } from '../components/portal/Typography'
+import { CardTitle } from '../components/portal/Typography'
 // SportCardImage removed
 import Card from '../components/portal/Card'
 import Icon from '../components/portal/Icon'
 import Button from '../components/portal/Button'
 import EmptyState from '../components/portal/EmptyState'
+import PullToRefreshContainer from '../components/common/mobile/PullToRefreshContainer'
+import CollapsibleHeader from '../components/common/mobile/CollapsibleHeader'
+import SwipeableRow from '../components/common/mobile/SwipeableRow'
 import { cn } from '../utils/cn'
 import { useT } from '../i18n/useI18n'
 
@@ -421,10 +424,15 @@ export default function Travel() {
 
     return (
         <PortalLayout breadcrumbs={[{ label: 'Home', path: '/portal/dashboard' }, { label: 'Travel' }]}>
+            <PullToRefreshContainer onRefresh={async () => { setRetryCount((count) => count + 1) }}>
             
             {/* Header */}
             <div className="mb-8">
-                <PageTitle>Travel</PageTitle>
+                <CollapsibleHeader
+                    title="Travel"
+                    mode="large"
+                    scrollContainerSelector=".portal-workspace-main"
+                />
                 <p className="text-gray-500 dark:text-gray-400 text-lg font-light tracking-wide mt-2">
                     Manage upcoming trips and view past travel history.
                 </p>
@@ -564,8 +572,18 @@ export default function Travel() {
                                         const sport = planSports[plan.id]
                                         
                                         return (
-                                            <div 
+                                            <SwipeableRow
                                                 key={plan.id}
+                                                rightActions={[
+                                                    {
+                                                        id: `${plan.id}-details`,
+                                                        label: 'Details',
+                                                        tone: 'primary',
+                                                        onSelect: () => navigate(`/portal/travel/${plan.id}`),
+                                                    },
+                                                ]}
+                                            >
+                                            <div 
                                                 onClick={() => navigate(`/portal/travel/${plan.id}`)}
                                                 className="group relative bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-lg hover:border-[var(--org-btn-primary-bg)]/30 transition-all duration-200 cursor-pointer overflow-hidden p-4 sm:p-5 flex flex-col gap-3"
                                             >
@@ -619,6 +637,7 @@ export default function Travel() {
                                                     </span>
                                                 </div>
                                             </div>
+                                            </SwipeableRow>
                                         )
                                     })}
                                 </div>
@@ -627,6 +646,7 @@ export default function Travel() {
                     ))}
                 </div>
             )}
+            </PullToRefreshContainer>
         </PortalLayout>
     )
 }

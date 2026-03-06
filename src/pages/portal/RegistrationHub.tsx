@@ -2,6 +2,7 @@
 import { useMemo } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { getLink } from '@/utils/routes'
+import CollapsibleHeader from '@/components/common/mobile/CollapsibleHeader'
 import type { OrgMemberRole } from '@/contexts/OrganizationContext'
 
 type RegistrationRole = 'org_admin' | 'coach' | 'parent' | 'athlete' | 'staff' | 'fan'
@@ -102,8 +103,13 @@ export default function RegistrationHub() {
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+        <CollapsibleHeader
+          title="Registration Hub"
+          mode="large"
+          scrollContainerSelector=".portal-workspace-main"
+        />
         <p className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">{content.roleLabel}</p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-gray-900 dark:text-white">Registration Hub</h1>
+        <h1 className="sr-only">Registration Hub</h1>
         <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">{content.title}</p>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{content.description}</p>
       </div>

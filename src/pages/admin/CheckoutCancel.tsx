@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { t } from '../../i18n'
 import { AdminPageHeader, Card, Button } from '../../components/admin'
+import { getLink, RouteKeys } from '../../utils/routes'
 import '../../styles/orgAdmin.css'
 
 export default function CheckoutCancel() {
@@ -18,8 +19,8 @@ export default function CheckoutCancel() {
           </div>
         </div>
         <div className="oa-flex oa-gap-3">
-          <Button onClick={() => navigate('/admin/organization/billing')}>{t('checkout.returnToBilling')}</Button>
-          <Button variant="primary" onClick={() => navigate('/admin/organization/billing/plan-selection')}>{t('billing.planSelectionTitle')}</Button>
+          <Button onClick={() => navigate(getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING))}>{t('checkout.returnToBilling')}</Button>
+          <Button variant="primary" onClick={() => navigate(getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING_PLAN_SELECTION))}>{t('billing.planSelectionTitle')}</Button>
         </div>
       </Card>
     </div>

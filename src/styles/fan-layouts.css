@@ -854,6 +854,9 @@
     gap: 1rem;
     position: sticky;
     top: 1.5rem;
+    max-height: calc(100dvh - 2.5rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .fan-ticket-pass-header {
@@ -934,6 +937,7 @@
     font-size: 0.9rem;
     line-height: 1.4;
     text-transform: none;
+    word-break: break-word;
 }
 
 .fan-ticket-detail-row .material-symbols-outlined {
@@ -1125,6 +1129,8 @@
 
     .fan-ticket-pass-card {
         position: static;
+        max-height: none;
+        overflow-y: visible;
     }
 }
 
@@ -1135,7 +1141,47 @@
     }
 
     .fan-ticket-detail-title {
-        font-size: 1.5rem;
+        font-size: 1.35rem;
+        line-height: 1.25;
+        letter-spacing: -0.02em;
+    }
+
+    .fan-ticket-detail-meta {
+        gap: 0.75rem;
+    }
+
+    .fan-ticket-detail-meta span {
+        font-size: 0.72rem;
+        letter-spacing: 0.03em;
+        text-transform: none;
+        line-height: 1.35;
+    }
+
+    .fan-ticket-pass-note {
+        font-size: 0.76rem;
+        letter-spacing: 0.03em;
+        text-transform: none;
+        line-height: 1.35;
+    }
+
+    .fan-ticket-detail-section h3 {
+        font-size: 0.74rem;
+        letter-spacing: 0.08em;
+    }
+
+    .fan-ticket-detail-row {
+        font-size: 0.88rem;
+        line-height: 1.45;
+    }
+
+    .fan-ticket-detail-label {
+        letter-spacing: 0.07em;
+    }
+
+    .fan-ticket-confirmation-code {
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        word-break: break-all;
     }
 
     .fan-ticket-detail-row {

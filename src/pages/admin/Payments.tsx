@@ -18,6 +18,7 @@ import {
 } from '../../components/admin'
 import { FeatureGatedButton } from '../../components/FeatureGatedButton'
 import { TopLevelStats } from '../../components/common/TopLevelStats'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
 import { cn } from '../../utils/cn'
 import { hasAnyRole } from '../../utils/roleHelpers'
 import { Navigate } from 'react-router-dom'
@@ -593,7 +594,7 @@ export default function Payments() {
               <Button 
                 variant="primary"
                 icon="arrow_forward"
-                onClick={() => navigate('/admin/organization?tab=payments')}
+                onClick={() => navigate(`${getLink(RouteKeys.ADMIN_ORGANIZATION)}?tab=payments`)}
                 style={{
                   padding: '16px 36px',
                   fontSize: '14px',
@@ -614,6 +615,7 @@ export default function Payments() {
   // Show full payments UI when Stripe is connected
   return (
     <div className="oa-root">
+      <PullToRefreshContainer onRefresh={fetchPayments}>
       <AdminPageHeader 
         title={t('admin.payments.title')}
         subtitle={t('admin.payments.subtitle')} 
@@ -695,8 +697,9 @@ export default function Payments() {
         rowsPerPage={rowsPerPage}
         onPageChange={setPage}
         onRowsPerPageChange={setRowsPerPage}
-        onRowClick={(row) => navigate(`/admin/payments/${row.id}`)}
+        onRowClick={(row) => navigate(getLink(RouteKeys.ADMIN_PAYMENT_DETAIL, { id: row.id }))}
       />
+      </PullToRefreshContainer>
     </div>
   )
 }

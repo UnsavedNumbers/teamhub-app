@@ -5,10 +5,14 @@ import { getUniformKits, getUniformSubmissions, getUniformKitItems, type Uniform
 import { getContactForCategory } from '../data/services/organizationContactsService'
 import { getAthletes } from '../data/services/familyService'
 import PortalLayout from '../components/portal/PortalLayout'
-import { PageTitle, CardTitle } from '../components/portal/Typography'
+import { CardTitle, PageTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import PullToRefreshContainer from '../components/common/mobile/PullToRefreshContainer'
+import CollapsibleHeader from '../components/common/mobile/CollapsibleHeader'
+import GroupedList from '../components/common/mobile/GroupedList'
+import { useMobile } from '../hooks/useMobile'
 import { useT } from '../i18n/useI18n'
 import { getLink } from '../utils/routes'
 
@@ -25,6 +29,7 @@ export default function Uniforms() {
   
   const t = useT()
   const navigate = useNavigate()
+  const isMobile = useMobile()
   const [children, setChildren] = useState<Child[]>([])
   const [kits, setKits] = useState<UniformKit[]>([])
   const [kitItems, setKitItems] = useState<Record<string, UniformItem[]>>({})
@@ -98,8 +103,17 @@ export default function Uniforms() {
           { label: 'Uniforms' },
         ]}
       >
+        <PullToRefreshContainer onRefresh={fetchData}>
         <div className="mb-8 sm:mb-12">
-          <PageTitle>Uniforms</PageTitle>
+          {isMobile ? (
+            <CollapsibleHeader
+              title="Uniforms"
+              mode="large"
+              scrollContainerSelector=".portal-workspace-main"
+            />
+          ) : (
+            <PageTitle>Uniforms</PageTitle>
+          )}
           <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
             Submit uniform sizes for your athletes.
           </p>
@@ -130,7 +144,10 @@ export default function Uniforms() {
           </Card>
         ) : (
           <div className="space-y-4 sm:space-y-6">
-            {kits.map((kit) => (
+            <GroupedList
+              stickyHeaders
+              sections={[{ id: 'kits', header: 'UNIFORMS', items: kits }]}
+              renderItem={(kit) => (
               <Card key={kit.id} className="p-0 overflow-hidden">
                 <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-800">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-3 sm:gap-4">
@@ -188,7 +205,8 @@ export default function Uniforms() {
                    </div>
                 </div>
               </Card>
-            ))}
+              )}
+            />
 
             <Card className="mt-8 sm:mt-10 p-4 sm:p-6 border-t-4 border-[var(--org-btn-primary-bg, #137fec)]">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -232,6 +250,7 @@ export default function Uniforms() {
             )}
           </div>
         )}
+        </PullToRefreshContainer>
       </PortalLayout>
   )
 }

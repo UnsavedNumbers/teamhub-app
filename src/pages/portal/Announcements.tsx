@@ -17,10 +17,14 @@ import { getAnnouncements, getAnnouncementById, type Announcement } from '@/data
 import { getTeamsForParent } from '@/data/services/teamsService'
 import { getAnnouncementEmoji, getAnnouncementLabel } from '@/utils/announcementTypes'
 import PortalLayout from '@/components/portal/PortalLayout'
-import { PageTitle } from '@/components/portal/Typography'
 import EmptyState from '@/components/portal/EmptyState'
 import Icon from '@/components/portal/Icon'
+import PullToRefreshContainer from '@/components/common/mobile/PullToRefreshContainer'
+import CollapsibleHeader from '@/components/common/mobile/CollapsibleHeader'
+import SwipeableRow from '@/components/common/mobile/SwipeableRow'
+import ContextMenu from '@/components/common/mobile/ContextMenu'
 import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
+import { getLink, RouteKeys } from '@/utils/routes'
 
 interface Team {
   id: string
@@ -87,7 +91,7 @@ export default function Announcements() {
   })
 
   // Fetch announcements
-  const { data: announcementsResponse, isLoading } = useQuery({
+  const { data: announcementsResponse, isLoading, refetch: refetchAnnouncements } = useQuery({
     queryKey: ['announcements', context.orgId, selectedTeam],
     queryFn: async () => {
       if (!context.orgId) return { data: [], error: null }
@@ -107,12 +111,12 @@ export default function Announcements() {
   // Auto-select first announcement only on desktop
   useEffect(() => {
     if (isDesktop && !selectedAnnouncementId && announcements.length > 0) {
-      navigate(`/portal/announcements/${announcements[0].id}`, { replace: true })
+      navigate(getLink(RouteKeys.PORTAL_ANNOUNCEMENT_DETAIL, { announcementId: announcements[0].id }), { replace: true })
     }
   }, [announcements, selectedAnnouncementId, navigate, isDesktop])
 
   // Fetch selected announcement details
-  const { data: selectedAnnouncementResponse } = useQuery({
+  const { data: selectedAnnouncementResponse, refetch: refetchSelectedAnnouncement } = useQuery({
     queryKey: ['announcement', selectedAnnouncementId],
     queryFn: async () => {
       if (!selectedAnnouncementId) return { data: null, error: null }
@@ -139,13 +143,25 @@ export default function Announcements() {
   return (
     <PortalLayout
       breadcrumbs={[
-        { label: 'Home', path: '/portal/dashboard' },
+        { label: 'Home', path: getLink(RouteKeys.PORTAL_DASHBOARD) },
         { label: t('nav.announcements') },
       ]}
     >
+      <PullToRefreshContainer
+        onRefresh={async () => {
+          await refetchAnnouncements()
+          if (selectedAnnouncementId) {
+            await refetchSelectedAnnouncement()
+          }
+        }}
+      >
       {/* Header */}
       <div className="mb-6 sm:mb-8">
-        <PageTitle>{t('nav.announcements')}</PageTitle>
+        <CollapsibleHeader
+          title={t('nav.announcements')}
+          mode="large"
+          scrollContainerSelector=".portal-workspace-main"
+        />
         <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide mt-1">
           {t('portal.fan.announcements.subtitle', { defaultValue: 'Stay updated with important announcements from your organization' })}
         </p>
@@ -210,9 +226,39 @@ export default function Announcements() {
                   const isSelected = selectedAnnouncementId === ann.id
                   
                   return (
-                    <button
+                    <ContextMenu
                       key={ann.id}
-                      onClick={() => navigate(`/portal/announcements/${ann.id}`)}
+                      actions={[
+                        {
+                          id: `${ann.id}-view`,
+                          label: t('common.viewDetails'),
+                          onSelect: () => navigate(getLink(RouteKeys.PORTAL_ANNOUNCEMENT_DETAIL, { announcementId: ann.id })),
+                        },
+                        {
+                          id: `${ann.id}-share`,
+                          label: t('common.share'),
+                          onSelect: () => navigate(getLink(RouteKeys.PORTAL_ANNOUNCEMENT_DETAIL, { announcementId: ann.id })),
+                        },
+                      ]}
+                    >
+                    <SwipeableRow
+                      rightActions={[
+                        {
+                          id: `${ann.id}-details`,
+                          label: t('common.viewDetails'),
+                          onSelect: () => navigate(getLink(RouteKeys.PORTAL_ANNOUNCEMENT_DETAIL, { announcementId: ann.id })),
+                          tone: 'primary',
+                        },
+                        {
+                          id: `${ann.id}-delete`,
+                          label: t('common.delete'),
+                          onSelect: () => navigate(getLink(RouteKeys.PORTAL_ANNOUNCEMENT_DETAIL, { announcementId: ann.id })),
+                          tone: 'danger',
+                        },
+                      ]}
+                    >
+                    <button
+                      onClick={() => navigate(getLink(RouteKeys.PORTAL_ANNOUNCEMENT_DETAIL, { announcementId: ann.id }))}
                       className={`w-full text-left p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
                         isSelected ? 'bg-gray-100 dark:bg-gray-800' : ''
                       }`}
@@ -246,6 +292,8 @@ export default function Announcements() {
                         </div>
                       </div>
                     </button>
+                    </SwipeableRow>
+                    </ContextMenu>
                   )
                 })}
               </div>
@@ -263,7 +311,7 @@ export default function Announcements() {
             <div className="border-b border-gray-200 p-4 dark:border-gray-700 lg:hidden">
               <button
                 type="button"
-                onClick={() => navigate('/portal/announcements')}
+                onClick={() => navigate(getLink(RouteKeys.PORTAL_ANNOUNCEMENTS))}
                 className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--org-link-color)] transition-colors hover:text-[var(--org-btn-primary-bg)]"
               >
                 <Icon name="arrow_back" size="text-base" />
@@ -360,6 +408,7 @@ export default function Announcements() {
           )}
         </div>
       </div>
+      </PullToRefreshContainer>
     </PortalLayout>
   )
 }

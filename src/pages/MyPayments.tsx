@@ -10,6 +10,12 @@ import PortalLayout from '../components/portal/PortalLayout'
 import { PageTitle, SectionHeader } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
+import PullToRefreshContainer from '../components/common/mobile/PullToRefreshContainer'
+import CollapsibleHeader from '../components/common/mobile/CollapsibleHeader'
+import GroupedList, { type GroupedListSection } from '../components/common/mobile/GroupedList'
+import SwipeableRow from '../components/common/mobile/SwipeableRow'
+import { useMobile } from '../hooks/useMobile'
+import { getLink, RouteKeys } from '../utils/routes'
 
 type FeeAssignmentStatus = 'unpaid' | 'partial' | 'paid' | 'waived' | 'overdue'
 
@@ -70,6 +76,7 @@ export default function MyPayments() {
 
   const { context, isReady, isAuthenticated } = useUserContext()
   const navigate = useNavigate()
+  const isMobile = useMobile()
 
   // In fake data mode, load payments even when no org is selected so /portal/payments shows demo data
   const shouldLoad = isReady || (USE_FAKE_DATA && isAuthenticated)
@@ -221,6 +228,27 @@ export default function MyPayments() {
       return true
     })
   }, [assignments, statusFilter, childFilter, teamFilter])
+
+  const groupedAssignments = useMemo<GroupedListSection<FeeAssignment>[]>(() => {
+    const groups: Record<string, FeeAssignment[]> = {
+      paid: [],
+      partial: [],
+      unpaid: [],
+      overdue: [],
+      waived: [],
+    }
+
+    filteredAssignments.forEach((assignment) => {
+      groups[assignment.status]?.push(assignment)
+    })
+
+    return [
+      { id: 'paid', header: 'PAID', items: groups.paid },
+      { id: 'partial', header: 'PARTIAL', items: groups.partial },
+      { id: 'unpaid', header: 'OUTSTANDING', items: [...groups.unpaid, ...groups.overdue] },
+      { id: 'waived', header: 'WAIVED', items: groups.waived },
+    ].filter((section) => section.items.length > 0)
+  }, [filteredAssignments])
 
   const selectedAssignments = filteredAssignments.filter((a) => selectedIds.includes(a.id))
   const unpaidAssignments = filteredAssignments.filter((a) => ['unpaid', 'partial', 'overdue'].includes(a.status))
@@ -432,8 +460,17 @@ export default function MyPayments() {
           { label: 'Payments' },
         ]}
       >
+        <PullToRefreshContainer onRefresh={fetchAssignments}>
         <div className="mb-8 sm:mb-12">
-          <PageTitle>Payments</PageTitle>
+          {isMobile ? (
+            <CollapsibleHeader
+              title="Payments"
+              mode="large"
+              scrollContainerSelector=".portal-workspace-main"
+            />
+          ) : (
+            <PageTitle>Payments</PageTitle>
+          )}
           <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
             Select fees to pay or filter to find a specific fee.
           </p>
@@ -445,6 +482,7 @@ export default function MyPayments() {
           </Card>
         )}
 
+        <div className="w-full xl:max-w-5xl">
         <div className="mb-6 sm:mb-8">
           <SectionHeader className="mb-3 sm:mb-4">Filters</SectionHeader>
           <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center md:justify-between">
@@ -578,21 +616,43 @@ export default function MyPayments() {
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-              {filteredAssignments.map((a) => {
+            <div className="mb-6 sm:mb-8">
+              <GroupedList
+                stickyHeaders
+                sections={groupedAssignments}
+                renderItem={(a) => {
                 const isSelected = selectedIds.includes(a.id)
                 const dueDate = a.due_date || a.fee?.due_date
                 const isOverdue = dueDate ? new Date(dueDate) < new Date() && ['unpaid', 'partial'].includes(a.status) : false
 
                 return (
-                  <Card
+                  <SwipeableRow
                     key={a.id}
+                    rightActions={
+                      ['unpaid', 'partial', 'overdue'].includes(a.status)
+                        ? [
+                            {
+                              id: `${a.id}-pay`,
+                              label: 'Pay Now',
+                              tone: 'success',
+                              onSelect: () => {
+                                if (!selectedIds.includes(a.id)) {
+                                  toggleSelected(a.id)
+                                }
+                                void handlePayNow()
+                              },
+                            },
+                          ]
+                        : []
+                    }
+                  >
+                  <Card
                     onClick={(e) => {
                       // Don't navigate if clicking checkbox or its label
                       if ((e.target as HTMLElement).closest('input[type="checkbox"]')) {
                         return
                       }
-                      navigate(`/portal/payments/${a.id}`)
+                      navigate(getLink(RouteKeys.PORTAL_PAYMENT_DETAIL, { id: a.id }))
                     }}
                     className={`p-4 sm:p-6 hover:shadow-2xl hover:shadow-[var(--org-btn-primary-bg, #137fec)]/5 transition-all duration-300 cursor-pointer ${
                       isSelected ? 'ring-2 ring-[var(--org-btn-primary-bg, #137fec)]' : ''
@@ -663,8 +723,10 @@ export default function MyPayments() {
                       </div>
                     </div>
                   </Card>
+                  </SwipeableRow>
                 )
-              })}
+              }}
+              />
             </div>
 
             <Card className="p-4 sm:p-6">
@@ -766,6 +828,8 @@ export default function MyPayments() {
             </div>
           )
         })()}
+        </div>
+        </PullToRefreshContainer>
       </PortalLayout>
   )
 }

@@ -1456,6 +1456,10 @@ html.dark .gn-notif--neutral .notif-chip--urgent {
   will-change: transform;
 }
 
+.mobile-stack-view--edge-back {
+  transition: transform 300ms cubic-bezier(0.2, 0, 0, 1);
+}
+
 .mobile-stack-view--enter-forward {
   animation: ios-push-in 300ms cubic-bezier(0.2, 0, 0, 1);
 }
@@ -1486,8 +1490,12 @@ html.dark .gn-notif--neutral .notif-chip--urgent {
   position: sticky;
   top: 0;
   z-index: 30;
-  background: color-mix(in srgb, var(--gn-glass-bg) 80%, transparent);
-  backdrop-filter: blur(10px);
+  background: color-mix(in srgb, #f3f4f6 90%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+html.dark .ios-collapsible-header {
+  background: color-mix(in srgb, #000000 88%, transparent);
 }
 
 .ios-collapsible-header__bar {
@@ -2162,7 +2170,7 @@ html.dark .oa-theme-active.portal-neutral .portal-grid-bg {
 
 .oa-theme-active.portal-neutral .portal-workspace-header.pwa-neutral,
 .oa-theme-active.portal-neutral .portal-workspace-sidebar {
-    background: #ffffff;
+  background: #f3f4f6;
     border-color: #d1d5db;
 }
 

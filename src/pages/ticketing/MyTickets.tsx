@@ -14,7 +14,8 @@ import { useOffline } from '@/hooks/useOffline'
 import FullScreenLoader from '@/components/common/FullScreenLoader'
 import { showSuccess, showError } from '@/utils/toast'
 import PortalLayout from '@/components/portal/PortalLayout'
-import { PageTitle } from '@/components/portal/Typography'
+import PullToRefreshContainer from '@/components/common/mobile/PullToRefreshContainer'
+import CollapsibleHeader from '@/components/common/mobile/CollapsibleHeader'
 import { useDebugLifecycle } from '@/lib/debug/integrations/useDebugLifecycle'
 import type { Ticket, TicketOrder, TicketType, TicketedEvent } from '@/types/ticketing'
 
@@ -301,12 +302,12 @@ function EventTicketCarousel({ group }: { group: EventTicketGroup }) {
       <div className={`absolute left-0 top-0 bottom-0 w-1 ${getGroupStatusClass(group.orders)}`} />
 
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4 pl-3">
-        <div>
-          <h2 className="text-xl font-black text-[#111418] dark:text-white uppercase tracking-tight leading-tight">
+        <div className="min-w-0">
+          <h2 className="text-lg sm:text-xl font-extrabold text-[#111418] dark:text-white tracking-tight leading-tight break-words">
             {event?.title || 'Event Tickets'}
           </h2>
-          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400 mt-1">
-            <span className="font-medium">{eventDateLabel}{eventTimeLabel ? ` - ${eventTimeLabel}` : ''}</span>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <span className="font-medium break-words">{eventDateLabel}{eventTimeLabel ? ` - ${eventTimeLabel}` : ''}</span>
             <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
             {orderDateLabel && <span>Purchased {orderDateLabel}</span>}
             <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
@@ -354,7 +355,7 @@ function EventTicketCarousel({ group }: { group: EventTicketGroup }) {
         <div
           ref={carouselRef}
           onScroll={handleCarouselScroll}
-          className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden touch-pan-x"
+          className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {group.tickets.map((ticket) => (
             <div key={ticket.id} className="min-w-full snap-center">
@@ -376,8 +377,8 @@ function EventTicketCarousel({ group }: { group: EventTicketGroup }) {
                   <span className="material-symbols-outlined text-gray-400">qr_code_2</span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-[#111418] dark:text-white">Ticket {nextTicketIndex + 1} of {ticketCount}</h3>
-                  <p className="text-xs text-gray-500">{nextTicketPreview}</p>
+                  <h3 className="font-bold text-[#111418] dark:text-white break-words">Ticket {nextTicketIndex + 1} of {ticketCount}</h3>
+                  <p className="text-xs text-gray-500 break-words">{nextTicketPreview}</p>
                 </div>
               </div>
               <button
@@ -491,6 +492,19 @@ export default function MyTickets() {
     [orderBundles],
   )
 
+  const renderHeader = () => (
+    <div className="mb-6 sm:mb-8">
+      <CollapsibleHeader
+        title="My Tickets"
+        mode="large"
+        scrollContainerSelector=".portal-workspace-main"
+      />
+      <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
+        Your event tickets
+      </p>
+    </div>
+  )
+
   if (isLoading) {
     return (
       <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
@@ -528,12 +542,7 @@ export default function MyTickets() {
   if (!orders || orders.length === 0) {
     return (
       <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
-        <div className="mb-6 sm:mb-8">
-          <PageTitle>My Tickets</PageTitle>
-          <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
-            Your event tickets
-          </p>
-        </div>
+        {renderHeader()}
         <div className="bg-white dark:bg-gray-900/50 rounded-xl shadow-sm p-12 text-center border border-gray-200 dark:border-gray-700">
           <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
             <span className="material-symbols-outlined text-3xl text-gray-400">confirmation_number</span>
@@ -559,12 +568,7 @@ export default function MyTickets() {
   if (isLoadingTickets) {
     return (
       <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
-        <div className="mb-6 sm:mb-8">
-          <PageTitle>My Tickets</PageTitle>
-          <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
-            Your event tickets
-          </p>
-        </div>
+        {renderHeader()}
         <div className="animate-pulse bg-white dark:bg-gray-900/50 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
           <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-6" />
           <div className="h-6 bg-gray-100 dark:bg-gray-800 rounded w-2/3 mb-4" />
@@ -601,12 +605,7 @@ export default function MyTickets() {
   if (eventGroups.length === 0) {
     return (
       <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
-        <div className="mb-6 sm:mb-8">
-          <PageTitle>My Tickets</PageTitle>
-          <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
-            Your event tickets
-          </p>
-        </div>
+        {renderHeader()}
         <div className="text-center py-12 bg-white dark:bg-gray-900/50 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No ticket records found</h2>
           <p className="text-gray-500 dark:text-gray-400">We found your orders but no active ticket records for this account.</p>
@@ -617,10 +616,15 @@ export default function MyTickets() {
 
   return (
     <PortalLayout breadcrumbs={MY_TICKETS_BREADCRUMBS}>
+      <PullToRefreshContainer onRefresh={async () => { await refetch(); await refetchTickets() }}>
       <div className="mb-6 sm:mb-8">
         <div className="mobile-stack-controls mb-6 sm:mb-8 sm:items-end sm:justify-between sm:gap-6">
           <div className="flex-1">
-            <PageTitle>My Tickets</PageTitle>
+            <CollapsibleHeader
+              title="My Tickets"
+              mode="large"
+              scrollContainerSelector=".portal-workspace-main"
+            />
             <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
               Your event tickets
             </p>
@@ -640,6 +644,7 @@ export default function MyTickets() {
           <EventTicketCarousel key={group.eventKey} group={group} />
         ))}
       </div>
+      </PullToRefreshContainer>
     </PortalLayout>
   )
 }

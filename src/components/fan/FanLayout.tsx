@@ -13,6 +13,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { useFilteredNavItems } from '../../hooks/useFilteredNavigation'
 import MobileStackTransition from '../common/mobile/MobileStackTransition'
+import PullToRefreshContainer from '../common/mobile/PullToRefreshContainer'
 import '../../styles/fan.css'
 
 interface NavItem {
@@ -39,6 +40,7 @@ export default function FanLayout() {
   const { profile } = useAuth()
   
   const [notificationCount] = useState(0)
+  const [refreshNonce, setRefreshNonce] = useState(0)
 
   // Filter navigation items based on feature gates (fan pages are hidden when gated)
   const { filteredItems: navItems } = useFilteredNavItems(rawNavItems)
@@ -119,9 +121,15 @@ export default function FanLayout() {
 
       {/* Main Content */}
       <main className="fan-container fan-main">
-        <MobileStackTransition>
-          <Outlet />
-        </MobileStackTransition>
+        <PullToRefreshContainer
+          onRefresh={async () => {
+            setRefreshNonce((value) => value + 1)
+          }}
+        >
+          <MobileStackTransition key={refreshNonce}>
+            <Outlet />
+          </MobileStackTransition>
+        </PullToRefreshContainer>
       </main>
 
 

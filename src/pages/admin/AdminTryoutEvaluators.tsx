@@ -15,6 +15,7 @@ import {
 } from '../../data/services/tryoutsService'
 import { AdminPageHeader, Badge, Button, Card } from '../../components/admin'
 import { showError, showSuccess } from '../../utils/toast'
+import { getLink, RouteKeys } from '../../utils/routes'
 import '../../styles/orgAdmin.css'
 
 interface CoachOption {
@@ -175,12 +176,12 @@ export default function AdminTryoutEvaluators() {
         title={t('admin.tryouts.evaluators.title' as TranslationKey)}
         subtitle={tryoutTitle || t('admin.tryouts.evaluators.subtitle' as TranslationKey)}
         breadcrumbs={[
-          { label: t('admin.tryouts.title'), path: '/admin/tryouts' },
-          { label: tryoutTitle || t('admin.tryouts.evaluators.title' as TranslationKey), path: `/admin/tryouts/${tryoutId}` },
+          { label: t('admin.tryouts.title'), path: getLink(RouteKeys.ADMIN_TRYOUTS) },
+          { label: tryoutTitle || t('admin.tryouts.evaluators.title' as TranslationKey), path: getLink(RouteKeys.ADMIN_TRYOUT_DETAIL, { tryoutId }) },
           { label: t('admin.tryouts.evaluators.title' as TranslationKey) },
         ]}
         actions={
-          <Button variant="ghost" onClick={() => navigate(`/admin/tryouts/${tryoutId}`)}>
+          <Button variant="ghost" onClick={() => navigate(getLink(RouteKeys.ADMIN_TRYOUT_DETAIL, { tryoutId }))}>
             {t('common.back')}
           </Button>
         }

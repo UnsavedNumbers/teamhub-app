@@ -20,6 +20,7 @@ import GlobalNav from '../components/common/GlobalNav'
 import { DemoGuideIntegration } from '../components/demo/DemoGuideIntegration'
 import { AppPage } from '../components/shared/AppPage'
 import MobileStackTransition from '@/components/common/mobile/MobileStackTransition'
+import PullToRefreshContainer from '@/components/common/mobile/PullToRefreshContainer'
 import type { NavSection } from '@/types/menu'
 import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
 import { useQuery } from '@tanstack/react-query'
@@ -68,6 +69,7 @@ export default function AdminLayout() {
     typeof window !== 'undefined' ? window.matchMedia(ADMIN_LAYOUT_MOBILE_NAV_QUERY).matches : false
   )
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [refreshNonce, setRefreshNonce] = useState(0)
   const [featureGateModal, setFeatureGateModal] = useState<{ open: boolean; message: string; reasonCode?: string; featureKey?: string }>({
     open: false,
     message: '',
@@ -582,9 +584,15 @@ export default function AdminLayout() {
 
         {/* Content */}
         <main className="oa-content min-w-0" data-testid="app-shell">
-          <MobileStackTransition>
-            <Outlet />
-          </MobileStackTransition>
+          <PullToRefreshContainer
+            onRefresh={async () => {
+              setRefreshNonce((value) => value + 1)
+            }}
+          >
+            <MobileStackTransition key={refreshNonce}>
+              <Outlet />
+            </MobileStackTransition>
+          </PullToRefreshContainer>
         </main>
       </div>
 

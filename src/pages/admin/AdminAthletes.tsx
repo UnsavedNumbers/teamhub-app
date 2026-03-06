@@ -13,6 +13,7 @@ import { getLink } from '../../utils/routes'
 import { getErrorMessage } from '../../utils/errorUtils'
 import { showSuccess, showError } from '../../utils/toast'
 import { ConfirmDialog, AdminPageHeader, Card } from '../../components/admin'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
 import AthletesHeader from '../../components/admin/AthletesHeader'
 import AthletesFilters, { type AthletesFilters as AthletesFiltersType } from '../../components/admin/AthletesFilters'
 import AthletesGrid, { type AthleteCardData } from '../../components/admin/AthletesGrid'
@@ -324,6 +325,7 @@ export default function AdminAthletes() {
 
     return (
         <div>
+            <PullToRefreshContainer onRefresh={fetchAthletes}>
             <AdminPageHeader 
                 title={t('admin.athletes.title')} 
                 subtitle={t('admin.athletes.subtitle')} 
@@ -429,6 +431,7 @@ export default function AdminAthletes() {
                     setActionError(null)
                 }}
             />
+            </PullToRefreshContainer>
         </div>
     )
 }

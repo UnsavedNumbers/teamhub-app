@@ -39,6 +39,7 @@ import {
   Button,
   Select,
 } from '../../components/admin'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
 import { cn } from '../../utils/cn'
 import { DEMO_PAGE_IMAGES } from '../../utils/demoImagePlaceholders'
 import '../../styles/orgAdmin.css'
@@ -955,29 +956,31 @@ export default function AdminDashboard() {
 
   return (
     <div className="oa-root" data-testid="dashboard">
-      <AdminPageHeader
-        title={t('admin.dashboard.title')}
-        subtitle={orgName || t('admin.dashboard.subtitle')}
-        actions={
-          <div className="oa-flex oa-items-center oa-gap-3" style={{ flexWrap: 'wrap' }}>
-            <div className="oa-flex oa-flex-col oa-gap-1">
-              <span className="oa-text-xs oa-font-semibold oa-uppercase oa-tracking-wide oa-text-muted">
-                {t('admin.dashboard.layoutLabel')}
-              </span>
-              <Select
-                options={layoutOptions}
-                value={layout}
-                onChange={e => handleLayoutChange(e.target.value as DashboardLayout)}
-                aria-label={t('admin.dashboard.layoutLabel')}
-                style={{ minWidth: 180 }}
-              />
+      <PullToRefreshContainer onRefresh={fetchDashboardData}>
+        <AdminPageHeader
+          title={t('admin.dashboard.title')}
+          subtitle={orgName || t('admin.dashboard.subtitle')}
+          actions={
+            <div className="oa-flex oa-items-center oa-gap-3" style={{ flexWrap: 'wrap' }}>
+              <div className="oa-flex oa-flex-col oa-gap-1">
+                <span className="oa-text-xs oa-font-semibold oa-uppercase oa-tracking-wide oa-text-muted">
+                  {t('admin.dashboard.layoutLabel')}
+                </span>
+                <Select
+                  options={layoutOptions}
+                  value={layout}
+                  onChange={e => handleLayoutChange(e.target.value as DashboardLayout)}
+                  aria-label={t('admin.dashboard.layoutLabel')}
+                  style={{ minWidth: 180 }}
+                />
+              </div>
             </div>
-          </div>
-        }
-      />
-      {layout === 'stadium' && <StadiumDashboard {...props} />}
-      {layout === 'editorial' && <EditorialDashboard {...props} />}
-      {layout === 'athlete' && <AthleteDashboard {...props} />}
+          }
+        />
+        {layout === 'stadium' && <StadiumDashboard {...props} />}
+        {layout === 'editorial' && <EditorialDashboard {...props} />}
+        {layout === 'athlete' && <AthleteDashboard {...props} />}
+      </PullToRefreshContainer>
     </div>
   )
 }

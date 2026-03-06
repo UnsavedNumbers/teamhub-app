@@ -22,6 +22,7 @@ import { HelpFeatureLayout } from '../../components/help/HelpFeatureLayout'
 import { HelpHeaderSearch } from '../../components/help/HelpHeaderSearch'
 import { HelpRoleSwitcher } from '../../components/help/HelpRoleSwitcher'
 import { ArticlePageSkeleton } from '../../components/help/HelpSkeletons'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
 import '../../styles/helpCenter.css'
 
 type UserRole = 'parent' | 'coach' | 'org_admin' | 'athlete' | 'platform_admin'
@@ -328,6 +329,7 @@ export default function ArticlePage() {
           </nav>
         }
       >
+        <PullToRefreshContainer onRefresh={loadArticle}>
         <section style={{ marginBottom: '1rem' }}>
           <p className="help-uber-meta-row" style={{ marginTop: 0, marginBottom: 0 }}>
             {t('portal.settings.helpCenter.articleReadingTime', { minutes: article.readingTime || 4 })}
@@ -349,6 +351,7 @@ export default function ArticlePage() {
             <button type="button" className="help-uber-secondary-button">No</button>
           </div>
         </section>
+        </PullToRefreshContainer>
       </HelpFeatureLayout>
 
       {toolLinkPopup && (

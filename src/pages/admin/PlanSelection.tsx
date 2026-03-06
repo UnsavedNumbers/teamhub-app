@@ -73,7 +73,7 @@ export default function PlanSelection() {
           setError(t('billing.upgradePaymentRequired'))
           await refreshLicense()
           setTimeout(() => {
-            window.location.reload()
+            navigate(getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING))
           }, 2000)
         } else if (result.success) {
           setSuccessMessage(t('billing.upgradeCompleted'))

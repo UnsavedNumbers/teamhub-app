@@ -9,6 +9,7 @@ import { useScrollLock } from '../hooks/useScrollLock'
 import { DemoGuideIntegration } from '../components/demo/DemoGuideIntegration'
 import { AppPage, PageSection } from '../components/shared/AppPage'
 import MobileStackTransition from '../components/common/mobile/MobileStackTransition'
+import PullToRefreshContainer from '../components/common/mobile/PullToRefreshContainer'
 import '../styles/portal.css'
 
 /**
@@ -26,6 +27,7 @@ export default function PortalWorkspaceLayout() {
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [refreshNonce, setRefreshNonce] = useState(0)
   const [useMobileNav, setUseMobileNav] = useState(
     typeof window !== 'undefined' ? window.matchMedia(ADMIN_LAYOUT_MOBILE_NAV_QUERY).matches : false
   )
@@ -90,9 +92,15 @@ export default function PortalWorkspaceLayout() {
 
         <main className="portal-workspace-main min-h-0 min-w-0 flex-1 overflow-y-auto">
           <PageSection className="w-full p-4 sm:p-6 lg:p-8">
-            <MobileStackTransition>
-              <Outlet />
-            </MobileStackTransition>
+            <PullToRefreshContainer
+              onRefresh={async () => {
+                setRefreshNonce((value) => value + 1)
+              }}
+            >
+              <MobileStackTransition key={refreshNonce}>
+                <Outlet />
+              </MobileStackTransition>
+            </PullToRefreshContainer>
           </PageSection>
         </main>
       </div>

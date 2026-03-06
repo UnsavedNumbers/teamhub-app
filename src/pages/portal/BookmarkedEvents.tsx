@@ -13,6 +13,11 @@ import Card from '../../components/portal/Card'
 import Button from '../../components/portal/Button'
 import Icon from '../../components/portal/Icon'
 import EmptyState from '../../components/portal/EmptyState'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
+import CollapsibleHeader from '../../components/common/mobile/CollapsibleHeader'
+import GroupedList from '../../components/common/mobile/GroupedList'
+import SwipeableRow from '../../components/common/mobile/SwipeableRow'
+import { useMobile } from '../../hooks/useMobile'
 import { formatEventDate, formatEventTimeRange } from '../../types/calendar'
 import { useNavigate } from 'react-router-dom'
 import { useI18n } from '../../i18n/useI18n'
@@ -28,6 +33,7 @@ export default function BookmarkedEvents() {
   const tAny = t as any
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const isMobile = useMobile()
   
   const { data: bookmarks, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['bookmarked-events'],
@@ -93,8 +99,17 @@ export default function BookmarkedEvents() {
         { label: t('portal.fan.bookmarkedEvents.title') },
       ]}
     >
+      <PullToRefreshContainer onRefresh={async () => { await refetch() }}>
       <div className="mb-6 sm:mb-8">
-        <PageTitle>{t('portal.fan.bookmarkedEvents.title')}</PageTitle>
+        {isMobile ? (
+          <CollapsibleHeader
+            title={t('portal.fan.bookmarkedEvents.title')}
+            mode="large"
+            scrollContainerSelector=".portal-workspace-main"
+          />
+        ) : (
+          <PageTitle>{t('portal.fan.bookmarkedEvents.title')}</PageTitle>
+        )}
         <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide mt-1">
           {t('portal.fan.bookmarkedEvents.description')}
         </p>
@@ -110,16 +125,29 @@ export default function BookmarkedEvents() {
           ))}
         </div>
       ) : bookmarks && bookmarks.length > 0 ? (
-        <div className="space-y-4">
-          {bookmarks.map((bookmark: FanEventBookmark) => {
+        <GroupedList
+          stickyHeaders
+          sections={[{ id: 'bookmarks', header: t('portal.fan.bookmarkedEvents.title'), items: bookmarks as FanEventBookmark[] }]}
+          renderItem={(bookmark) => {
             const event = bookmark.event
             if (!event) return null
 
             return (
-              <Card key={bookmark.id} className="p-6">
+              <SwipeableRow
+                key={bookmark.id}
+                rightActions={[
+                  {
+                    id: `${bookmark.id}-remove`,
+                    label: t('common.remove'),
+                    tone: 'danger',
+                    onSelect: () => deleteBookmark(bookmark.event_id),
+                  },
+                ]}
+              >
+              <Card className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                    <h3 className="text-[17px] font-semibold text-gray-900 dark:text-white mb-2 leading-[1.2]">
                       {event.title}
                     </h3>
                     <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
@@ -156,9 +184,10 @@ export default function BookmarkedEvents() {
                   </div>
                 </div>
               </Card>
+              </SwipeableRow>
             )
-          })}
-        </div>
+          }}
+        />
       ) : (
         <Card>
           <EmptyState
@@ -172,6 +201,7 @@ export default function BookmarkedEvents() {
           />
         </Card>
       )}
+      </PullToRefreshContainer>
     </PortalLayout>
   )
 }

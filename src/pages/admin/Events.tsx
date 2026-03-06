@@ -13,6 +13,7 @@ import { validateCancelEvent, EVENT_ERRORS } from '../../utils/eventValidation'
 import { useOrganization } from '../../contexts/OrganizationContext'
 import { deriveActorRoleFromRoles, logEvent } from '../../utils/eventLogger'
 import { Card, ConfirmDialog, AdminPageHeader } from '../../components/admin'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
 import EventsHeader from '../../components/admin/EventsHeader'
 import EventsFilters from '../../components/admin/EventsFilters'
 import EventsList from '../../components/admin/EventsList'
@@ -547,6 +548,7 @@ export default function Events() {
 
     return (
         <div>
+            <PullToRefreshContainer onRefresh={fetchEvents}>
             <AdminPageHeader title={t('admin.events.title')} subtitle={t('admin.events.subtitle')} />
 
             <EventsHeader
@@ -711,6 +713,7 @@ export default function Events() {
                     setActionError(null)
                 }}
             />
+            </PullToRefreshContainer>
         </div>
     )
 }

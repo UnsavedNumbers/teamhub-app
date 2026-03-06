@@ -98,9 +98,11 @@ export default function UserContextDropdown({ neutralPalette = false }: UserCont
     return currentOrganization.roles?.[0] || null
   }, [currentRouteKey, currentOrganization])
 
-  // Close on outside click
+  // Close on outside click (desktop only; mobile sheet handles its own backdrop interactions)
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    if (isMobile || !isOpen) return
+
+    const handleClickOutside = (event: PointerEvent) => {
       const target = event.target as Node
       const clickedTrigger = dropdownRef.current?.contains(target) ?? false
       const clickedMenu = menuRef.current?.contains(target) ?? false
@@ -108,9 +110,10 @@ export default function UserContextDropdown({ neutralPalette = false }: UserCont
         setIsOpen(false)
       }
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+
+    document.addEventListener('pointerdown', handleClickOutside)
+    return () => document.removeEventListener('pointerdown', handleClickOutside)
+  }, [isMobile, isOpen])
 
   // Close on Escape key
   useEffect(() => {

@@ -14,11 +14,14 @@ import { getContactForCategory } from '../data/services/organizationContactsServ
 import { getAthletes } from '../data/services/familyService'
 import type { Tryout, TryoutRegistration } from '../data/services/tryoutsService'
 import PortalLayout from '../components/portal/PortalLayout'
-import { PageTitle, SectionHeader, CardTitle } from '../components/portal/Typography'
+import { SectionHeader, CardTitle } from '../components/portal/Typography'
 import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
+import PullToRefreshContainer from '../components/common/mobile/PullToRefreshContainer'
+import CollapsibleHeader from '../components/common/mobile/CollapsibleHeader'
 import { showError, showSuccess } from '../utils/toast'
+import { getLink, RouteKeys } from '../utils/routes'
 
 import { useDebugLifecycle } from '../lib/debug/integrations/useDebugLifecycle'
 
@@ -150,12 +153,17 @@ export default function Tryouts() {
   return (
       <PortalLayout
         breadcrumbs={[
-          { label: 'Home', path: '/portal/dashboard' },
+          { label: 'Home', path: getLink(RouteKeys.PORTAL_DASHBOARD) },
           { label: 'Tryouts' },
         ]}
       >
+        <PullToRefreshContainer onRefresh={fetchData}>
         <div className="mb-8 sm:mb-12">
-          <PageTitle>Tryouts</PageTitle>
+          <CollapsibleHeader
+            title="Tryouts"
+            mode="large"
+            scrollContainerSelector=".portal-workspace-main"
+          />
           <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg font-light tracking-wide">
             View and register for upcoming tryouts.
           </p>
@@ -321,7 +329,7 @@ export default function Tryouts() {
                       <Button
                         variant="secondary"
                         className="w-full mt-2"
-                        onClick={() => navigate(`/portal/tryouts/${tryout.id}`)}
+                        onClick={() => navigate(getLink(RouteKeys.PORTAL_TRYOUT_DETAIL, { tryoutId: tryout.id }))}
                       >
                         View Details
                       </Button>
@@ -394,6 +402,7 @@ export default function Tryouts() {
             </div>
           </div>
         )}
+        </PullToRefreshContainer>
       </PortalLayout>
   )
 }

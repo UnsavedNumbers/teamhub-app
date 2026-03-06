@@ -15,6 +15,8 @@ import Card from '../../components/portal/Card'
 import Button from '../../components/portal/Button'
 import Icon from '../../components/portal/Icon'
 import EmptyState from '../../components/portal/EmptyState'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
+import CollapsibleHeader from '../../components/common/mobile/CollapsibleHeader'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { useI18n } from '../../i18n/useI18n'
 import type { SearchEntityResult } from '../../data/services/fanService'
@@ -33,7 +35,7 @@ export default function DiscoverOrgs() {
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Search query - only search for organizations
-  const { data: searchResults = [], isLoading } = useQuery({
+  const { data: searchResults = [], isLoading, refetch } = useQuery({
     queryKey: ['discover-orgs', searchQuery],
     queryFn: async () => {
       if (!searchQuery.trim() || searchQuery.trim().length < 2) {
@@ -75,8 +77,7 @@ export default function DiscoverOrgs() {
       showError('Failed to follow organization')
     } else {
       showSuccess(`Now following ${entity.name}`)
-      // Refresh search results to update follow status
-      window.location.reload()
+      await refetch()
     }
   }
 
@@ -87,8 +88,7 @@ export default function DiscoverOrgs() {
       showError('Failed to unfollow organization')
     } else {
       showSuccess(`Unfollowed ${entity.name}`)
-      // Refresh search results to update follow status
-      window.location.reload()
+      await refetch()
     }
   }
 
@@ -109,8 +109,20 @@ export default function DiscoverOrgs() {
 
   return (
     <PortalLayout>
+      <PullToRefreshContainer
+        onRefresh={async () => {
+          if (searchQuery.trim().length >= 2) {
+            await refetch()
+          }
+        }}
+      >
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <PageTitle>{t('portal.fan.discoverOrgs.title')}</PageTitle>
+        <CollapsibleHeader
+          title={t('portal.fan.discoverOrgs.title')}
+          mode="large"
+          scrollContainerSelector=".portal-workspace-main"
+        />
+        <PageTitle className="sr-only">{t('portal.fan.discoverOrgs.title')}</PageTitle>
         <p className="text-gray-600 dark:text-gray-400 mb-6">
           {t('portal.fan.discoverOrgs.description')}
         </p>
@@ -229,6 +241,7 @@ export default function DiscoverOrgs() {
           </Card>
         )}
       </div>
+      </PullToRefreshContainer>
     </PortalLayout>
   )
 }

@@ -11,6 +11,7 @@ import Card from '../components/portal/Card'
 import Button from '../components/portal/Button'
 import Icon from '../components/portal/Icon'
 import { getAnnouncementEmoji } from '../utils/announcementTypes'
+import { getLink, RouteKeys } from '../utils/routes'
 
 export default function AnnouncementDetail() {
   const { announcementId } = useParams<{ announcementId: string }>()
@@ -83,7 +84,7 @@ export default function AnnouncementDetail() {
     if (!announcementId) {
       debug.error('AnnouncementDetail', 'No announcementId - redirecting', {})
       setLoading(false)
-      navigate('/portal/announcements', { replace: true })
+      navigate(getLink(RouteKeys.PORTAL_ANNOUNCEMENTS), { replace: true })
       return
     }
 
@@ -151,7 +152,7 @@ export default function AnnouncementDetail() {
           'color:#f43f5e',
           { error }
         )
-        navigate('/portal/announcements', { replace: true })
+        navigate(getLink(RouteKeys.PORTAL_ANNOUNCEMENTS), { replace: true })
         return
       }
 
@@ -163,7 +164,7 @@ export default function AnnouncementDetail() {
       debug.error('AnnouncementDetail', 'Unexpected error in fetchData', { err, attempt, announcementId })
       console.error('%c[AnnouncementDetail] Unexpected error', 'color:#f43f5e;font-weight:bold', err)
       setLoading(false)
-      navigate('/portal/announcements', { replace: true })
+      navigate(getLink(RouteKeys.PORTAL_ANNOUNCEMENTS), { replace: true })
     }
   }, [announcementId, context, isReady, navigate])
 
@@ -174,7 +175,7 @@ export default function AnnouncementDetail() {
   }, [isReady, announcementId, fetchData])
 
   // Get team context from query parameter for back navigation
-  const backUrl = '/portal/announcements'
+  const backUrl = getLink(RouteKeys.PORTAL_ANNOUNCEMENTS)
 
   if (loading) {
     return (
@@ -250,8 +251,8 @@ export default function AnnouncementDetail() {
   return (
     <PortalLayout
       breadcrumbs={[
-        { label: 'Home', path: '/portal/dashboard' },
-        { label: 'Announcements', path: '/portal/announcements' },
+        { label: 'Home', path: getLink(RouteKeys.PORTAL_DASHBOARD) },
+        { label: 'Announcements', path: getLink(RouteKeys.PORTAL_ANNOUNCEMENTS) },
         { label: announcement.title },
       ]}
     >

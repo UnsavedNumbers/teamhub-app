@@ -5,6 +5,7 @@ import { useLicense } from '../../hooks/useLicense'
 import { t } from '../../i18n'
 import { formatDate } from '../../utils/licenseUtils'
 import { AdminPageHeader, Card, Button } from '../../components/admin'
+import { getLink, RouteKeys } from '../../utils/routes'
 import '../../styles/orgAdmin.css'
 
 export default function CheckoutSuccess() {
@@ -14,7 +15,7 @@ export default function CheckoutSuccess() {
   const { summary } = useLicense(orgId)
 
   useEffect(() => {
-    const timer = setTimeout(() => navigate('/admin/organization/billing'), 3000)
+    const timer = setTimeout(() => navigate(getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING)), 3000)
     return () => clearTimeout(timer)
   }, [navigate])
 
@@ -46,7 +47,7 @@ export default function CheckoutSuccess() {
         )}
         <div className="oa-flex oa-flex-col oa-gap-4">
           <p className="oa-body-s oa-text-muted">{t('checkout.redirecting')}</p>
-          <Button onClick={() => navigate('/admin/organization/billing')}>{t('checkout.returnToBilling')}</Button>
+          <Button onClick={() => navigate(getLink(RouteKeys.ADMIN_ORGANIZATION_BILLING))}>{t('checkout.returnToBilling')}</Button>
         </div>
       </Card>
     </div>

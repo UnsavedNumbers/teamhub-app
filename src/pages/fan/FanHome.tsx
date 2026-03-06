@@ -19,6 +19,7 @@ import {
 import type { FanOrgFollow, CalendarEvent } from '../../types/staffAndFan'
 import { getLink, RouteKeys } from '../../utils/routes'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
 import { showError } from '../../utils/toast'
 import '../../styles/fan.css'
 
@@ -269,79 +270,80 @@ export default function FanHome() {
   }
 
   return (
-    <div className="fan-page">
-      {/* Hero Section with Search */}
-      <section className="fan-hero-section">
-        <div className="fan-hero-background"></div>
-        <div className="fan-hero-overlay"></div>
-        <div className="fan-hero-content">
-          <div className="fan-container">
-            <div className="fan-search-wrapper">
-              <span className="material-symbols-outlined fan-search-icon">search</span>
-              <form onSubmit={handleSearchSubmit}>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  className="fan-search-input fan-search-input-hero"
-                  placeholder="Search athletes, teams, or moments..."
-                />
-              </form>
-              {isSearching && (
-                <div style={{ position: 'absolute', right: '1.5rem', top: '50%', transform: 'translateY(-50%)' }}>
-                  <LoadingSpinner size="small" />
+    <PullToRefreshContainer onRefresh={loadAllData}>
+      <div className="fan-page">
+        {/* Hero Section with Search */}
+        <section className="fan-hero-section">
+          <div className="fan-hero-background"></div>
+          <div className="fan-hero-overlay"></div>
+          <div className="fan-hero-content">
+            <div className="fan-container">
+              <div className="fan-search-wrapper">
+                <span className="material-symbols-outlined fan-search-icon">search</span>
+                <form onSubmit={handleSearchSubmit}>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    className="fan-search-input fan-search-input-hero"
+                    placeholder="Search athletes, teams, or moments..."
+                  />
+                </form>
+                {isSearching && (
+                  <div style={{ position: 'absolute', right: '1.5rem', top: '50%', transform: 'translateY(-50%)' }}>
+                    <LoadingSpinner size="small" />
+                  </div>
+                )}
+              </div>
+              
+              {/* Search Results Dropdown */}
+              {searchResults.length > 0 && (
+                <div className="fan-following-list" style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(255, 255, 255, 0.95)', border: '1px solid var(--color-border)', backdropFilter: 'blur(8px)' }}>
+                  {searchResults.map((result) => (
+                    <button
+                      key={`${result.entity_type}-${result.id}`}
+                      className="fan-following-item"
+                      onClick={() => handleSearchResultClick(result)}
+                      style={{ width: '100%', textAlign: 'left' }}
+                    >
+                      <div className="fan-following-avatar">
+                        {result.logo_url ? (
+                          <img src={result.logo_url} alt={result.name} />
+                        ) : (
+                          result.name?.[0] || '?'
+                        )}
+                      </div>
+                      <span className="fan-following-name">{result.name}</span>
+                    </button>
+                  ))}
                 </div>
               )}
-            </div>
-            
-            {/* Search Results Dropdown */}
-            {searchResults.length > 0 && (
-              <div className="fan-following-list" style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(255, 255, 255, 0.95)', border: '1px solid var(--color-border)', backdropFilter: 'blur(8px)' }}>
-                {searchResults.map((result) => (
-                  <button
-                    key={`${result.entity_type}-${result.id}`}
-                    className="fan-following-item"
-                    onClick={() => handleSearchResultClick(result)}
-                    style={{ width: '100%', textAlign: 'left' }}
-                  >
-                    <div className="fan-following-avatar">
-                      {result.logo_url ? (
-                        <img src={result.logo_url} alt={result.name} />
-                      ) : (
-                        result.name?.[0] || '?'
-                      )}
-                    </div>
-                    <span className="fan-following-name">{result.name}</span>
-                  </button>
-                ))}
+              
+              {/* Trending Tags */}
+              <div className="fan-trending">
+                <span className="fan-trending-label">Trending:</span>
+                <button 
+                  className="fan-trending-link"
+                  onClick={() => navigate(`${getLink(RouteKeys.FAN_DISCOVER)}?q=championship`)}
+                >
+                  Championship Finals
+                </button>
+                <button 
+                  className="fan-trending-link"
+                  onClick={() => navigate(`${getLink(RouteKeys.FAN_DISCOVER)}?q=playoffs`)}
+                >
+                  Playoffs
+                </button>
+                <button 
+                  className="fan-trending-link"
+                  onClick={() => navigate(`${getLink(RouteKeys.FAN_DISCOVER)}?q=mvp`)}
+                >
+                  MVP Race
+                </button>
               </div>
-            )}
-            
-            {/* Trending Tags */}
-            <div className="fan-trending">
-              <span className="fan-trending-label">Trending:</span>
-              <button 
-                className="fan-trending-link"
-                onClick={() => navigate(`${getLink(RouteKeys.FAN_DISCOVER)}?q=championship`)}
-              >
-                Championship Finals
-              </button>
-              <button 
-                className="fan-trending-link"
-                onClick={() => navigate(`${getLink(RouteKeys.FAN_DISCOVER)}?q=playoffs`)}
-              >
-                Playoffs
-              </button>
-              <button 
-                className="fan-trending-link"
-                onClick={() => navigate(`${getLink(RouteKeys.FAN_DISCOVER)}?q=mvp`)}
-              >
-                MVP Race
-              </button>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
       <main className="fan-main">
         <div className="fan-container">
@@ -612,6 +614,7 @@ export default function FanHome() {
           </div>
         </div>
       </main>
-    </div>
+      </div>
+    </PullToRefreshContainer>
   )
 }

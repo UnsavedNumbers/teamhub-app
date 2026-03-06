@@ -9,6 +9,7 @@ import Icon from '../components/portal/Icon'
 import { USE_FAKE_DATA } from '../data/config'
 import { captureEvent } from '../lib/analytics/analytics'
 import { useAuth } from '../hooks/useAuth'
+import { getLink, RouteKeys } from '../utils/routes'
 
 interface SessionItem {
   amount_cents: number
@@ -37,7 +38,7 @@ export default function PaymentSuccess() {
   const trackedSessionRef = useRef<string | null>(null)
 
   useEffect(() => {
-    const timer = setTimeout(() => navigate('/portal/payments'), 5000)
+    const timer = setTimeout(() => navigate(getLink(RouteKeys.PORTAL_PAYMENTS)), 5000)
     return () => clearTimeout(timer)
   }, [navigate])
 
@@ -105,8 +106,8 @@ export default function PaymentSuccess() {
   return (
       <PortalLayout
         breadcrumbs={[
-          { label: 'Home', path: '/portal/dashboard' },
-          { label: 'Payments', path: '/portal/payments' },
+          { label: 'Home', path: getLink(RouteKeys.PORTAL_DASHBOARD) },
+          { label: 'Payments', path: getLink(RouteKeys.PORTAL_PAYMENTS) },
           { label: 'Payment received' },
         ]}
       >

@@ -19,6 +19,7 @@ import { HelpFeatureLayout } from '../../components/help/HelpFeatureLayout'
 import { HelpHeaderSearch } from '../../components/help/HelpHeaderSearch'
 import { HelpRoleSwitcher } from '../../components/help/HelpRoleSwitcher'
 import { ContactPageSkeleton } from '../../components/help/HelpSkeletons'
+import PullToRefreshContainer from '../../components/common/mobile/PullToRefreshContainer'
 import '../../styles/helpCenter.css'
 
 type UserRole = 'parent' | 'coach' | 'org_admin' | 'athlete' | 'platform_admin'
@@ -87,6 +88,7 @@ export default function HelpContactPage() {
       headerActions={<HelpHeaderSearch scopeRole={userRole || undefined} />}
       headerRoleSwitcher={<HelpRoleSwitcher currentRoleSlug={undefined} />}
     >
+      <PullToRefreshContainer onRefresh={loadCategories}>
       <nav className="help-uber-breadcrumb" aria-label={t('portal.settings.helpCenter.breadcrumbHelpCenter')}>
         <Link to={getLink('portal.help')}>{t('portal.settings.helpCenter.breadcrumbHelpCenter')}</Link>
         <span className="material-symbols-outlined text-sm" aria-hidden="true">chevron_right</span>
@@ -101,6 +103,7 @@ export default function HelpContactPage() {
           requireEmail={true}
         />
       </section>
+      </PullToRefreshContainer>
     </HelpFeatureLayout>
   )
 }

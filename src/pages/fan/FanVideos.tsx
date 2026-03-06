@@ -24,6 +24,7 @@ import { getChildById } from '@/data/fake/fakeUsers'
 import { getTeamById } from '@/data/fake/fakeTeams'
 import { getLink, RouteKeys } from '@/utils/routes'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
+import PullToRefreshContainer from '@/components/common/mobile/PullToRefreshContainer'
 import { showError } from '@/utils/toast'
 import { useI18n } from '@/i18n/useI18n'
 import Icon from '@/components/portal/Icon'
@@ -420,7 +421,8 @@ export default function FanVideos() {
   }
 
   return (
-    <div className="fan-photos-page">
+    <PullToRefreshContainer onRefresh={async () => { await loadVideos(true) }}>
+      <div className="fan-photos-page">
       {/* Page Header */}
       <div className="fan-photos-header">
         <div>
@@ -545,7 +547,8 @@ export default function FanVideos() {
           {tAny('common.endOfResults')}
         </div>
       )}
-    </div>
+      </div>
+    </PullToRefreshContainer>
   )
 }
 

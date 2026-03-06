@@ -383,14 +383,14 @@ export default function TicketEventDetail() {
   return (
     <div className="min-h-screen bg-[#f6f7f8] dark:bg-[#101922] text-[#111418] dark:text-white">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-[#f0f2f4] dark:border-gray-800 bg-white dark:bg-[#101922] px-10 py-3 sticky top-0 z-50">
+      <header className="flex items-center justify-between border-b border-[#f0f2f4] dark:border-gray-800 bg-white dark:bg-[#101922] px-4 sm:px-6 lg:px-10 py-3 sticky top-0 z-50">
         <div className="flex items-center gap-4 text-[#111418] dark:text-white">
           <div className="size-6 text-[#137fec]">
             <svg fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
               <path clipRule="evenodd" d="M24 4H6V17.3333V30.6667H24V44H42V30.6667V17.3333H24V4Z" fillRule="evenodd" />
             </svg>
           </div>
-          <h2 className="text-[#111418] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">YouthSports.team</h2>
+          <h2 className="text-[#111418] dark:text-white text-base sm:text-lg font-bold leading-tight tracking-[-0.015em]">YouthSports.team</h2>
         </div>
       </header>
 
@@ -398,31 +398,31 @@ export default function TicketEventDetail() {
         {/* Hero Header Section */}
         <div className="w-full">
           <div
-            className="relative min-h-[400px] flex flex-col justify-end bg-cover bg-center"
+            className="relative min-h-[280px] sm:min-h-[400px] flex flex-col justify-end bg-cover bg-center"
             style={{
               backgroundImage: heroBannerUrl
                 ? `linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0) 100%), url(${heroBannerUrl})`
                 : 'linear-gradient(to top, rgba(19,127,236,0.9) 0%, rgba(19,127,236,0.3) 100%)',
             }}
           >
-            <div className="max-w-[1200px] mx-auto w-full px-10 pb-10">
+            <div className="max-w-[1200px] mx-auto w-full px-4 sm:px-6 lg:px-10 pb-6 sm:pb-10">
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 <span className="bg-[#137fec] text-white text-xs font-bold uppercase tracking-widest px-3 py-1 rounded">
                   Official Event
                 </span>
               </div>
-              <h1 className="text-white text-5xl md:text-6xl font-black leading-tight tracking-tight">
+              <h1 className="text-white text-3xl sm:text-5xl md:text-6xl font-black leading-tight tracking-tight break-words">
                 {event.title}
               </h1>
               {event.event_description?.trim() && (
-                <p className="text-white/80 text-lg mt-2 max-w-2xl font-light">{event.event_description.trim()}</p>
+                <p className="text-white/85 text-base sm:text-lg mt-2 max-w-2xl font-light break-words leading-relaxed">{event.event_description.trim()}</p>
               )}
             </div>
           </div>
         </div>
 
         {/* Metadata Bar */}
-        <div className="bg-white dark:bg-gray-900 border-b border-[#f0f2f4] dark:border-gray-800 py-4 px-10">
+        <div className="bg-white dark:bg-gray-900 border-b border-[#f0f2f4] dark:border-gray-800 py-4 px-4 sm:px-6 lg:px-10">
           <div className="max-w-[1200px] mx-auto flex flex-wrap justify-between items-center gap-4">
             <div className="flex flex-col items-start md:flex-row md:items-center gap-4 md:gap-6 w-full md:w-auto">
               <div className="flex items-center gap-2 min-w-0">
@@ -442,7 +442,7 @@ export default function TicketEventDetail() {
         </div>
 
         {venueAddress && (
-          <div className="bg-white dark:bg-gray-900 border-b border-[#f0f2f4] dark:border-gray-800 py-5 px-10">
+          <div className="bg-white dark:bg-gray-900 border-b border-[#f0f2f4] dark:border-gray-800 py-5 px-4 sm:px-6 lg:px-10">
             <div className="max-w-[1200px] mx-auto">
               <div className="grid gap-3 sm:grid-cols-2">
                 <VenueMapActionButtons
@@ -464,12 +464,12 @@ export default function TicketEventDetail() {
           </div>
         )}
 
-        <div className="max-w-[1200px] mx-auto px-10 py-12">
-          <div className="flex flex-col lg:flex-row gap-10">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-10 py-8 sm:py-12">
+          <div className="flex flex-col lg:flex-row gap-6 sm:gap-10">
             {/* Left Column: Ticket Selection */}
             <div className="flex-1">
               <div className="mb-8">
-                <h2 className="text-3xl font-black tracking-tight mb-2">Ticket Selection</h2>
+                <h2 className="text-2xl sm:text-3xl font-black tracking-tight mb-2">Ticket Selection</h2>
                 <p className="text-[#617589] dark:text-gray-400">Select your access level for this event.</p>
               </div>
 
@@ -508,7 +508,7 @@ export default function TicketEventDetail() {
                   return (
                     <div
                       key={ticketType.id}
-                      className={`p-6 ${
+                      className={`p-4 sm:p-6 ${
                         idx < ticketTypes.length - 1 ? 'border-b border-[#f0f2f4] dark:border-gray-800' : ''
                       } hover:bg-[#f6f7f8] dark:hover:bg-gray-800/50 transition-colors`}
                     >
@@ -582,12 +582,12 @@ export default function TicketEventDetail() {
 
             {/* Right Column: Sticky Order Summary */}
             <div className="w-full lg:w-[380px]">
-              <div className="sticky top-24">
+              <div className="lg:sticky lg:top-24">
                 <div className="bg-white dark:bg-gray-900 rounded-xl shadow-[0_4px_6px_-1px_rgb(0_0_0_/_0.1),0_2px_4px_-2px_rgb(0_0_0_/_0.1)] border border-[#f0f2f4] dark:border-gray-800 overflow-hidden">
                   <div className="bg-[#111418] dark:bg-black p-4 text-white">
                     <h3 className="font-bold text-lg uppercase tracking-widest">Order Summary</h3>
                   </div>
-                  <div className="p-6">
+                  <div className="p-4 sm:p-6">
                     <div className="space-y-4 mb-6">
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-[#617589] dark:text-gray-400">Subtotal</span>

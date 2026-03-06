@@ -17,6 +17,7 @@ import { AdminPageHeader, Badge, Button, Card } from '../../components/admin'
 import OrgDataTable from '../../components/admin/OrgDataTable'
 import type { ColumnConfig } from '../../components/admin/OrgDataTable'
 import { TopLevelStats } from '../../components/common/TopLevelStats'
+import { getLink, RouteKeys } from '../../utils/routes'
 import '../../styles/orgAdmin.css'
 
 type DetailTab = 'overview' | 'registrations' | 'evaluators' | 'evaluations' | 'results'
@@ -237,15 +238,15 @@ export default function AdminTryoutDetail() {
       <AdminPageHeader
         title={tryout.title}
         breadcrumbs={[
-          { label: t('admin.tryouts.title'), path: '/admin/tryouts' },
+          { label: t('admin.tryouts.title'), path: getLink(RouteKeys.ADMIN_TRYOUTS) },
           { label: tryout.title },
         ]}
         actions={
           <div className="oa-flex oa-gap-2">
-            <Button variant="ghost" onClick={() => navigate('/admin/tryouts')}>
+            <Button variant="ghost" onClick={() => navigate(getLink(RouteKeys.ADMIN_TRYOUTS))}>
               {t('common.back')}
             </Button>
-            <Button variant="secondary" onClick={() => navigate(`/admin/tryouts/${tryout.id}/registrations`)}>
+            <Button variant="secondary" onClick={() => navigate(getLink(RouteKeys.ADMIN_TRYOUTS_REGISTRATIONS, { tryoutId: tryout.id }))}>
               {t('admin.tryouts.registrations.title' as TranslationKey)}
             </Button>
           </div>
@@ -327,7 +328,7 @@ export default function AdminTryoutDetail() {
         <Card>
           <div className="oa-flex oa-justify-between oa-items-center oa-mb-3">
             <h3 className="oa-h3">{t('admin.tryouts.evaluators.assignedTitle' as TranslationKey)}</h3>
-            <Button variant="secondary" onClick={() => navigate(`/admin/tryouts/${tryout.id}/evaluators`)}>
+            <Button variant="secondary" onClick={() => navigate(getLink(RouteKeys.ADMIN_TRYOUTS_EVALUATORS, { tryoutId: tryout.id }))}>
               {t('admin.tryouts.evaluators.manage' as TranslationKey)}
             </Button>
           </div>
@@ -350,7 +351,7 @@ export default function AdminTryoutDetail() {
         <Card>
           <div className="oa-flex oa-justify-between oa-items-center oa-mb-3">
             <h3 className="oa-h3">{t('admin.tryouts.evaluation.title' as TranslationKey)}</h3>
-            <Button variant="secondary" onClick={() => navigate(`/admin/tryouts/${tryout.id}/evaluation`)}>
+            <Button variant="secondary" onClick={() => navigate(getLink(RouteKeys.ADMIN_TRYOUTS_EVALUATION, { tryoutId: tryout.id }))}>
               {t('admin.tryouts.evaluation.actions.open' as TranslationKey)}
             </Button>
           </div>
