@@ -19,6 +19,7 @@ import NoteComposer, { type NewNote } from './NoteComposer'
 import NotesFeed from './NotesFeed'
 import Icon from '@/components/portal/Icon'
 import { cn } from '@/utils/cn'
+import { t } from '@/i18n'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -130,14 +131,14 @@ export default function NotesPanel({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
-          <h2 className="text-sm font-black uppercase tracking-widest text-gray-900 dark:text-white">
-            Notes
+          <h2 className="text-sm font-black uppercase tracking-widest text-[var(--pa-text-primary)]">
+            {t('videoLibrary.notes.title')}
           </h2>
           <button
             type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            aria-label="Close notes panel"
+            aria-label={t('videoLibrary.notes.closePanel')}
           >
             <Icon name="close" size="text-xl" />
           </button>
@@ -201,12 +202,12 @@ export default function NotesPanel({
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 pb-2 shrink-0">
-          <h2 className="text-sm font-black uppercase tracking-widest">Notes</h2>
+          <h2 className="text-sm font-black uppercase tracking-widest text-[var(--pa-text-primary)]">{t('videoLibrary.notes.title')}</h2>
           <button
             type="button"
             onClick={onClose}
             className="p-1 text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            aria-label="Close notes panel"
+            aria-label={t('videoLibrary.notes.closePanel')}
           >
             <Icon name="close" size="text-lg" />
           </button>

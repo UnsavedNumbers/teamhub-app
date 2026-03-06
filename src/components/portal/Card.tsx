@@ -13,8 +13,8 @@ export default function Card({ children, className = '', noPadding = false, high
   return (
     <div 
       className={cn(
-        "bg-white dark:bg-neutral-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl", 
-        !noPadding && "p-6",
+        "bg-white dark:bg-neutral-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl transition-transform duration-200 ease-out active:scale-[0.98]",
+        !noPadding && "px-4 py-3",
         highlight && "org-card-accent",
         className
       )} 

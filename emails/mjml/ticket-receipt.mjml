@@ -1,0 +1,155 @@
+<mjml>
+  <mj-head>
+    <mj-title>Ticket Receipt</mj-title>
+    <mj-preview>Your ticket receipt and entry codes are ready.</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-text color="#1f2937" font-size="14px" line-height="1.5" />
+      <mj-section background-color="#ffffff" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .card {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+      }
+      .muted {
+        color: #6b7280;
+        font-size: 12px;
+      }
+      .summary-table th {
+        background: #f3f4f6;
+        color: #111827;
+        font-size: 12px;
+        text-align: left;
+        padding: 10px;
+        border: 1px solid #d1d5db;
+      }
+      .summary-table td {
+        font-size: 13px;
+        padding: 10px;
+        border: 1px solid #d1d5db;
+      }
+      .summary-table .right {
+        text-align: right;
+      }
+      .total-chip {
+        background: #111827;
+        border-radius: 8px;
+      }
+      .total-chip td {
+        color: #ffffff;
+        font-size: 20px;
+        font-weight: 700;
+        text-align: center;
+        padding: 14px;
+      }
+      .code-table td {
+        border-bottom: 1px solid #e5e7eb;
+        padding: 10px 0;
+        vertical-align: top;
+      }
+      .code-label {
+        color: #6b7280;
+        font-size: 12px;
+      }
+      .code-value {
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f3f4f6">
+    <mj-section padding="24px 20px 12px 20px">
+      <mj-column>
+        <mj-text font-size="24px" font-weight="700" color="#111827" padding-bottom="4px">
+          Ticket Receipt
+        </mj-text>
+        <mj-text css-class="muted">
+          Receipt ID: {{RECEIPT_ID}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section css-class="card" padding="20px">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="700" color="#111827" padding-bottom="8px">
+          {{EVENT_NAME}}
+        </mj-text>
+        <mj-text>
+          <strong>Organization:</strong> {{ORGANIZATION_NAME}}<br />
+          <strong>Date:</strong> {{EVENT_DATE}}<br />
+          <strong>Time:</strong> {{EVENT_TIME}}<br />
+          <strong>Venue:</strong> {{VENUE_ADDRESS}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section css-class="card" padding="20px" padding-top="16px">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="700" color="#111827" padding-bottom="10px">
+          Order Summary
+        </mj-text>
+        <mj-table css-class="summary-table">
+          <tr>
+            <th>Ticket Type</th>
+            <th class="right">Qty</th>
+            <th class="right">Unit</th>
+            <th class="right">Subtotal</th>
+          </tr>
+          {{LINE_ITEMS_ROWS}}
+          {{FEES_TAX_ROWS}}
+        </mj-table>
+        <mj-table css-class="total-chip" padding-top="12px">
+          <tr>
+            <td>Total Paid: {{TOTAL_PAID}}</td>
+          </tr>
+        </mj-table>
+        <mj-text padding-top="12px">
+          <strong>Purchase Time:</strong> {{PURCHASE_DATE_TIME}}<br />
+          <strong>Buyer Email:</strong> {{BUYER_EMAIL}}<br />
+          <strong>Order ID:</strong> {{ORDER_ID}}<br />
+          <strong>Stripe Ref:</strong> {{STRIPE_REFERENCE}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section css-class="card" padding="20px" padding-top="16px">
+      <mj-column>
+        <mj-text font-size="16px" font-weight="700" color="#111827" padding-bottom="10px">
+          Ticket Codes
+        </mj-text>
+        <mj-table css-class="code-table">
+          {{TICKET_CODES_ROWS}}
+        </mj-table>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="20px">
+      <mj-column>
+        <mj-button
+          href="{{MY_TICKETS_URL}}"
+          background-color="#2563eb"
+          color="#ffffff"
+          border-radius="8px"
+          font-size="16px"
+          font-weight="700"
+          inner-padding="14px 20px"
+        >
+          View My Tickets
+        </mj-button>
+        <mj-text css-class="muted" align="center" padding-top="8px">
+          This link requires sign-in.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section padding="0 20px 24px 20px">
+      <mj-column>
+        <mj-text css-class="muted" align="center">
+          If some details are unavailable, this receipt still confirms your payment.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

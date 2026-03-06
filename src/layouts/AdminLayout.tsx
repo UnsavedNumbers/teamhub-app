@@ -19,6 +19,7 @@ import MobileMenu from '../components/common/MobileMenu'
 import GlobalNav from '../components/common/GlobalNav'
 import { DemoGuideIntegration } from '../components/demo/DemoGuideIntegration'
 import { AppPage } from '../components/shared/AppPage'
+import MobileStackTransition from '@/components/common/mobile/MobileStackTransition'
 import type { NavSection } from '@/types/menu'
 import { useFilteredNavigation } from '@/hooks/useFilteredNavigation'
 import { useQuery } from '@tanstack/react-query'
@@ -581,7 +582,9 @@ export default function AdminLayout() {
 
         {/* Content */}
         <main className="oa-content min-w-0" data-testid="app-shell">
-          <Outlet />
+          <MobileStackTransition>
+            <Outlet />
+          </MobileStackTransition>
         </main>
       </div>
 

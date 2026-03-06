@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Ticket Receipt</title>
+  </head>
+  <body style="margin:0;padding:20px;background:#f3f4f6;font-family:Arial,sans-serif;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+      <tr>
+        <td align="center">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="640" style="max-width:640px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;">
+            <tr>
+              <td style="padding:20px 20px 8px 20px;">
+                <div style="font-size:24px;font-weight:700;">Ticket Receipt</div>
+                <div style="font-size:12px;color:#6b7280;">Receipt ID: {{RECEIPT_ID}}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 20px 12px 20px;">
+                <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px;">
+                  <div style="font-size:18px;font-weight:700;">{{EVENT_NAME}}</div>
+                  <div style="margin-top:8px;font-size:14px;line-height:1.5;">
+                    <strong>Organization:</strong> {{ORGANIZATION_NAME}}<br/>
+                    <strong>Date:</strong> {{EVENT_DATE}}<br/>
+                    <strong>Time:</strong> {{EVENT_TIME}}<br/>
+                    <strong>Venue:</strong> {{VENUE_ADDRESS}}
+                  </div>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 20px 12px 20px;">
+                <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px;">
+                  <div style="font-size:16px;font-weight:700;margin-bottom:8px;">Order Summary</div>
+                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">
+                    <tr>
+                      <th style="padding:8px;border:1px solid #d1d5db;background:#f3f4f6;text-align:left;font-size:12px;">Ticket Type</th>
+                      <th style="padding:8px;border:1px solid #d1d5db;background:#f3f4f6;text-align:right;font-size:12px;">Qty</th>
+                      <th style="padding:8px;border:1px solid #d1d5db;background:#f3f4f6;text-align:right;font-size:12px;">Unit</th>
+                      <th style="padding:8px;border:1px solid #d1d5db;background:#f3f4f6;text-align:right;font-size:12px;">Subtotal</th>
+                    </tr>
+                    {{LINE_ITEMS_ROWS}}
+                    {{FEES_TAX_ROWS}}
+                  </table>
+                  <div style="margin-top:10px;padding:12px;border-radius:8px;background:#111827;color:#fff;text-align:center;font-size:18px;font-weight:700;">
+                    Total Paid: {{TOTAL_PAID}}
+                  </div>
+                  <div style="margin-top:10px;font-size:14px;line-height:1.5;">
+                    <strong>Purchase Time:</strong> {{PURCHASE_DATE_TIME}}<br/>
+                    <strong>Buyer Email:</strong> {{BUYER_EMAIL}}<br/>
+                    <strong>Order ID:</strong> {{ORDER_ID}}<br/>
+                    <strong>Stripe Ref:</strong> {{STRIPE_REFERENCE}}
+                  </div>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 20px 12px 20px;">
+                <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px;">
+                  <div style="font-size:16px;font-weight:700;margin-bottom:8px;">Ticket Codes</div>
+                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">
+                    {{TICKET_CODES_ROWS}}
+                  </table>
+                  {{PRIMARY_QR_BLOCK}}
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 20px 22px 20px;text-align:center;">
+                <a href="{{MY_TICKETS_URL}}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:8px;">
+                  View My Tickets
+                </a>
+                <div style="margin-top:8px;font-size:12px;color:#6b7280;">This link requires sign-in.</div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

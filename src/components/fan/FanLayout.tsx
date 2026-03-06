@@ -12,6 +12,7 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { getLink, RouteKeys } from '../../utils/routes'
 import { useFilteredNavItems } from '../../hooks/useFilteredNavigation'
+import MobileStackTransition from '../common/mobile/MobileStackTransition'
 import '../../styles/fan.css'
 
 interface NavItem {
@@ -118,7 +119,9 @@ export default function FanLayout() {
 
       {/* Main Content */}
       <main className="fan-container fan-main">
-        <Outlet />
+        <MobileStackTransition>
+          <Outlet />
+        </MobileStackTransition>
       </main>
 
 

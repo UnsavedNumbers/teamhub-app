@@ -5029,6 +5029,7 @@ export const en = {
         // Notes
         notes: {
             title: 'Coaching Notes',
+            closePanel: 'Close notes panel',
             composer: 'Add Note',
             composerPlaceholder: 'Start typing your coaching observation...',
             noNotes: 'No notes yet',

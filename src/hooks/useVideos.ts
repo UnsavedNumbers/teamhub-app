@@ -1131,7 +1131,24 @@ export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions)
       
       if (fetchError) throw fetchError
       
-      setNotes((data || []) as unknown as VideoNote[])
+      const mappedNotes = ((data || []) as Array<Record<string, unknown>>).map((noteRow) => {
+        const timestampSeconds =
+          typeof noteRow.timestamp_seconds === 'number' ? noteRow.timestamp_seconds : null
+        const durationSeconds =
+          typeof noteRow.duration_seconds === 'number' ? noteRow.duration_seconds : null
+
+        return {
+          ...noteRow,
+          timestamp_start: timestampSeconds,
+          timestamp_end:
+            timestampSeconds !== null && durationSeconds !== null
+              ? timestampSeconds + durationSeconds
+              : null,
+          targets: (noteRow.video_note_targets as VideoNote['targets']) ?? [],
+        } as unknown as VideoNote
+      })
+
+      setNotes(mappedNotes)
     } catch (err) {
       console.error('Error fetching video notes:', err)
       setError(err instanceof Error ? err : new Error('Failed to fetch notes'))
@@ -1175,10 +1192,14 @@ export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions)
       const payload = {
         video_id: videoId,
         author_id: user.id,
+        title: note.title ?? null,
         content: note.content,
-        scope: note.scope,
+        scope: note.scope ?? 'coaches',
         timestamp_seconds: note.timestamp_start ?? null,
-        duration_seconds: note.timestamp_end ?? null,
+        duration_seconds: note.timestamp_end !== undefined && note.timestamp_end !== null
+          ? Math.max(0, note.timestamp_end - (note.timestamp_start ?? 0))
+          : null,
+        is_pinned: note.is_pinned ?? false,
         drawing_data: (drawing_data ?? null) as Json | null,
       } as VideoNoteInsert
       
@@ -1209,6 +1230,12 @@ export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions)
         const fallbackNote = {
           id: crypto.randomUUID(),
           ...payload,
+          timestamp_start: payload.timestamp_seconds,
+          timestamp_end:
+            payload.timestamp_seconds !== null && payload.duration_seconds !== null
+              ? (payload.timestamp_seconds ?? 0) + (payload.duration_seconds ?? 0)
+              : null,
+          targets: [],
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           deleted_at: null,
@@ -1229,7 +1256,15 @@ export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions)
           )
       }
       
-      const newNote = data as unknown as VideoNote
+      const newNote = {
+        ...(data as Record<string, unknown>),
+        timestamp_start: data.timestamp_seconds,
+        timestamp_end:
+          data.timestamp_seconds !== null && data.duration_seconds !== null
+            ? (data.timestamp_seconds ?? 0) + (data.duration_seconds ?? 0)
+            : null,
+        targets: [],
+      } as unknown as VideoNote
       setNotes(prev => [...prev, newNote])
       return newNote
     } catch (err) {
@@ -1257,10 +1292,12 @@ export function useVideoNotes({ videoId, enabled = true }: UseVideoNotesOptions)
       }
 
       const dbUpdates = {
+        ...(updates.title !== undefined && { title: updates.title }),
         ...(updates.content !== undefined && { content: updates.content }),
         ...(updates.scope !== undefined && { scope: updates.scope }),
         ...(updates.timestamp_start !== undefined && { timestamp_seconds: updates.timestamp_start }),
         ...(updates.timestamp_end !== undefined && { duration_seconds: updates.timestamp_end }),
+        ...(updates.is_pinned !== undefined && { is_pinned: updates.is_pinned }),
         ...(updates.drawing_data !== undefined && { drawing_data: updates.drawing_data as Json | null }),
       } as VideoNoteUpdate
         
@@ -1745,8 +1782,14 @@ export function useVideoMutations(): UseVideoMutationsReturn {
         category,
         visibility,
         team_id,
+        season_id,
         event_id,
+        program_id,
+        level_id,
+        sport_id,
         recorded_at,
+        recording_location,
+        thumbnail_time_offset,
       } = updates
       const safeUpdates = {
         ...(title !== undefined && { title }),
@@ -1754,8 +1797,14 @@ export function useVideoMutations(): UseVideoMutationsReturn {
         ...(category !== undefined && { category }),
         ...(visibility !== undefined && { visibility }),
         ...(team_id !== undefined && { team_id }),
+        ...(season_id !== undefined && { season_id }),
         ...(event_id !== undefined && { event_id }),
+        ...(program_id !== undefined && { program_id }),
+        ...(level_id !== undefined && { level_id }),
+        ...(sport_id !== undefined && { sport_id }),
         ...(recorded_at !== undefined && { recorded_at }),
+        ...(recording_location !== undefined && { recording_location }),
+        ...(thumbnail_time_offset !== undefined && { thumbnail_time_offset }),
       }
       
       const { error } = await supabase
