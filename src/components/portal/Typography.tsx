@@ -7,7 +7,7 @@ interface TypographyProps {
 
 export function PageTitle({ children, className = '' }: TypographyProps) {
   return (
-    <h1 className={`text-5xl font-black tracking-tighter text-gray-900 dark:text-white mb-2 leading-none font-impact ${className}`}>
+    <h1 className={`text-[34px] font-bold tracking-[-0.01em] text-gray-900 dark:text-white mb-2 leading-[1.1] ${className}`}>
       {children}
     </h1>
   )
@@ -15,7 +15,7 @@ export function PageTitle({ children, className = '' }: TypographyProps) {
 
 export function SectionHeader({ children, className = '' }: TypographyProps) {
   return (
-    <h2 className={`text-xs font-black uppercase tracking-[0.2em] text-gray-900 dark:text-white ${className}`}>
+    <h2 className={`text-[13px] font-medium tracking-normal text-gray-700 dark:text-gray-300 leading-[1.2] ${className}`}>
       {children}
     </h2>
   )
@@ -23,7 +23,7 @@ export function SectionHeader({ children, className = '' }: TypographyProps) {
 
 export function CardTitle({ children, className = '' }: TypographyProps) {
   return (
-    <h3 className={`text-2xl font-black text-gray-900 dark:text-white leading-tight uppercase font-impact ${className}`}>
+    <h3 className={`text-[17px] font-semibold text-gray-900 dark:text-white leading-[1.2] ${className}`}>
       {children}
     </h3>
   )

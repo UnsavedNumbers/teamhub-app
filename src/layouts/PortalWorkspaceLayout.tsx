@@ -8,6 +8,7 @@ import { ADMIN_LAYOUT_MOBILE_NAV_QUERY } from '../config/breakpoints'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { DemoGuideIntegration } from '../components/demo/DemoGuideIntegration'
 import { AppPage, PageSection } from '../components/shared/AppPage'
+import MobileStackTransition from '../components/common/mobile/MobileStackTransition'
 import '../styles/portal.css'
 
 /**
@@ -89,7 +90,9 @@ export default function PortalWorkspaceLayout() {
 
         <main className="portal-workspace-main min-h-0 min-w-0 flex-1 overflow-y-auto">
           <PageSection className="w-full p-4 sm:p-6 lg:p-8">
-            <Outlet />
+            <MobileStackTransition>
+              <Outlet />
+            </MobileStackTransition>
           </PageSection>
         </main>
       </div>
